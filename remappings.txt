@@ -1,3 +1,4 @@
 @extension/=lib/extension/
 @core/=lib/extension/lib/core/src/
 @group/=lib/group/src/
+@openzeppelin/=lib/extension/lib/core/lib/openzeppelin-contracts/
