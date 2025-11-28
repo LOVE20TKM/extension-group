@@ -10,7 +10,5 @@ interface ILOVE20ExtensionBaseGroupTokenJoin is
     ILOVE20ExtensionBaseGroup,
     IGroupTokenJoin
 {
-    // No additional functions needed
     // exit() is inherited from ILOVE20Extension -> IExtensionExit
-    // Group token join functions are inherited from IGroupTokenJoin
 }

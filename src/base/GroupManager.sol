@@ -25,8 +25,11 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
     /// @notice Staking multiplier
     uint256 public immutable stakingMultiplier;
 
-    /// @notice Max actor amount multiplier
+    /// @notice Max join amount multiplier
     uint256 public immutable maxJoinAmountMultiplier;
+
+    /// @notice Minimum join amount
+    uint256 public immutable minJoinAmount;
 
     // ============================================
     // STATE VARIABLES
@@ -55,13 +58,15 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         uint256 minGovernanceVoteRatio_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 minJoinAmount_
     ) ExtensionCore(factory_, tokenAddress_) {
         _groupAddress = ILOVE20Group(groupAddress_);
         minGovernanceVoteRatio = minGovernanceVoteRatio_;
         capacityMultiplier = capacityMultiplier_;
         stakingMultiplier = stakingMultiplier_;
         maxJoinAmountMultiplier = maxJoinAmountMultiplier_;
+        minJoinAmount = minJoinAmount_;
     }
 
     // ============================================
@@ -102,8 +107,8 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         uint256 groupId,
         string memory description,
         uint256 stakedAmount,
-        uint256 minJoinAmount,
-        uint256 maxJoinAmount
+        uint256 groupMinJoinAmount,
+        uint256 groupMaxJoinAmount
     ) public virtual onlyGroupOwner(groupId) returns (bool) {
         GroupInfo storage group = _groups[groupId];
 
@@ -113,12 +118,14 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         // Validate parameters
         if (stakedAmount == 0) revert InvalidGroupParameters();
 
-        // Validate actor amount constraints
-        if (maxJoinAmount != 0 && maxJoinAmount < minJoinAmount) {
+        // Validate join amount constraints
+        if (
+            groupMaxJoinAmount != 0 && groupMaxJoinAmount < groupMinJoinAmount
+        ) {
             revert InvalidGroupParameters();
         }
 
-        // Capacity check (abstract method)
+        // Capacity check
         address owner = _groupAddress.ownerOf(groupId);
         _checkCanStartGroup(owner, stakedAmount);
 
@@ -130,15 +137,15 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
 
         // Calculate capacity
         uint256 capacity = _calculateGroupCapacity(owner, stakedAmount);
-        uint256 currentRound = _getCurrentRound();
+        uint256 currentRound = _join.currentRound();
 
         // Initialize group
         group.groupId = groupId;
         group.description = description;
         group.stakedAmount = stakedAmount;
         group.capacity = capacity;
-        group.minJoinAmount = minJoinAmount;
-        group.maxJoinAmount = maxJoinAmount;
+        group.groupMinJoinAmount = groupMinJoinAmount;
+        group.groupMaxJoinAmount = groupMaxJoinAmount;
         group.startedRound = currentRound;
 
         _allStartedGroupIds.push(groupId);
@@ -176,7 +183,7 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         if (group.startedRound == 0) revert GroupNotFound();
         if (group.isStopped) revert GroupAlreadyStopped();
 
-        uint256 currentRound = _getCurrentRound();
+        uint256 currentRound = _join.currentRound();
         if (currentRound == group.startedRound)
             revert CannotStopInStartedRound();
 
@@ -302,13 +309,6 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         GroupInfo memory group = _groups[groupId];
         return (group.totalJoinedAmount + amount <= group.capacity);
     }
-
-    // ============================================
-    // ABSTRACT METHODS (to be implemented by subclasses)
-    // ============================================
-
-    /// @dev Get current round number
-    function _getCurrentRound() internal view virtual returns (uint256);
 
     // ============================================
     // CAPACITY CALCULATION (INTERNAL)

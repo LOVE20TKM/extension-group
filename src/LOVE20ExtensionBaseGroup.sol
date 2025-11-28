@@ -32,7 +32,8 @@ abstract contract LOVE20ExtensionBaseGroup is
     /// @param minGovernanceVoteRatio_ Minimum governance vote ratio
     /// @param capacityMultiplier_ Capacity multiplier
     /// @param stakingMultiplier_ Staking multiplier
-    /// @param maxJoinAmountMultiplier_ Max actor amount multiplier
+    /// @param maxJoinAmountMultiplier_ Max join amount multiplier
+    /// @param minJoinAmount_ Minimum join amount
     constructor(
         address factory_,
         address tokenAddress_,
@@ -40,7 +41,8 @@ abstract contract LOVE20ExtensionBaseGroup is
         uint256 minGovernanceVoteRatio_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 minJoinAmount_
     )
         GroupManager(
             factory_,
@@ -49,24 +51,10 @@ abstract contract LOVE20ExtensionBaseGroup is
             minGovernanceVoteRatio_,
             capacityMultiplier_,
             stakingMultiplier_,
-            maxJoinAmountMultiplier_
+            maxJoinAmountMultiplier_,
+            minJoinAmount_
         )
     {}
-
-    // ============================================
-    // OVERRIDE: GET CURRENT ROUND
-    // ============================================
-
-    /// @inheritdoc GroupManager
-    function _getCurrentRound()
-        internal
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _join.currentRound();
-    }
 
     // ============================================
     // ABSTRACT METHODS - TO BE IMPLEMENTED BY SUBCLASSES

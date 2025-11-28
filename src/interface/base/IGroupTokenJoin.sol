@@ -6,9 +6,8 @@ interface IGroupTokenJoin {
     // ERRORS
     // ============================================
 
-    error AlreadyInGroup();
+    error AlreadyInOtherGroup();
     error NotInGroup();
-    error NotInThisGroup();
     error AmountBelowMinimum();
     error AmountExceedsAccountCap();
     error GroupCapacityFull();
@@ -18,14 +17,14 @@ interface IGroupTokenJoin {
     // EVENTS
     // ============================================
 
-    event JoinGroup(
+    event Join(
         uint256 indexed groupId,
         address indexed account,
         uint256 amount,
         uint256 round
     );
 
-    event ExitGroup(
+    event Exit(
         uint256 indexed groupId,
         address indexed account,
         uint256 amount,
@@ -47,11 +46,8 @@ interface IGroupTokenJoin {
     // FUNCTIONS
     // ============================================
 
-    /// @notice Join a group
-    function joinGroup(uint256 groupId, uint256 amount) external;
-
-    /// @notice Exit from a group
-    function exitGroup(uint256 groupId) external;
+    /// @notice Join a group (can be called multiple times to add more tokens)
+    function join(uint256 groupId, uint256 amount) external;
 
     // ============================================
     // VIEW FUNCTIONS
@@ -79,4 +75,10 @@ interface IGroupTokenJoin {
         address account,
         uint256 round
     ) external view returns (uint256 groupId);
+
+    /// @notice Get group's total joined amount during a specific round
+    function getGroupTotalByRound(
+        uint256 groupId,
+        uint256 round
+    ) external view returns (uint256);
 }

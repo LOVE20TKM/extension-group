@@ -2,51 +2,26 @@
 pragma solidity =0.8.17;
 
 import {IGroupTokenJoin} from "../interface/base/IGroupTokenJoin.sol";
-import {IGroupManager} from "../interface/base/IGroupManager.sol";
+import {GroupManager} from "./GroupManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {ArrayUtils} from "@core/lib/ArrayUtils.sol";
 
 /// @title GroupTokenJoin
 /// @notice Handles account joining/exiting groups with token participation
-/// @dev Does not inherit GroupManager to avoid diamond inheritance
-abstract contract GroupTokenJoin is ReentrancyGuard {
+abstract contract GroupTokenJoin is
+    GroupManager,
+    ReentrancyGuard,
+    IGroupTokenJoin
+{
     // ============================================
     // STATE VARIABLES - IMMUTABLE CONFIG
     // ============================================
 
     /// @notice The token used for joining groups
     address public immutable joinTokenAddress;
-
-    // ============================================
-    // EVENTS
-    // ============================================
-
-    event JoinGroup(
-        uint256 indexed groupId,
-        address indexed account,
-        uint256 amount,
-        uint256 round
-    );
-
-    event ExitGroup(
-        uint256 indexed groupId,
-        address indexed account,
-        uint256 amount,
-        uint256 round
-    );
-
-    // ============================================
-    // STRUCTS
-    // ============================================
-
-    /// @notice Join information
-    struct JoinInfo {
-        uint256 groupId;
-        uint256 amount;
-        uint256 joinedRound;
-    }
 
     // ============================================
     // STATE VARIABLES
@@ -69,6 +44,12 @@ abstract contract GroupTokenJoin is ReentrancyGuard {
     /// @notice Mapping: account => rounds[] (rounds when account changed groups)
     mapping(address => uint256[]) internal _accountGroupChangeRounds;
 
+    /// @notice Mapping: groupId => round => totalJoinedAmount (history)
+    mapping(uint256 => mapping(uint256 => uint256)) internal _groupTotalByRound;
+
+    /// @notice Mapping: groupId => rounds[] (rounds when group total changed)
+    mapping(uint256 => uint256[]) internal _groupTotalChangeRounds;
+
     /// @dev ERC20 interface for the join token
     IERC20 internal _joinToken;
 
@@ -80,7 +61,7 @@ abstract contract GroupTokenJoin is ReentrancyGuard {
     /// @param joinTokenAddress_ The token that can be used to join groups
     constructor(address joinTokenAddress_) {
         if (joinTokenAddress_ == address(0)) {
-            revert IGroupTokenJoin.NotInGroup(); // reuse error for simplicity
+            revert IGroupTokenJoin.NotInGroup();
         }
         joinTokenAddress = joinTokenAddress_;
         _joinToken = IERC20(joinTokenAddress_);
@@ -90,97 +71,96 @@ abstract contract GroupTokenJoin is ReentrancyGuard {
     // JOIN/EXIT OPERATIONS
     // ============================================
 
-    /// @notice Join a group with tokens
-    function joinGroup(
-        uint256 groupId,
-        uint256 amount
-    ) public virtual nonReentrant {
-        // Hook for snapshot mechanism (before state change)
-        _beforeJoinGroup(groupId, msg.sender);
+    /// @notice Join a group with tokens (can be called multiple times)
+    function join(uint256 groupId, uint256 amount) public virtual nonReentrant {
+        _beforeJoin(groupId, msg.sender);
 
-        // Check account is not already in a group
         JoinInfo storage participation = _joinInfo[msg.sender];
-        if (participation.groupId != 0) revert IGroupTokenJoin.AlreadyInGroup();
+        bool isFirstJoin = participation.groupId == 0;
 
-        IGroupManager.GroupInfo memory group = _getGroupInfo(groupId);
+        // If already in a group, must be the same group
+        if (!isFirstJoin && participation.groupId != groupId) {
+            revert IGroupTokenJoin.AlreadyInOtherGroup();
+        }
 
-        // Check group is active
+        GroupInfo storage group = _groups[groupId];
+
         if (group.startedRound == 0 || group.isStopped) {
             revert IGroupTokenJoin.CannotJoinStoppedGroup();
         }
 
-        // Validate amount
-        if (amount == 0 || amount < group.minJoinAmount) {
-            revert IGroupTokenJoin.AmountBelowMinimum();
+        // Check minimum only for first join
+        if (isFirstJoin) {
+            uint256 effectiveMin = group.groupMinJoinAmount > minJoinAmount
+                ? group.groupMinJoinAmount
+                : minJoinAmount;
+            if (amount == 0 || amount < effectiveMin) {
+                revert IGroupTokenJoin.AmountBelowMinimum();
+            }
         }
-        if (group.maxJoinAmount > 0 && amount > group.maxJoinAmount) {
+
+        // Check max amount (group level and account level)
+        uint256 newTotal = participation.amount + amount;
+        if (
+            group.groupMaxJoinAmount > 0 && newTotal > group.groupMaxJoinAmount
+        ) {
+            revert IGroupTokenJoin.AmountExceedsAccountCap();
+        }
+        uint256 accountMaxAmount = calculateJoinMaxAmount();
+        if (newTotal > accountMaxAmount) {
             revert IGroupTokenJoin.AmountExceedsAccountCap();
         }
 
-        // Check account cap
-        uint256 accountMaxAmount = _calculateJoinMaxAmount();
-        if (amount > accountMaxAmount)
-            revert IGroupTokenJoin.AmountExceedsAccountCap();
-
-        // Check group capacity
-        if (!_checkCapacityAvailable(groupId, amount)) {
+        if (!checkCapacityAvailable(groupId, amount)) {
             revert IGroupTokenJoin.GroupCapacityFull();
         }
 
-        // Transfer tokens from account
         _joinToken.transferFrom(msg.sender, address(this), amount);
 
-        // Update state
-        uint256 currentRound = _getCurrentRound();
+        uint256 currentRound = _join.currentRound();
         participation.groupId = groupId;
-        participation.amount = amount;
-        participation.joinedRound = currentRound;
+        participation.amount = newTotal;
 
-        _updateGrouptotalJoinedAmount(
-            groupId,
-            group.totalJoinedAmount + amount
-        );
+        group.totalJoinedAmount += amount;
+        _recordGroupTotal(groupId, group.totalJoinedAmount, currentRound);
 
-        // Record history
-        uint256[] storage changeRounds = _accountGroupChangeRounds[msg.sender];
-        if (
-            changeRounds.length == 0 ||
-            changeRounds[changeRounds.length - 1] != currentRound
-        ) {
-            changeRounds.push(currentRound);
+        // Record history and add to group list only on first join
+        if (isFirstJoin) {
+            participation.joinedRound = currentRound;
+
+            uint256[] storage changeRounds = _accountGroupChangeRounds[
+                msg.sender
+            ];
+            if (
+                changeRounds.length == 0 ||
+                changeRounds[changeRounds.length - 1] != currentRound
+            ) {
+                changeRounds.push(currentRound);
+            }
+            _accountGroupByRound[msg.sender][currentRound] = groupId;
+
+            uint256 accountIndex = _groupAccounts[groupId].length;
+            _groupAccounts[groupId].push(msg.sender);
+            _accountIndexInGroup[groupId][msg.sender] = accountIndex;
+
+            _addAccount(msg.sender);
         }
-        _accountGroupByRound[msg.sender][currentRound] = groupId;
 
-        // Add to group's account list
-        uint256 accountIndex = _groupAccounts[groupId].length;
-        _groupAccounts[groupId].push(msg.sender);
-        _accountIndexInGroup[groupId][msg.sender] = accountIndex;
-
-        // Add to accounts tracking
-        _addAccount(msg.sender);
-
-        emit JoinGroup(groupId, msg.sender, amount, currentRound);
+        emit Join(groupId, msg.sender, amount, currentRound);
     }
 
-    /// @notice Exit from a group
-    function exitGroup(uint256 groupId) public virtual nonReentrant {
-        // Hook for snapshot mechanism (before state change)
-        _beforeExit(groupId, msg.sender);
-
+    /// @notice Exit from current group
+    function exit() public virtual nonReentrant {
         JoinInfo storage participation = _joinInfo[msg.sender];
-
-        // Check account is in a group
         if (participation.groupId == 0) revert IGroupTokenJoin.NotInGroup();
 
-        // Check account is in specified group
-        if (participation.groupId != groupId)
-            revert IGroupTokenJoin.NotInThisGroup();
+        uint256 groupId = participation.groupId;
+        _beforeExit(groupId, msg.sender);
 
         uint256 amount = participation.amount;
-        IGroupManager.GroupInfo memory group = _getGroupInfo(groupId);
+        GroupInfo storage group = _groups[groupId];
 
-        // Record history
-        uint256 currentRound = _getCurrentRound();
+        uint256 currentRound = _join.currentRound();
         uint256[] storage changeRounds = _accountGroupChangeRounds[msg.sender];
         if (
             changeRounds.length == 0 ||
@@ -188,27 +168,18 @@ abstract contract GroupTokenJoin is ReentrancyGuard {
         ) {
             changeRounds.push(currentRound);
         }
-        _accountGroupByRound[msg.sender][currentRound] = 0; // 0 means not in any group
+        _accountGroupByRound[msg.sender][currentRound] = 0;
 
-        // Update group
-        _updateGrouptotalJoinedAmount(
-            groupId,
-            group.totalJoinedAmount - amount
-        );
+        group.totalJoinedAmount -= amount;
+        _recordGroupTotal(groupId, group.totalJoinedAmount, currentRound);
 
-        // Remove from group's account list
         _removeAccountFromGroup(groupId, msg.sender);
-
-        // Clear participation
         delete _joinInfo[msg.sender];
-
-        // Remove from accounts tracking
         _removeAccount(msg.sender);
 
-        // Return tokens
         _joinToken.transfer(msg.sender, amount);
 
-        emit ExitGroup(groupId, msg.sender, amount, currentRound);
+        emit Exit(groupId, msg.sender, amount, currentRound);
     }
 
     // ============================================
@@ -241,95 +212,95 @@ abstract contract GroupTokenJoin is ReentrancyGuard {
         uint256 groupId,
         uint256 amount
     ) external view returns (bool canJoin, string memory reason) {
-        IGroupManager.GroupInfo memory group = _getGroupInfo(groupId);
+        GroupInfo storage group = _groups[groupId];
+        JoinInfo storage participation = _joinInfo[account];
+        bool isFirstJoin = participation.groupId == 0;
 
-        // Check if group exists
         if (group.startedRound == 0) {
             return (false, "Group does not exist");
         }
-
-        // Check if group is stopped
         if (group.isStopped) {
             return (false, "Group is stopped");
         }
-
-        // Check if account is already in a group
-        if (_joinInfo[account].groupId != 0) {
-            return (false, "Already in a group");
+        if (!isFirstJoin && participation.groupId != groupId) {
+            return (false, "Already in other group");
         }
 
-        // Check minimum amount
-        if (amount < group.minJoinAmount) {
-            return (false, "Amount below minimum");
+        // Check minimum only for first join
+        if (isFirstJoin) {
+            uint256 effectiveMin = group.groupMinJoinAmount > minJoinAmount
+                ? group.groupMinJoinAmount
+                : minJoinAmount;
+            if (amount < effectiveMin) {
+                return (false, "Amount below minimum");
+            }
         }
 
-        // Check maximum amount
-        if (group.maxJoinAmount > 0 && amount > group.maxJoinAmount) {
+        uint256 newTotal = participation.amount + amount;
+        if (
+            group.groupMaxJoinAmount > 0 && newTotal > group.groupMaxJoinAmount
+        ) {
             return (false, "Amount exceeds group max");
         }
 
-        // Check account cap
-        uint256 accountMaxAmount = _calculateJoinMaxAmount();
-        if (amount > accountMaxAmount) {
+        uint256 accountMaxAmount = calculateJoinMaxAmount();
+        if (newTotal > accountMaxAmount) {
             return (false, "Amount exceeds account cap");
         }
-
-        // Check group capacity
-        if (!_checkCapacityAvailable(groupId, amount)) {
+        if (!checkCapacityAvailable(groupId, amount)) {
             return (false, "Group capacity full");
         }
 
         return (true, "");
     }
 
-    /// @notice Get which group an account was in during a specific round
+    /// @notice Get which group an account was in at end of a specific round
     function getAccountGroupByRound(
         address account,
         uint256 round
     ) public view returns (uint256 groupId) {
-        uint256[] storage changeRounds = _accountGroupChangeRounds[account];
-
-        if (changeRounds.length == 0) {
-            return 0;
-        }
-
-        // Binary search for nearest round <= target round
-        uint256 left = 0;
-        uint256 right = changeRounds.length;
-        uint256 nearestIndex = type(uint256).max;
-
-        while (left < right) {
-            uint256 mid = (left + right) / 2;
-            if (changeRounds[mid] <= round) {
-                nearestIndex = mid;
-                left = mid + 1;
-            } else {
-                right = mid;
-            }
-        }
-
-        if (nearestIndex == type(uint256).max) {
-            return 0;
-        }
-
-        uint256 nearestRound = changeRounds[nearestIndex];
-
-        // If account joined/exited in THIS round, reward is based on PREVIOUS group
-        if (nearestRound == round) {
-            if (nearestIndex == 0) {
-                return 0;
-            }
-            return
-                _accountGroupByRound[account][changeRounds[nearestIndex - 1]];
-        }
-
-        // Normal case: account was already in this group
+        (bool found, uint256 nearestRound) = ArrayUtils
+            .findLeftNearestOrEqualValue(
+                _accountGroupChangeRounds[account],
+                round
+            );
+        if (!found) return 0;
         return _accountGroupByRound[account][nearestRound];
+    }
+
+    /// @notice Get group's total joined amount at end of a specific round
+    function getGroupTotalByRound(
+        uint256 groupId,
+        uint256 round
+    ) public view returns (uint256) {
+        (bool found, uint256 nearestRound) = ArrayUtils
+            .findLeftNearestOrEqualValue(
+                _groupTotalChangeRounds[groupId],
+                round
+            );
+        if (!found) return 0;
+        return _groupTotalByRound[groupId][nearestRound];
     }
 
     // ============================================
     // INTERNAL HELPERS
     // ============================================
+
+    /// @dev Record group total history
+    function _recordGroupTotal(
+        uint256 groupId,
+        uint256 total,
+        uint256 currentRound
+    ) internal {
+        uint256[] storage changeRounds = _groupTotalChangeRounds[groupId];
+        if (
+            changeRounds.length == 0 ||
+            changeRounds[changeRounds.length - 1] != currentRound
+        ) {
+            changeRounds.push(currentRound);
+        }
+        _groupTotalByRound[groupId][currentRound] = total;
+    }
 
     /// @dev Remove account from group's account list
     function _removeAccountFromGroup(
@@ -341,67 +312,32 @@ abstract contract GroupTokenJoin is ReentrancyGuard {
         uint256 lastIndex = accounts.length - 1;
 
         if (accountIndex != lastIndex) {
-            // Move last account to removed position
             address lastAccount = accounts[lastIndex];
             accounts[accountIndex] = lastAccount;
             _accountIndexInGroup[groupId][lastAccount] = accountIndex;
         }
 
-        // Remove last element
         accounts.pop();
         delete _accountIndexInGroup[groupId][account];
     }
 
     // ============================================
-    // HOOKS (for subclasses to implement)
+    // HOOKS
     // ============================================
 
-    /// @dev Hook called BEFORE account joins (for snapshot mechanism)
-    function _beforeJoinGroup(
-        uint256 groupId,
-        address account
-    ) internal virtual {}
+    /// @dev Hook called BEFORE account joins
+    function _beforeJoin(uint256 groupId, address account) internal virtual {}
 
-    /// @dev Hook called BEFORE account exits (for snapshot mechanism)
+    /// @dev Hook called BEFORE account exits
     function _beforeExit(uint256 groupId, address account) internal virtual {}
-
-    /// @dev Check if capacity is available
-    function _checkCapacityAvailable(
-        uint256 groupId,
-        uint256 amount
-    ) internal view virtual returns (bool) {
-        return _getGroupManager().checkCapacityAvailable(groupId, amount);
-    }
-
-    /// @dev Calculate max amount for account
-    function _calculateJoinMaxAmount() internal view virtual returns (uint256) {
-        return _getGroupManager().calculateJoinMaxAmount();
-    }
 
     // ============================================
     // ABSTRACT METHODS
     // ============================================
-
-    /// @dev Get GroupManager instance
-    function _getGroupManager() internal view virtual returns (IGroupManager);
 
     /// @dev Add account to tracking
     function _addAccount(address account) internal virtual;
 
     /// @dev Remove account from tracking
     function _removeAccount(address account) internal virtual;
-
-    /// @dev Get group info
-    function _getGroupInfo(
-        uint256 groupId
-    ) internal view virtual returns (IGroupManager.GroupInfo memory);
-
-    /// @dev Update group total participation
-    function _updateGrouptotalJoinedAmount(
-        uint256 groupId,
-        uint256 newTotal
-    ) internal virtual;
-
-    /// @dev Get current round
-    function _getCurrentRound() internal view virtual returns (uint256);
 }

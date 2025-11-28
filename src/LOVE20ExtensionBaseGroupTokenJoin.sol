@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {LOVE20ExtensionBaseGroup} from "./LOVE20ExtensionBaseGroup.sol";
 import {GroupTokenJoin} from "./base/GroupTokenJoin.sol";
+import {GroupManager} from "./base/GroupManager.sol";
 import {IExtensionExit} from "@extension/src/interface/base/IExtensionExit.sol";
-import {IGroupTokenJoin} from "./interface/base/IGroupTokenJoin.sol";
-import {IGroupManager} from "./interface/base/IGroupManager.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
+import {
+    ExtensionVerificationInfo
+} from "@extension/src/base/ExtensionVerificationInfo.sol";
+import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
 
 /// @title LOVE20ExtensionBaseGroupTokenJoin
 /// @notice Abstract base contract for token join group extensions
 /// @dev Combines group management with token-based actor participation
 abstract contract LOVE20ExtensionBaseGroupTokenJoin is
-    LOVE20ExtensionBaseGroup,
-    GroupTokenJoin
+    GroupTokenJoin,
+    ExtensionAccounts,
+    ExtensionVerificationInfo,
+    ILOVE20Extension
 {
     // ============================================
     // CONSTRUCTOR
@@ -28,7 +31,8 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
     /// @param minGovernanceVoteRatio_ Minimum governance vote ratio
     /// @param capacityMultiplier_ Capacity multiplier
     /// @param stakingMultiplier_ Staking multiplier
-    /// @param maxJoinAmountMultiplier_ Max actor amount multiplier
+    /// @param maxJoinAmountMultiplier_ Max join amount multiplier
+    /// @param minJoinAmount_ Minimum join amount
     constructor(
         address factory_,
         address tokenAddress_,
@@ -37,18 +41,20 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
         uint256 minGovernanceVoteRatio_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 minJoinAmount_
     )
-        LOVE20ExtensionBaseGroup(
+        GroupTokenJoin(joinTokenAddress_)
+        GroupManager(
             factory_,
             tokenAddress_,
             groupAddress_,
             minGovernanceVoteRatio_,
             capacityMultiplier_,
             stakingMultiplier_,
-            maxJoinAmountMultiplier_
+            maxJoinAmountMultiplier_,
+            minJoinAmount_
         )
-        GroupTokenJoin(joinTokenAddress_)
     {}
 
     // ============================================
@@ -67,40 +73,6 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
         address account
     ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._removeAccount(account);
-    }
-
-    // ============================================
-    // OVERRIDE: GROUP MANAGER METHODS
-    // ============================================
-
-    /// @inheritdoc GroupTokenJoin
-    function _getGroupManager() internal view override returns (IGroupManager) {
-        return IGroupManager(address(this));
-    }
-
-    /// @inheritdoc GroupTokenJoin
-    function _getGroupInfo(
-        uint256 groupId
-    ) internal view override returns (IGroupManager.GroupInfo memory) {
-        return _groups[groupId];
-    }
-
-    /// @inheritdoc GroupTokenJoin
-    function _updateGrouptotalJoinedAmount(
-        uint256 groupId,
-        uint256 newTotal
-    ) internal override {
-        _groups[groupId].totalJoinedAmount = newTotal;
-    }
-
-    /// @inheritdoc GroupTokenJoin
-    function _getCurrentRound()
-        internal
-        view
-        override(LOVE20ExtensionBaseGroup, GroupTokenJoin)
-        returns (uint256)
-    {
-        return LOVE20ExtensionBaseGroup._getCurrentRound();
     }
 
     // ============================================
@@ -133,10 +105,8 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
     // IMPLEMENTATION: IEXTENSIONEXIT
     // ============================================
 
-    /// @inheritdoc IExtensionExit
-    function exit() public override {
-        uint256 groupId = _joinInfo[msg.sender].groupId;
-        if (groupId == 0) revert IGroupTokenJoin.NotInGroup();
-        exitGroup(groupId);
+    /// @dev Override exit to satisfy IExtensionExit and GroupTokenJoin
+    function exit() public override(GroupTokenJoin, IExtensionExit) {
+        GroupTokenJoin.exit();
     }
 }

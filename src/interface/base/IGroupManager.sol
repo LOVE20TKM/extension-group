@@ -59,8 +59,8 @@ interface IGroupManager {
         string description;
         uint256 stakedAmount;
         uint256 capacity;
-        uint256 minJoinAmount;
-        uint256 maxJoinAmount; // 0 = no limit
+        uint256 groupMinJoinAmount;
+        uint256 groupMaxJoinAmount; // 0 = no limit
         uint256 totalJoinedAmount;
         bool isStopped;
         uint256 startedRound; // 0 = not started
@@ -76,8 +76,8 @@ interface IGroupManager {
         uint256 groupId,
         string memory description,
         uint256 stakedAmount,
-        uint256 minJoinAmount,
-        uint256 maxJoinAmount
+        uint256 groupMinJoinAmount,
+        uint256 groupMaxJoinAmount
     ) external returns (bool);
 
     /// @notice Expand group capacity
@@ -142,6 +142,9 @@ interface IGroupManager {
 
     /// @notice Get max join amount multiplier
     function maxJoinAmountMultiplier() external view returns (uint256);
+
+    /// @notice Get minimum join amount
+    function minJoinAmount() external view returns (uint256);
 
     /// @notice Calculate group capacity
     function calculateGroupCapacity(
