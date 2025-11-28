@@ -165,7 +165,7 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         uint256 newStakedAmount = group.stakedAmount + additionalStake;
 
         address owner = _groupAddress.ownerOf(groupId);
-        _checkCanExpandGroup(owner, newStakedAmount);
+        _checkCanExpandGroup(owner, groupId, newStakedAmount);
 
         _stakingToken.transferFrom(msg.sender, address(this), additionalStake);
 
@@ -360,6 +360,13 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
     }
 
     /// @inheritdoc IGroupManager
+    function getTotalStakedByOwner(
+        address owner
+    ) public view returns (uint256) {
+        return _getTotalStakedByOwner(owner);
+    }
+
+    /// @inheritdoc IGroupManager
     function getExpandableInfo(
         uint256 groupId
     )
@@ -381,8 +388,10 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         maxCapacity = _calculateMaxCapacityForOwner(owner);
         maxStake = maxCapacity / stakingMultiplier;
 
-        if (maxStake > currentStake) {
-            additionalStakeAllowed = maxStake - currentStake;
+        // Calculate total staked by owner across all active groups
+        uint256 totalOwnerStake = _getTotalStakedByOwner(owner);
+        if (maxStake > totalOwnerStake) {
+            additionalStakeAllowed = maxStake - totalOwnerStake;
         }
     }
 
@@ -419,18 +428,35 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         ) {
             revert InvalidGroupParameters();
         }
+
+        // Check total stake (existing + new) doesn't exceed owner's max
+        uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
+        uint256 maxStake = maxCapacity / stakingMultiplier;
+        uint256 existingStake = _getTotalStakedByOwner(owner);
+        uint256 newTotalStake = existingStake + stakedAmount;
+
+        if (newTotalStake > maxStake) {
+            revert InvalidGroupParameters();
+        }
     }
 
     /// @dev Check if owner can expand group
     function _checkCanExpandGroup(
         address owner,
+        uint256 groupId,
         uint256 newStakedAmount
     ) internal view virtual {
-        // Check doesn't exceed owner's capacity limit
-        uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
-        uint256 newCapacity = newStakedAmount * stakingMultiplier;
+        // Calculate total stake for owner across all active groups (excluding current group)
+        uint256 totalOwnerStake = _getTotalStakedByOwner(owner);
+        uint256 currentGroupStake = _groups[groupId].stakedAmount;
+        uint256 otherGroupsStake = totalOwnerStake - currentGroupStake;
 
-        if (newCapacity > maxCapacity) {
+        // Check total stake doesn't exceed owner's max
+        uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
+        uint256 maxStake = maxCapacity / stakingMultiplier;
+        uint256 newTotalStake = otherGroupsStake + newStakedAmount;
+
+        if (newTotalStake > maxStake) {
             revert InvalidGroupParameters();
         }
     }
@@ -464,5 +490,20 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         return
             (totalMinted * ownerGovernanceVotes * capacityMultiplier) /
             totalGovernanceVotes;
+    }
+
+    /// @dev Get total staked amount by owner across all active groups
+    function _getTotalStakedByOwner(
+        address owner
+    ) internal view returns (uint256 totalStaked) {
+        uint256 nftBalance = _groupAddress.balanceOf(owner);
+        for (uint256 i = 0; i < nftBalance; i++) {
+            uint256 groupId = _groupAddress.tokenOfOwnerByIndex(owner, i);
+            GroupInfo storage group = _groups[groupId];
+            // Only count active groups (started and not stopped)
+            if (group.startedRound != 0 && !group.isStopped) {
+                totalStaked += group.stakedAmount;
+            }
+        }
     }
 }

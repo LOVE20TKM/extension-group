@@ -183,6 +183,11 @@ interface IGroupManager {
         uint256 groupId
     ) external view returns (uint256);
 
+    /// @notice Get total staked amount by owner across all active groups
+    function getTotalStakedByOwner(
+        address owner
+    ) external view returns (uint256);
+
     /// @notice Get expandable info for a group
     /// @return currentCapacity Current group capacity
     /// @return maxCapacity Max capacity based on owner's governance votes
