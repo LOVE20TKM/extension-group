@@ -340,6 +340,26 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
     }
 
     /// @inheritdoc IGroupManager
+    function getMinStakeToStart() public view returns (uint256) {
+        uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
+        uint256 minCapacity = (totalMinted *
+            minGovernanceVoteRatio *
+            capacityMultiplier) / 1e18;
+        return minCapacity / stakingMultiplier;
+    }
+
+    /// @inheritdoc IGroupManager
+    function getRemainingCapacity(
+        uint256 groupId
+    ) public view returns (uint256) {
+        GroupInfo memory group = _groups[groupId];
+        if (group.capacity <= group.totalJoinedAmount) {
+            return 0;
+        }
+        return group.capacity - group.totalJoinedAmount;
+    }
+
+    /// @inheritdoc IGroupManager
     function getExpandableInfo(
         uint256 groupId
     )

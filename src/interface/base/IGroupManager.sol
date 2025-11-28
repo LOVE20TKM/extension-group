@@ -175,6 +175,14 @@ interface IGroupManager {
         address owner
     ) external view returns (uint256);
 
+    /// @notice Get minimum stake required to start a group
+    function getMinStakeToStart() external view returns (uint256);
+
+    /// @notice Get remaining capacity for a group
+    function getRemainingCapacity(
+        uint256 groupId
+    ) external view returns (uint256);
+
     /// @notice Get expandable info for a group
     /// @return currentCapacity Current group capacity
     /// @return maxCapacity Max capacity based on owner's governance votes
