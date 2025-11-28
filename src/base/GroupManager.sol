@@ -325,6 +325,13 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         return (group.totalJoinedAmount + amount <= group.capacity);
     }
 
+    /// @inheritdoc IGroupManager
+    function calculateStakeForCapacity(
+        uint256 capacity
+    ) public view returns (uint256) {
+        return capacity / stakingMultiplier;
+    }
+
     // ============================================
     // CAPACITY CALCULATION (INTERNAL)
     // ============================================

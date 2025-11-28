@@ -164,4 +164,9 @@ interface IGroupManager {
         uint256 groupId,
         uint256 amount
     ) external view returns (bool);
+
+    /// @notice Calculate stake required for a given capacity
+    function calculateStakeForCapacity(
+        uint256 capacity
+    ) external view returns (uint256);
 }
