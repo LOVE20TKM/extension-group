@@ -332,6 +332,40 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
         return capacity / stakingMultiplier;
     }
 
+    /// @inheritdoc IGroupManager
+    function getMaxCapacityForOwner(
+        address owner
+    ) public view returns (uint256) {
+        return _calculateMaxCapacityForOwner(owner);
+    }
+
+    /// @inheritdoc IGroupManager
+    function getExpandableInfo(
+        uint256 groupId
+    )
+        public
+        view
+        returns (
+            uint256 currentCapacity,
+            uint256 maxCapacity,
+            uint256 currentStake,
+            uint256 maxStake,
+            uint256 additionalStakeAllowed
+        )
+    {
+        GroupInfo memory group = _groups[groupId];
+        address owner = _groupAddress.ownerOf(groupId);
+
+        currentCapacity = group.capacity;
+        currentStake = group.stakedAmount;
+        maxCapacity = _calculateMaxCapacityForOwner(owner);
+        maxStake = maxCapacity / stakingMultiplier;
+
+        if (maxStake > currentStake) {
+            additionalStakeAllowed = maxStake - currentStake;
+        }
+    }
+
     // ============================================
     // CAPACITY CALCULATION (INTERNAL)
     // ============================================

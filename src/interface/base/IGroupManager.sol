@@ -169,4 +169,28 @@ interface IGroupManager {
     function calculateStakeForCapacity(
         uint256 capacity
     ) external view returns (uint256);
+
+    /// @notice Get max capacity for owner based on governance votes
+    function getMaxCapacityForOwner(
+        address owner
+    ) external view returns (uint256);
+
+    /// @notice Get expandable info for a group
+    /// @return currentCapacity Current group capacity
+    /// @return maxCapacity Max capacity based on owner's governance votes
+    /// @return currentStake Current staked amount
+    /// @return maxStake Max stake allowed (to reach maxCapacity)
+    /// @return additionalStakeAllowed Additional stake that can be added
+    function getExpandableInfo(
+        uint256 groupId
+    )
+        external
+        view
+        returns (
+            uint256 currentCapacity,
+            uint256 maxCapacity,
+            uint256 currentStake,
+            uint256 maxStake,
+            uint256 additionalStakeAllowed
+        );
 }
