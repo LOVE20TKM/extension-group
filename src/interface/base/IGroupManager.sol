@@ -2,23 +2,17 @@
 pragma solidity =0.8.17;
 
 interface IGroupManager {
-    // ============================================
-    // ERRORS
-    // ============================================
+    // ============ Errors ============
 
     error GroupNotFound();
     error GroupAlreadyActivated();
     error GroupAlreadyDeactivated();
-    error OnlyGroupOwner();
-    error OnlyGroupOwnerOrVerifier();
     error GroupNotActive();
     error InvalidGroupParameters();
     error CannotDeactivateInActivatedRound();
-    error NotGroupNFTOwner();
+    error OnlyGroupOwner();
 
-    // ============================================
-    // EVENTS
-    // ============================================
+    // ============ Events ============
 
     event GroupActivated(
         uint256 indexed groupId,
@@ -27,34 +21,27 @@ interface IGroupManager {
         uint256 capacity,
         uint256 round
     );
-
     event GroupExpanded(
         uint256 indexed groupId,
         uint256 additionalStake,
         uint256 newCapacity
     );
-
     event GroupDeactivated(
         uint256 indexed groupId,
         uint256 round,
         uint256 returnedStake
     );
-
     event GroupInfoUpdated(
         uint256 indexed groupId,
         string newDescription,
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount
     );
-
     event GroupVerifierSet(uint256 indexed groupId, address indexed verifier);
 
-    // ============================================
-    // STRUCTS
-    // ============================================
+    // ============ Structs ============
 
-    /// @notice Group information structure
-    /// @dev owner is not stored, retrieved via _groupAddress.ownerOf(groupId)
+    /// @notice Group information (owner retrieved via NFT ownerOf)
     struct GroupInfo {
         uint256 groupId;
         address verifier;
@@ -69,11 +56,8 @@ interface IGroupManager {
         uint256 deactivatedRound; // 0 = not deactivated
     }
 
-    // ============================================
-    // FUNCTIONS
-    // ============================================
+    // ============ Write Functions ============
 
-    /// @notice Activate a group (must own Group NFT)
     function activateGroup(
         uint256 groupId,
         string memory description,
@@ -82,13 +66,10 @@ interface IGroupManager {
         uint256 groupMaxJoinAmount
     ) external returns (bool);
 
-    /// @notice Expand group capacity
     function expandGroup(uint256 groupId, uint256 additionalStake) external;
 
-    /// @notice Deactivate a group
     function deactivateGroup(uint256 groupId) external;
 
-    /// @notice Update group info (description, min/max join amounts)
     function updateGroupInfo(
         uint256 groupId,
         string memory newDescription,
@@ -96,104 +77,39 @@ interface IGroupManager {
         uint256 newMaxJoinAmount
     ) external;
 
-    /// @notice Set group verifier
     function setGroupVerifier(uint256 groupId, address verifier) external;
 
-    // ============================================
-    // VIEW FUNCTIONS
-    // ============================================
+    // ============ View Functions ============
 
-    /// @notice Get Group NFT contract address
     function groupAddress() external view returns (address);
-
-    /// @notice Get group information
     function getGroupInfo(
         uint256 groupId
     ) external view returns (GroupInfo memory);
-
-    /// @notice Get group owner (from NFT)
-    function getGroupOwner(uint256 groupId) external view returns (address);
-
-    /// @notice Get all groups owned by an address
     function getGroupsByOwner(
         address owner
     ) external view returns (uint256[] memory);
-
-    /// @notice Get all activated group IDs
     function getAllActivatedGroupIds() external view returns (uint256[] memory);
-
-    /// @notice Check if group is active
     function isGroupActive(uint256 groupId) external view returns (bool);
-
-    /// @notice Check if address can verify a group
     function canVerify(
         address verifier,
         uint256 groupId
     ) external view returns (bool);
 
-    // ============================================
-    // CAPACITY FUNCTIONS
-    // ============================================
-
-    /// @notice Get minimum governance vote ratio
-    function minGovernanceVoteRatio() external view returns (uint256);
-
-    /// @notice Get capacity multiplier
+    // --- Config Parameters (immutable) ---
+    function minGovVoteRatioBps() external view returns (uint256);
     function capacityMultiplier() external view returns (uint256);
-
-    /// @notice Get staking multiplier
     function stakingMultiplier() external view returns (uint256);
-
-    /// @notice Get max join amount multiplier
     function maxJoinAmountMultiplier() external view returns (uint256);
-
-    /// @notice Get minimum join amount
     function minJoinAmount() external view returns (uint256);
 
-    /// @notice Calculate group capacity
-    function calculateGroupCapacity(
-        address owner,
-        uint256 stakedAmount
-    ) external view returns (uint256);
-
-    /// @notice Calculate max amount for join
+    // --- Capacity ---
     function calculateJoinMaxAmount() external view returns (uint256);
-
-    /// @notice Check if capacity is available for amount
-    function checkCapacityAvailable(
-        uint256 groupId,
-        uint256 amount
-    ) external view returns (bool);
-
-    /// @notice Calculate stake required for a given capacity
-    function calculateStakeForCapacity(
-        uint256 capacity
-    ) external view returns (uint256);
-
-    /// @notice Get max capacity for owner based on governance votes
     function getMaxCapacityForOwner(
         address owner
     ) external view returns (uint256);
-
-    /// @notice Get minimum stake required to activate a group
-    function getMinStakeToActivate() external view returns (uint256);
-
-    /// @notice Get remaining capacity for a group
-    function getRemainingCapacity(
-        uint256 groupId
-    ) external view returns (uint256);
-
-    /// @notice Get total staked amount by owner across all active groups
     function getTotalStakedByOwner(
         address owner
     ) external view returns (uint256);
-
-    /// @notice Get expandable info for caller's all active groups
-    /// @return currentCapacity Total capacity of all active groups
-    /// @return maxCapacity Max capacity based on caller's governance votes
-    /// @return currentStake Total staked amount across all active groups
-    /// @return maxStake Max stake allowed (to reach maxCapacity)
-    /// @return additionalStakeAllowed Additional stake that can be added
     function getExpandableInfo()
         external
         view
