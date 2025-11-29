@@ -7,7 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {ArrayUtils} from "@core/lib/ArrayUtils.sol";
+import {RoundHistory} from "@extension/src/lib/RoundHistory.sol";
+
+using RoundHistory for RoundHistory.History;
 
 /// @title GroupTokenJoin
 /// @notice Handles token-based group joining and exiting
@@ -26,16 +28,13 @@ abstract contract GroupTokenJoin is
 
     // Account state
     mapping(address => JoinInfo) internal _joinInfo;
-    mapping(address => uint256[]) internal _accountGroupChangeRounds;
-    mapping(address => mapping(uint256 => uint256))
-        internal _accountGroupByRound;
+    mapping(address => RoundHistory.History) internal _accountGroupHistory;
 
     // Group state
     mapping(uint256 => address[]) internal _groupAccounts;
     mapping(uint256 => mapping(address => uint256))
         internal _accountIndexInGroup;
-    mapping(uint256 => uint256[]) internal _groupTotalChangeRounds;
-    mapping(uint256 => mapping(uint256 => uint256)) internal _groupTotalByRound;
+    mapping(uint256 => RoundHistory.History) internal _groupTotalHistory;
 
     // ============ Constructor ============
 
@@ -144,24 +143,14 @@ abstract contract GroupTokenJoin is
         address account,
         uint256 round
     ) public view returns (uint256) {
-        (bool found, uint256 nearestRound) = ArrayUtils
-            .findLeftNearestOrEqualValue(
-                _accountGroupChangeRounds[account],
-                round
-            );
-        return found ? _accountGroupByRound[account][nearestRound] : 0;
+        return _accountGroupHistory[account].value(round);
     }
 
     function getGroupTotalByRound(
         uint256 groupId,
         uint256 round
     ) public view returns (uint256) {
-        (bool found, uint256 nearestRound) = ArrayUtils
-            .findLeftNearestOrEqualValue(
-                _groupTotalChangeRounds[groupId],
-                round
-            );
-        return found ? _groupTotalByRound[groupId][nearestRound] : 0;
+        return _groupTotalHistory[groupId].value(round);
     }
 
     // ============ Internal Functions ============
@@ -171,11 +160,7 @@ abstract contract GroupTokenJoin is
         uint256 groupId,
         uint256 round
     ) internal {
-        uint256[] storage rounds = _accountGroupChangeRounds[account];
-        if (rounds.length == 0 || rounds[rounds.length - 1] != round) {
-            rounds.push(round);
-        }
-        _accountGroupByRound[account][round] = groupId;
+        _accountGroupHistory[account].record(round, groupId);
     }
 
     function _recordGroupTotal(
@@ -183,11 +168,7 @@ abstract contract GroupTokenJoin is
         uint256 total,
         uint256 round
     ) internal {
-        uint256[] storage rounds = _groupTotalChangeRounds[groupId];
-        if (rounds.length == 0 || rounds[rounds.length - 1] != round) {
-            rounds.push(round);
-        }
-        _groupTotalByRound[groupId][round] = total;
+        _groupTotalHistory[groupId].record(round, total);
     }
 
     function _addAccountToGroup(uint256 groupId, address account) internal {
