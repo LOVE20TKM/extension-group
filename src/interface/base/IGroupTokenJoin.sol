@@ -50,6 +50,13 @@ interface IGroupTokenJoin {
     function accountsByGroupId(
         uint256 groupId
     ) external view returns (address[] memory);
+    function accountsByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256);
+    function accountsByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address);
 
     function groupIdByAccountByRound(
         address account,

@@ -7,9 +7,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {RoundHistory} from "@extension/src/lib/RoundHistory.sol";
+import {RoundUint256History} from "@extension/src/lib/RoundUint256History.sol";
 
-using RoundHistory for RoundHistory.History;
+using RoundUint256History for RoundUint256History.History;
 
 /// @title GroupTokenJoin
 /// @notice Handles token-based group joining and exiting
@@ -28,13 +28,14 @@ abstract contract GroupTokenJoin is
 
     // Account state
     mapping(address => JoinInfo) internal _joinInfo;
-    mapping(address => RoundHistory.History) internal _groupIdHistoryByAccount;
+    mapping(address => RoundUint256History.History)
+        internal _groupIdHistoryByAccount;
 
     // Group state
     mapping(uint256 => address[]) internal _accountsByGroupId;
     mapping(uint256 => mapping(address => uint256))
         internal _accountIndexInGroup;
-    mapping(uint256 => RoundHistory.History)
+    mapping(uint256 => RoundUint256History.History)
         internal _totalJoinedAmountHistoryByGroupId;
 
     // ============ Constructor ============
@@ -142,6 +143,17 @@ abstract contract GroupTokenJoin is
         uint256 groupId
     ) external view returns (address[] memory) {
         return _accountsByGroupId[groupId];
+    }
+    function accountsByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _accountsByGroupId[groupId].length;
+    }
+    function accountsByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address) {
+        return _accountsByGroupId[groupId][index];
     }
 
     function groupIdByAccountByRound(

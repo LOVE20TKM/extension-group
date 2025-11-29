@@ -89,8 +89,6 @@ interface IGroupManager {
 
     // ============ View Functions ============
 
-    function GROUP_ADDRESS() external view returns (address);
-    function STAKE_TOKEN_ADDRESS() external view returns (address);
     function groupInfo(
         uint256 groupId
     ) external view returns (GroupInfo memory);
@@ -98,6 +96,11 @@ interface IGroupManager {
         address owner
     ) external view returns (uint256[] memory);
     function activeGroupIds() external view returns (uint256[] memory);
+    function activeGroupIdsCount() external view returns (uint256);
+    function activeGroupIdsAtIndex(
+        uint256 index
+    ) external view returns (uint256 groupId);
+
     function isGroupActive(uint256 groupId) external view returns (bool);
     function canVerify(
         address account,
@@ -105,6 +108,8 @@ interface IGroupManager {
     ) external view returns (bool);
 
     // --- Config Parameters (immutable) ---
+    function GROUP_ADDRESS() external view returns (address);
+    function STAKE_TOKEN_ADDRESS() external view returns (address);
     function MIN_GOV_VOTE_RATIO_BPS() external view returns (uint256);
     function CAPACITY_MULTIPLIER() external view returns (uint256);
     function STAKING_MULTIPLIER() external view returns (uint256);

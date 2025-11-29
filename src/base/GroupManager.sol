@@ -236,6 +236,14 @@ abstract contract GroupManager is ExtensionCore, IGroupManager {
     function activeGroupIds() external view returns (uint256[] memory) {
         return _activeGroupIds;
     }
+    function activeGroupIdsCount() external view returns (uint256) {
+        return _activeGroupIds.length;
+    }
+    function activeGroupIdsAtIndex(
+        uint256 index
+    ) external view returns (uint256 groupId) {
+        return _activeGroupIds[index];
+    }
 
     function isGroupActive(uint256 groupId) external view returns (bool) {
         GroupInfo storage group = _groupInfo[groupId];
