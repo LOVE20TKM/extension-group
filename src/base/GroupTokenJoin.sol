@@ -20,7 +20,7 @@ abstract contract GroupTokenJoin is
 {
     // ============ Immutables ============
 
-    address public immutable joinTokenAddress;
+    address public immutable JOIN_TOKEN_ADDRESS;
 
     // ============ State ============
 
@@ -28,19 +28,20 @@ abstract contract GroupTokenJoin is
 
     // Account state
     mapping(address => JoinInfo) internal _joinInfo;
-    mapping(address => RoundHistory.History) internal _accountGroupHistory;
+    mapping(address => RoundHistory.History) internal _groupIdHistoryByAccount;
 
     // Group state
-    mapping(uint256 => address[]) internal _groupAccounts;
+    mapping(uint256 => address[]) internal _accountsByGroupId;
     mapping(uint256 => mapping(address => uint256))
         internal _accountIndexInGroup;
-    mapping(uint256 => RoundHistory.History) internal _groupTotalHistory;
+    mapping(uint256 => RoundHistory.History)
+        internal _totalJoinedAmountHistoryByGroupId;
 
     // ============ Constructor ============
 
     constructor(address joinTokenAddress_) {
         if (joinTokenAddress_ == address(0)) revert InvalidAddress();
-        joinTokenAddress = joinTokenAddress_;
+        JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         _joinToken = IERC20(joinTokenAddress_);
     }
 
@@ -52,7 +53,7 @@ abstract contract GroupTokenJoin is
         _beforeJoin(groupId, msg.sender);
 
         JoinInfo storage info = _joinInfo[msg.sender];
-        GroupInfo storage group = _groups[groupId];
+        GroupInfo storage group = _groupInfo[groupId];
         bool isFirstJoin = info.groupId == 0;
 
         // Validate group and membership
@@ -63,7 +64,7 @@ abstract contract GroupTokenJoin is
 
         // Validate amount
         if (isFirstJoin) {
-            uint256 minAmount = _max(group.groupMinJoinAmount, minJoinAmount);
+            uint256 minAmount = _max(group.groupMinJoinAmount, MIN_JOIN_AMOUNT);
             if (amount < minAmount) revert AmountBelowMinimum();
         }
 
@@ -86,11 +87,14 @@ abstract contract GroupTokenJoin is
         info.amount = newTotal;
         group.totalJoinedAmount += amount;
 
-        _recordGroupTotal(groupId, group.totalJoinedAmount, currentRound);
+        _totalJoinedAmountHistoryByGroupId[groupId].record(
+            currentRound,
+            group.totalJoinedAmount
+        );
 
         if (isFirstJoin) {
             info.joinedRound = currentRound;
-            _recordAccountGroup(msg.sender, groupId, currentRound);
+            _groupIdHistoryByAccount[msg.sender].record(currentRound, groupId);
             _addAccountToGroup(groupId, msg.sender);
             _addAccount(msg.sender);
         }
@@ -108,12 +112,15 @@ abstract contract GroupTokenJoin is
         _beforeExit(groupId, msg.sender);
 
         uint256 currentRound = _join.currentRound();
-        GroupInfo storage group = _groups[groupId];
+        GroupInfo storage group = _groupInfo[groupId];
 
         // Update state
-        _recordAccountGroup(msg.sender, 0, currentRound);
+        _groupIdHistoryByAccount[msg.sender].record(currentRound, 0);
         group.totalJoinedAmount -= amount;
-        _recordGroupTotal(groupId, group.totalJoinedAmount, currentRound);
+        _totalJoinedAmountHistoryByGroupId[groupId].record(
+            currentRound,
+            group.totalJoinedAmount
+        );
 
         _removeAccountFromGroup(groupId, msg.sender);
         delete _joinInfo[msg.sender];
@@ -127,60 +134,43 @@ abstract contract GroupTokenJoin is
 
     // ============ View Functions ============
 
-    function getJoinInfo(
-        address account
-    ) external view returns (JoinInfo memory) {
+    function joinInfo(address account) external view returns (JoinInfo memory) {
         return _joinInfo[account];
     }
 
-    function getGroupAccounts(
+    function accountsByGroupId(
         uint256 groupId
     ) external view returns (address[] memory) {
-        return _groupAccounts[groupId];
+        return _accountsByGroupId[groupId];
     }
 
-    function getAccountGroupByRound(
+    function groupIdByAccountByRound(
         address account,
         uint256 round
     ) public view returns (uint256) {
-        return _accountGroupHistory[account].value(round);
+        return _groupIdHistoryByAccount[account].value(round);
     }
 
-    function getGroupTotalByRound(
+    function totalJoinedAmountByGroupIdByRound(
         uint256 groupId,
         uint256 round
     ) public view returns (uint256) {
-        return _groupTotalHistory[groupId].value(round);
+        return _totalJoinedAmountHistoryByGroupId[groupId].value(round);
     }
 
     // ============ Internal Functions ============
 
-    function _recordAccountGroup(
-        address account,
-        uint256 groupId,
-        uint256 round
-    ) internal {
-        _accountGroupHistory[account].record(round, groupId);
-    }
-
-    function _recordGroupTotal(
-        uint256 groupId,
-        uint256 total,
-        uint256 round
-    ) internal {
-        _groupTotalHistory[groupId].record(round, total);
-    }
-
     function _addAccountToGroup(uint256 groupId, address account) internal {
-        _accountIndexInGroup[groupId][account] = _groupAccounts[groupId].length;
-        _groupAccounts[groupId].push(account);
+        _accountIndexInGroup[groupId][account] = _accountsByGroupId[groupId]
+            .length;
+        _accountsByGroupId[groupId].push(account);
     }
 
     function _removeAccountFromGroup(
         uint256 groupId,
         address account
     ) internal {
-        address[] storage accounts = _groupAccounts[groupId];
+        address[] storage accounts = _accountsByGroupId[groupId];
         uint256 index = _accountIndexInGroup[groupId][account];
         uint256 lastIndex = accounts.length - 1;
 

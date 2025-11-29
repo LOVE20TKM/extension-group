@@ -29,6 +29,7 @@ abstract contract LOVE20ExtensionBaseGroup is
     /// @param factory_ The factory contract address
     /// @param tokenAddress_ The token address
     /// @param groupAddress_ The LOVE20Group NFT contract address
+    /// @param stakeTokenAddress_ The token used for staking by group owners
     /// @param minGovernanceVoteRatio_ Minimum governance vote ratio
     /// @param capacityMultiplier_ Capacity multiplier
     /// @param stakingMultiplier_ Staking multiplier
@@ -38,6 +39,7 @@ abstract contract LOVE20ExtensionBaseGroup is
         address factory_,
         address tokenAddress_,
         address groupAddress_,
+        address stakeTokenAddress_,
         uint256 minGovernanceVoteRatio_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
@@ -48,6 +50,7 @@ abstract contract LOVE20ExtensionBaseGroup is
             factory_,
             tokenAddress_,
             groupAddress_,
+            stakeTokenAddress_,
             minGovernanceVoteRatio_,
             capacityMultiplier_,
             stakingMultiplier_,

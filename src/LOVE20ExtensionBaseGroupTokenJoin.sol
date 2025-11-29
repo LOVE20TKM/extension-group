@@ -27,6 +27,7 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
     /// @param factory_ The factory contract address
     /// @param tokenAddress_ The token address
     /// @param groupAddress_ The LOVE20Group NFT contract address
+    /// @param stakeTokenAddress_ The token used for staking by group owners
     /// @param joinTokenAddress_ The token used for joining groups
     /// @param minGovernanceVoteRatio_ Minimum governance vote ratio
     /// @param capacityMultiplier_ Capacity multiplier
@@ -37,6 +38,7 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
         address factory_,
         address tokenAddress_,
         address groupAddress_,
+        address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 minGovernanceVoteRatio_,
         uint256 capacityMultiplier_,
@@ -49,6 +51,7 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
             factory_,
             tokenAddress_,
             groupAddress_,
+            stakeTokenAddress_,
             minGovernanceVoteRatio_,
             capacityMultiplier_,
             stakingMultiplier_,
@@ -82,9 +85,9 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
     /// @notice Get total joined value across all groups
     function joinedValue() public view override returns (uint256) {
         uint256 total = 0;
-        uint256[] memory groupIds = this.getAllActivatedGroupIds();
+        uint256[] memory groupIds = this.activeGroupIds();
         for (uint256 i = 0; i < groupIds.length; i++) {
-            total += _groups[groupIds[i]].totalJoinedAmount;
+            total += _groupInfo[groupIds[i]].totalJoinedAmount;
         }
         return total;
     }

@@ -45,20 +45,18 @@ interface IGroupTokenJoin {
 
     // ============ View Functions ============
 
-    function getJoinInfo(
-        address account
-    ) external view returns (JoinInfo memory);
+    function joinInfo(address account) external view returns (JoinInfo memory);
 
-    function getGroupAccounts(
+    function accountsByGroupId(
         uint256 groupId
     ) external view returns (address[] memory);
 
-    function getAccountGroupByRound(
+    function groupIdByAccountByRound(
         address account,
         uint256 round
     ) external view returns (uint256);
 
-    function getGroupTotalByRound(
+    function totalJoinedAmountByGroupIdByRound(
         uint256 groupId,
         uint256 round
     ) external view returns (uint256);
