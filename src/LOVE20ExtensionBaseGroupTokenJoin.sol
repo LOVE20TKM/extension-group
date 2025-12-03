@@ -79,32 +79,6 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoin is
     }
 
     // ============================================
-    // IMPLEMENTATION: IEXTENSIONJOINEDVALUE
-    // ============================================
-
-    /// @notice Get total joined value across all groups
-    function joinedValue() public view override returns (uint256) {
-        uint256 total = 0;
-        uint256[] memory groupIds = this.activeGroupIds();
-        for (uint256 i = 0; i < groupIds.length; i++) {
-            total += _groupInfo[groupIds[i]].totalJoinedAmount;
-        }
-        return total;
-    }
-
-    /// @notice Get joined value for a specific account
-    function joinedValueByAccount(
-        address account
-    ) public view override returns (uint256) {
-        return _joinInfo[account].amount;
-    }
-
-    /// @notice Check if joined value is calculated
-    function isJoinedValueCalculated() public pure override returns (bool) {
-        return true;
-    }
-
-    // ============================================
     // IMPLEMENTATION: IEXTENSIONEXIT
     // ============================================
 

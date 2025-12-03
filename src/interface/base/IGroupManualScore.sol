@@ -35,7 +35,24 @@ interface IGroupSnapshot {
     ) external view returns (uint256);
 
     function snapshotAmount(uint256 round) external view returns (uint256);
+
+    function snapshotGroupIds(
+        uint256 round
+    ) external view returns (uint256[] memory);
+
+    function snapshotGroupIdsCount(
+        uint256 round
+    ) external view returns (uint256);
+
+    function snapshotGroupIdAtIndex(
+        uint256 round,
+        uint256 index
+    ) external view returns (uint256);
 }
+
+// ============ Constants ============
+
+uint256 constant MAX_ORIGIN_SCORE = 100;
 
 /// @title IGroupScore
 /// @notice Interface for group verification scoring
@@ -43,17 +60,15 @@ interface IGroupScore {
     // ============ Errors ============
 
     error NotVerifier();
-    error InvalidScoreTotal();
+    error ScoreExceedsMax();
+    error ScoresCountMismatch();
+    error VerifierCapacityExceeded();
     error VerificationAlreadySubmitted();
     error NoSnapshotForRound();
 
     // ============ Events ============
 
-    event ScoreSubmitted(
-        uint256 indexed round,
-        uint256 indexed groupId,
-        uint256 totalScore
-    );
+    event ScoreSubmitted(uint256 indexed round, uint256 indexed groupId);
 
     // ============ Write Functions ============
 
@@ -68,13 +83,6 @@ interface IGroupScore {
         uint256 round,
         address account
     ) external view returns (uint256);
-
-    function originScoreByGroupId(
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256);
-
-    function originScore(uint256 round) external view returns (uint256);
 
     function scoreByAccount(
         uint256 round,
@@ -137,3 +145,7 @@ interface IGroupDistrust {
         address groupOwner
     ) external view returns (uint256 distrustVotes, uint256 totalVerifyVotes);
 }
+
+/// @title IGroupManualScore
+/// @notice Combined interface for manual scoring functionality
+interface IGroupManualScore is IGroupSnapshot, IGroupScore, IGroupDistrust {}
