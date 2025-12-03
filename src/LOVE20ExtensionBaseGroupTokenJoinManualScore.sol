@@ -57,6 +57,9 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
     /// @dev round => list of snapshotted group ids
     mapping(uint256 => uint256[]) internal _snapshotGroupIds;
 
+    /// @dev round => list of snapshotted verifiers
+    mapping(uint256 => address[]) internal _snapshotVerifiers;
+
     // ============ State - Score ============
 
     /// @dev round => account => origin score [0-100]
@@ -85,9 +88,13 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
     mapping(uint256 => mapping(address => uint256))
         internal _distrustVotesByGroupOwner;
 
-    /// @dev round => voter => groupOwner => whether voted
-    mapping(uint256 => mapping(address => mapping(address => bool)))
-        internal _hasVotedDistrust;
+    /// @dev round => voter => groupOwner => distrust votes for this groupOwner
+    mapping(uint256 => mapping(address => mapping(address => uint256)))
+        internal _distrustVotesByVoterByGroupOwner;
+
+    /// @dev round => voter => groupOwner => reason
+    mapping(uint256 => mapping(address => mapping(address => string)))
+        internal _distrustReason;
 
     // ============ State - Reward ============
 
@@ -145,6 +152,23 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
     }
 
     /// @inheritdoc IGroupSnapshot
+    function snapshotAccountsByGroupIdCount(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _snapshotAccountsByGroupId[round][groupId].length;
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotAccountsByGroupIdAtIndex(
+        uint256 round,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address) {
+        return _snapshotAccountsByGroupId[round][groupId][index];
+    }
+
+    /// @inheritdoc IGroupSnapshot
     function snapshotAmountByAccount(
         uint256 round,
         address account
@@ -177,11 +201,58 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
         return _snapshotGroupIds[round].length;
     }
 
-    function snapshotGroupIdAtIndex(
+    function snapshotGroupIdsAtIndex(
         uint256 round,
         uint256 index
     ) external view returns (uint256) {
         return _snapshotGroupIds[round][index];
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotVerifiers(
+        uint256 round
+    ) external view returns (address[] memory) {
+        return _snapshotVerifiers[round];
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotVerifiersCount(
+        uint256 round
+    ) external view returns (uint256) {
+        return _snapshotVerifiers[round].length;
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotVerifiersAtIndex(
+        uint256 round,
+        uint256 index
+    ) external view returns (address) {
+        return _snapshotVerifiers[round][index];
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotGroupIdsByVerifier(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256[] memory) {
+        return _snapshotGroupIdsByVerifier[round][verifier];
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotGroupIdsByVerifierCount(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256) {
+        return _snapshotGroupIdsByVerifier[round][verifier].length;
+    }
+
+    /// @inheritdoc IGroupSnapshot
+    function snapshotGroupIdsByVerifierAtIndex(
+        uint256 round,
+        address verifier,
+        uint256 index
+    ) external view returns (uint256) {
+        return _snapshotGroupIdsByVerifier[round][verifier][index];
     }
 
     // ============ IGroupScore Implementation ============
@@ -307,20 +378,24 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
         );
         if (verifyVotes == 0) revert NotGovernor();
 
-        // Check not already voted for this group owner
-        if (_hasVotedDistrust[currentRound][msg.sender][groupOwner]) {
-            revert AlreadyVotedDistrust();
-        }
-
-        // Check amount doesn't exceed verify votes
-        if (amount > verifyVotes) revert DistrustVoteExceedsLimit();
+        // Check accumulated votes for this groupOwner don't exceed verify votes
+        if (
+            _distrustVotesByVoterByGroupOwner[currentRound][msg.sender][
+                groupOwner
+            ] +
+                amount >
+            verifyVotes
+        ) revert DistrustVoteExceedsLimit();
 
         // Check reason is not empty
         if (bytes(reason).length == 0) revert InvalidReason();
 
         // Record vote
-        _hasVotedDistrust[currentRound][msg.sender][groupOwner] = true;
+        _distrustVotesByVoterByGroupOwner[currentRound][msg.sender][
+            groupOwner
+        ] += amount;
         _distrustVotesByGroupOwner[currentRound][groupOwner] += amount;
+        _distrustReason[currentRound][msg.sender][groupOwner] = reason;
 
         // Update distrust for all active groups owned by this owner
         _updateDistrustForOwnerGroups(currentRound, groupOwner);
@@ -358,6 +433,24 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
     ) external view returns (uint256 distrustVotes, uint256 totalVerifyVotes) {
         distrustVotes = _distrustVotesByGroupOwner[round][groupOwner];
         totalVerifyVotes = _getTotalNonAbstainVerifyVotes(round);
+    }
+
+    /// @inheritdoc IGroupDistrust
+    function distrustVotesByVoterByGroupOwner(
+        uint256 round,
+        address voter,
+        address groupOwner
+    ) external view returns (uint256) {
+        return _distrustVotesByVoterByGroupOwner[round][voter][groupOwner];
+    }
+
+    /// @inheritdoc IGroupDistrust
+    function distrustReason(
+        uint256 round,
+        address voter,
+        address groupOwner
+    ) external view returns (string memory) {
+        return _distrustReason[round][voter][groupOwner];
     }
 
     // ============ IGroupReward Implementation ============
@@ -472,6 +565,11 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
         // Snapshot verifier and record groupId under verifier
         address owner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
         _snapshotVerifierByGroupId[round][groupId] = owner;
+
+        // Add verifier to list if first group for this verifier
+        if (_snapshotGroupIdsByVerifier[round][owner].length == 0) {
+            _snapshotVerifiers[round].push(owner);
+        }
         _snapshotGroupIdsByVerifier[round][owner].push(groupId);
 
         emit SnapshotCreated(round, groupId);

@@ -19,10 +19,25 @@ interface IGroupSnapshot {
 
     // ============ View Functions ============
 
+    // Accounts by GroupId
+
     function snapshotAccountsByGroupId(
         uint256 round,
         uint256 groupId
     ) external view returns (address[] memory);
+
+    function snapshotAccountsByGroupIdCount(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function snapshotAccountsByGroupIdAtIndex(
+        uint256 round,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address);
+
+    // Amount
 
     function snapshotAmountByAccount(
         uint256 round,
@@ -36,6 +51,8 @@ interface IGroupSnapshot {
 
     function snapshotAmount(uint256 round) external view returns (uint256);
 
+    // GroupIds
+
     function snapshotGroupIds(
         uint256 round
     ) external view returns (uint256[] memory);
@@ -44,8 +61,41 @@ interface IGroupSnapshot {
         uint256 round
     ) external view returns (uint256);
 
-    function snapshotGroupIdAtIndex(
+    function snapshotGroupIdsAtIndex(
         uint256 round,
+        uint256 index
+    ) external view returns (uint256);
+
+    // Verifiers
+
+    function snapshotVerifiers(
+        uint256 round
+    ) external view returns (address[] memory);
+
+    function snapshotVerifiersCount(
+        uint256 round
+    ) external view returns (uint256);
+
+    function snapshotVerifiersAtIndex(
+        uint256 round,
+        uint256 index
+    ) external view returns (address);
+
+    // GroupIds by Verifier
+
+    function snapshotGroupIdsByVerifier(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256[] memory);
+
+    function snapshotGroupIdsByVerifierCount(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256);
+
+    function snapshotGroupIdsByVerifierAtIndex(
+        uint256 round,
+        address verifier,
         uint256 index
     ) external view returns (uint256);
 }
@@ -104,7 +154,6 @@ interface IGroupDistrust {
 
     error NotGovernor();
     error DistrustVoteExceedsLimit();
-    error AlreadyVotedDistrust();
     error InvalidReason();
 
     // ============ Events ============
@@ -144,6 +193,20 @@ interface IGroupDistrust {
         uint256 round,
         address groupOwner
     ) external view returns (uint256 distrustVotes, uint256 totalVerifyVotes);
+
+    /// @notice Get distrust votes for a specific groupOwner by a voter
+    function distrustVotesByVoterByGroupOwner(
+        uint256 round,
+        address voter,
+        address groupOwner
+    ) external view returns (uint256);
+
+    /// @notice Get distrust reason for a specific groupOwner by a voter
+    function distrustReason(
+        uint256 round,
+        address voter,
+        address groupOwner
+    ) external view returns (string memory);
 }
 
 /// @title IGroupManualScore
