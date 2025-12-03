@@ -67,4 +67,9 @@ interface IGroupTokenJoin {
         uint256 groupId,
         uint256 round
     ) external view returns (uint256);
+
+    function totalJoinedAmount() external view returns (uint256);
+    function totalJoinedAmountByRound(
+        uint256 round
+    ) external view returns (uint256);
 }

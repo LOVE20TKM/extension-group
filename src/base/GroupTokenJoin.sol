@@ -37,6 +37,8 @@ abstract contract GroupTokenJoin is
         internal _accountIndexInGroup;
     mapping(uint256 => RoundUint256History.History)
         internal _totalJoinedAmountHistoryByGroupId;
+    RoundUint256History.History internal _totalJoinedAmountHistory;
+    uint256 internal _totalJoinedAmount;
 
     // ============ Constructor ============
 
@@ -91,6 +93,8 @@ abstract contract GroupTokenJoin is
             currentRound,
             group.totalJoinedAmount
         );
+        _totalJoinedAmount += amount;
+        _totalJoinedAmountHistory.record(currentRound, _totalJoinedAmount);
 
         if (isFirstJoin) {
             info.joinedRound = currentRound;
@@ -121,6 +125,8 @@ abstract contract GroupTokenJoin is
             currentRound,
             group.totalJoinedAmount
         );
+        _totalJoinedAmount -= amount;
+        _totalJoinedAmountHistory.record(currentRound, _totalJoinedAmount);
 
         _removeAccountFromGroup(groupId, msg.sender);
         delete _joinInfo[msg.sender];
@@ -167,6 +173,16 @@ abstract contract GroupTokenJoin is
         uint256 round
     ) public view returns (uint256) {
         return _totalJoinedAmountHistoryByGroupId[groupId].value(round);
+    }
+
+    function totalJoinedAmount() public view returns (uint256) {
+        return _totalJoinedAmount;
+    }
+
+    function totalJoinedAmountByRound(
+        uint256 round
+    ) public view returns (uint256) {
+        return _totalJoinedAmountHistory.value(round);
     }
 
     // ============ Internal Functions ============
