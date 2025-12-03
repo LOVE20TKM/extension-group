@@ -14,10 +14,10 @@ import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
 import {IExtensionExit} from "@extension/src/interface/base/IExtensionExit.sol";
 import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 
-/// @title LOVE20ExtensionBaseGroupTokenJoinManualScore
+/// @title LOVE20ExtensionGroupAction
 /// @notice Extension contract for manual scoring verification in group-based actions
-/// @dev Combines GroupReward (includes Snapshot, Score, Distrust) with Extension interfaces
-abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
+/// @dev Uses tokenAddress as both joinToken and stakeToken
+contract LOVE20ExtensionGroupAction is
     GroupTokenJoinSnapshotManualScoreDistrustReward,
     ExtensionAccounts,
     ExtensionVerificationInfo,
@@ -30,8 +30,6 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
         address factory_,
         address tokenAddress_,
         address groupAddress_,
-        address stakeTokenAddress_,
-        address joinTokenAddress_,
         uint256 minGovernanceVoteRatio_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
@@ -43,14 +41,14 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
             factory_,
             tokenAddress_,
             groupAddress_,
-            stakeTokenAddress_,
+            tokenAddress_, // stakeTokenAddress = tokenAddress
             minGovernanceVoteRatio_,
             capacityMultiplier_,
             stakingMultiplier_,
             maxJoinAmountMultiplier_,
             minJoinAmount_
         )
-        GroupTokenJoin(joinTokenAddress_)
+        GroupTokenJoin(tokenAddress_) // joinTokenAddress = tokenAddress
     {}
 
     // ============ Override: Account Management ============
@@ -71,5 +69,21 @@ abstract contract LOVE20ExtensionBaseGroupTokenJoinManualScore is
 
     function exit() public override(GroupTokenJoin, IExtensionExit) {
         GroupTokenJoin.exit();
+    }
+
+    // ============ IExtensionJoinedValue Implementation ============
+
+    function isJoinedValueCalculated() external pure returns (bool) {
+        return false;
+    }
+
+    function joinedValue() external view returns (uint256) {
+        return totalJoinedAmount();
+    }
+
+    function joinedValueByAccount(
+        address account
+    ) external view returns (uint256) {
+        return _joinInfo[account].amount;
     }
 }
