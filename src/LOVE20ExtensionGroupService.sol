@@ -62,12 +62,12 @@ contract LOVE20ExtensionGroupService is
 
     // ============ Constants ============
 
-    uint256 public constant MAX_RECIPIENTS = 10;
     uint256 public constant BASIS_POINTS_BASE = 10000;
 
     // ============ Immutables ============
 
     address public immutable GROUP_ACTION_ADDRESS;
+    uint256 public immutable MAX_RECIPIENTS;
 
     // ============ Storage ============
 
@@ -84,9 +84,11 @@ contract LOVE20ExtensionGroupService is
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupActionAddress_
+        address groupActionAddress_,
+        uint256 maxRecipients_
     ) ExtensionReward(factory_, tokenAddress_) {
         GROUP_ACTION_ADDRESS = groupActionAddress_;
+        MAX_RECIPIENTS = maxRecipients_;
     }
 
     // ============ Write Functions ============

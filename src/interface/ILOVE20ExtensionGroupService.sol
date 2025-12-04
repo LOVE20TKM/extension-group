@@ -30,12 +30,12 @@ interface ILOVE20ExtensionGroupService is ILOVE20Extension {
 
     // ============ Constants ============
 
-    function MAX_RECIPIENTS() external view returns (uint256);
     function BASIS_POINTS_BASE() external view returns (uint256);
 
-    // ============ View Functions ============
+    // ============ Immutables ============
 
     function GROUP_ACTION_ADDRESS() external view returns (address);
+    function MAX_RECIPIENTS() external view returns (uint256);
 
     function getRecipientsByRound(
         address account,
