@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
-import {ExtensionReward} from "@extension/src/base/ExtensionReward.sol";
 import {
-    ExtensionVerificationInfo
-} from "@extension/src/base/ExtensionVerificationInfo.sol";
-import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
-import {IExtensionExit} from "@extension/src/interface/base/IExtensionExit.sol";
+    LOVE20ExtensionBaseJoin
+} from "@extension/src/LOVE20ExtensionBaseJoin.sol";
+import {Join as JoinBase} from "@extension/src/base/Join.sol";
+import {IJoin} from "@extension/src/interface/base/IJoin.sol";
 import {
     ILOVE20ExtensionGroupAction
 } from "./interface/ILOVE20ExtensionGroupAction.sol";
@@ -29,36 +27,12 @@ import {
 /// @notice Extension contract for rewarding group service providers
 /// @dev Service reward = Total service reward × (Account's group action reward / Group action total reward)
 contract LOVE20ExtensionGroupService is
-    ExtensionAccounts,
-    ExtensionReward,
-    ExtensionVerificationInfo,
-    ILOVE20Extension
+    LOVE20ExtensionBaseJoin,
+    ILOVE20ExtensionGroupService
 {
     using EnumerableSet for EnumerableSet.AddressSet;
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
-
-    // ============ Errors ============
-
-    error NoActiveGroups();
-    error AlreadyJoined();
-    error NotJoined();
-    error InvalidBasisPoints();
-    error TooManyRecipients();
-    error ZeroAddress();
-    error ZeroBasisPoints();
-    error ArrayLengthMismatch();
-
-    // ============ Events ============
-
-    event Join(address indexed account, uint256 joinedValue, uint256 round);
-    event Exit(address indexed account, uint256 round);
-    event RecipientsUpdated(
-        address indexed account,
-        uint256 round,
-        address[] recipients,
-        uint256[] basisPoints
-    );
 
     // ============ Constants ============
 
@@ -86,7 +60,7 @@ contract LOVE20ExtensionGroupService is
         address tokenAddress_,
         address groupActionAddress_,
         uint256 maxRecipients_
-    ) ExtensionReward(factory_, tokenAddress_) {
+    ) LOVE20ExtensionBaseJoin(factory_, tokenAddress_) {
         GROUP_ACTION_ADDRESS = groupActionAddress_;
         MAX_RECIPIENTS = maxRecipients_;
     }
@@ -94,18 +68,14 @@ contract LOVE20ExtensionGroupService is
     // ============ Write Functions ============
 
     /// @notice Join the service reward action
-    function join() external {
-        _autoInitialize();
-
-        if (_accounts.contains(msg.sender)) revert AlreadyJoined();
-
+    function join(
+        string[] memory verificationInfos
+    ) public override(IJoin, JoinBase) {
         uint256 stakedAmount = ILOVE20ExtensionGroupAction(GROUP_ACTION_ADDRESS)
             .totalStakedByOwner(msg.sender);
         if (stakedAmount == 0) revert NoActiveGroups();
 
-        _addAccount(msg.sender);
-
-        emit Join(msg.sender, stakedAmount, _join.currentRound());
+        super.join(verificationInfos);
     }
 
     /// @notice Set reward recipients for the caller
@@ -113,14 +83,10 @@ contract LOVE20ExtensionGroupService is
         address[] calldata addrs,
         uint256[] calldata basisPoints
     ) external {
-        if (!_accounts.contains(msg.sender)) revert NotJoined();
+        if (!_center.isAccountJoined(tokenAddress, actionId, msg.sender)) {
+            revert NotJoined();
+        }
         _setRecipients(msg.sender, addrs, basisPoints);
-    }
-
-    /// @inheritdoc IExtensionExit
-    function exit() external {
-        _removeAccount(msg.sender);
-        emit Exit(msg.sender, _join.currentRound());
     }
 
     function _setRecipients(

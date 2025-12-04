@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
+import {
+    ILOVE20ExtensionJoin
+} from "@extension/src/interface/ILOVE20ExtensionJoin.sol";
 
 /// @title ILOVE20ExtensionGroupService
 /// @notice Interface for group service provider reward extension
-interface ILOVE20ExtensionGroupService is ILOVE20Extension {
+interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     // ============ Errors ============
 
     error NoActiveGroups();
-    error AlreadyJoined();
-    error NotJoined();
     error InvalidBasisPoints();
     error TooManyRecipients();
     error ZeroAddress();
@@ -19,8 +19,6 @@ interface ILOVE20ExtensionGroupService is ILOVE20Extension {
 
     // ============ Events ============
 
-    event Join(address indexed account, uint256 joinedValue, uint256 round);
-    event Exit(address indexed account, uint256 round);
     event RecipientsUpdated(
         address indexed account,
         uint256 round,
@@ -59,8 +57,6 @@ interface ILOVE20ExtensionGroupService is ILOVE20Extension {
     ) external view returns (uint256);
 
     // ============ Write Functions ============
-
-    function join() external;
 
     function setRecipients(
         address[] calldata addrs,
