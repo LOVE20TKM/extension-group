@@ -110,11 +110,11 @@ contract LOVE20ExtensionGroupService is
 
     /// @notice Set reward recipients for the caller
     function setRecipients(
-        address[] calldata recipients,
+        address[] calldata addrs,
         uint256[] calldata basisPoints
     ) external {
         if (!_accounts.contains(msg.sender)) revert NotJoined();
-        _setRecipients(msg.sender, recipients, basisPoints);
+        _setRecipients(msg.sender, addrs, basisPoints);
     }
 
     /// @inheritdoc IExtensionExit
@@ -125,66 +125,79 @@ contract LOVE20ExtensionGroupService is
 
     function _setRecipients(
         address account,
-        address[] memory recipients,
+        address[] memory addrs,
         uint256[] memory basisPoints
     ) internal {
-        if (recipients.length != basisPoints.length)
-            revert ArrayLengthMismatch();
-        if (recipients.length > MAX_RECIPIENTS) revert TooManyRecipients();
+        if (addrs.length != basisPoints.length) revert ArrayLengthMismatch();
+        if (addrs.length > MAX_RECIPIENTS) revert TooManyRecipients();
 
         uint256 totalBasisPoints;
-        for (uint256 i = 0; i < recipients.length; i++) {
-            if (recipients[i] == address(0)) revert ZeroAddress();
+        for (uint256 i = 0; i < addrs.length; i++) {
+            if (addrs[i] == address(0)) revert ZeroAddress();
             if (basisPoints[i] == 0) revert ZeroBasisPoints();
             totalBasisPoints += basisPoints[i];
         }
         if (totalBasisPoints > BASIS_POINTS_BASE) revert InvalidBasisPoints();
 
         uint256 currentRound = _join.currentRound();
-        _recipientsHistory[account].record(currentRound, recipients);
+        _recipientsHistory[account].record(currentRound, addrs);
         _basisPointsHistory[account].record(currentRound, basisPoints);
 
-        emit RecipientsUpdated(account, currentRound, recipients, basisPoints);
+        emit RecipientsUpdated(account, currentRound, addrs, basisPoints);
     }
 
     // ============ View Functions ============
 
-    /// @notice Get effective recipients for an account at a specific round
-    function getRecipientsByRound(
-        address account,
+    /// @notice Get effective recipients for a group owner at a specific round
+    function recipients(
+        address groupOwner,
         uint256 round
     )
         external
         view
-        returns (address[] memory recipients, uint256[] memory basisPoints)
+        returns (address[] memory addrs, uint256[] memory basisPoints)
     {
-        recipients = _recipientsHistory[account].value(round);
-        basisPoints = _basisPointsHistory[account].value(round);
+        addrs = _recipientsHistory[groupOwner].value(round);
+        basisPoints = _basisPointsHistory[groupOwner].value(round);
+    }
+
+    /// @notice Get latest recipients for a group owner
+    function recipientsLatest(
+        address groupOwner
+    )
+        external
+        view
+        returns (address[] memory addrs, uint256[] memory basisPoints)
+    {
+        addrs = _recipientsHistory[groupOwner].latestValue();
+        basisPoints = _basisPointsHistory[groupOwner].latestValue();
     }
 
     /// @notice Get reward amount for a specific recipient at a round
     function rewardByRecipient(
         uint256 round,
-        address joiner,
+        address groupOwner,
         address recipient
     ) external view returns (uint256) {
-        (uint256 totalAmount, ) = rewardByAccount(round, joiner);
+        (uint256 totalAmount, ) = rewardByAccount(round, groupOwner);
         if (totalAmount == 0) return 0;
 
-        address[] memory recipients = _recipientsHistory[joiner].value(round);
-        uint256[] memory basisPoints = _basisPointsHistory[joiner].value(round);
+        address[] memory addrs = _recipientsHistory[groupOwner].value(round);
+        uint256[] memory basisPoints = _basisPointsHistory[groupOwner].value(
+            round
+        );
 
         uint256 totalBasisPoints;
         uint256 recipientBasisPoints;
-        for (uint256 i = 0; i < recipients.length; i++) {
+        for (uint256 i = 0; i < addrs.length; i++) {
             totalBasisPoints += basisPoints[i];
-            if (recipients[i] == recipient) {
+            if (addrs[i] == recipient) {
                 recipientBasisPoints = basisPoints[i];
             }
         }
 
-        // If recipient is the joiner, return remaining after distribution
-        if (recipient == joiner) {
+        // If recipient is the groupOwner, return remaining after distribution
+        if (recipient == groupOwner) {
             uint256 distributed = (totalAmount * totalBasisPoints) /
                 BASIS_POINTS_BASE;
             return totalAmount - distributed;
@@ -248,18 +261,18 @@ contract LOVE20ExtensionGroupService is
 
         if (amount > 0) {
             ILOVE20Token token = ILOVE20Token(tokenAddress);
-            address[] memory recipients = _recipientsHistory[msg.sender].value(
+            address[] memory addrs = _recipientsHistory[msg.sender].value(
                 round
             );
             uint256[] memory basisPoints = _basisPointsHistory[msg.sender]
                 .value(round);
 
             uint256 distributed;
-            for (uint256 i = 0; i < recipients.length; i++) {
+            for (uint256 i = 0; i < addrs.length; i++) {
                 uint256 recipientAmount = (amount * basisPoints[i]) /
                     BASIS_POINTS_BASE;
                 if (recipientAmount > 0) {
-                    token.transfer(recipients[i], recipientAmount);
+                    token.transfer(addrs[i], recipientAmount);
                     distributed += recipientAmount;
                 }
             }

@@ -37,17 +37,24 @@ interface ILOVE20ExtensionGroupService is ILOVE20Extension {
     function GROUP_ACTION_ADDRESS() external view returns (address);
     function MAX_RECIPIENTS() external view returns (uint256);
 
-    function getRecipientsByRound(
-        address account,
+    function recipients(
+        address groupOwner,
         uint256 round
     )
         external
         view
-        returns (address[] memory recipients, uint256[] memory basisPoints);
+        returns (address[] memory addrs, uint256[] memory basisPoints);
+
+    function recipientsLatest(
+        address groupOwner
+    )
+        external
+        view
+        returns (address[] memory addrs, uint256[] memory basisPoints);
 
     function rewardByRecipient(
         uint256 round,
-        address joiner,
+        address groupOwner,
         address recipient
     ) external view returns (uint256);
 
@@ -56,7 +63,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20Extension {
     function join() external;
 
     function setRecipients(
-        address[] calldata recipients,
+        address[] calldata addrs,
         uint256[] calldata basisPoints
     ) external;
 }
