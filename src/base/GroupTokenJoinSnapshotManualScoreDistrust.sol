@@ -37,12 +37,13 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
     ) external {
         uint256 currentRound = _verify.currentRound();
 
-        // Check caller has verified this action (is a governor who verified)
-        uint256 verifyVotes = _verify.scoreByVerifierByActionId(
+        // Check caller has voted for extension contract (non-abstain vote)
+        uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
             tokenAddress,
             currentRound,
             msg.sender,
-            actionId
+            actionId,
+            address(this)
         );
         if (verifyVotes == 0) revert NotGovernor();
 
@@ -152,18 +153,13 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
     function _getTotalNonAbstainVerifyVotes(
         uint256 round
     ) internal view returns (uint256) {
-        uint256 totalScore = _verify.scoreByActionId(
-            tokenAddress,
-            round,
-            actionId
-        );
-        uint256 abstentionScore = _verify.scoreByActionIdByAccount(
-            tokenAddress,
-            round,
-            actionId,
-            address(0)
-        );
-        return totalScore - abstentionScore;
+        return
+            _verify.scoreByActionIdByAccount(
+                tokenAddress,
+                round,
+                actionId,
+                address(this)
+            );
     }
 
     // ============ Override Functions ============
