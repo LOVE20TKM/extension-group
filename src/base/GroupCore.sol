@@ -27,6 +27,9 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
     mapping(uint256 => GroupInfo) internal _groupInfo;
     uint256[] internal _activeGroupIds;
 
+    // total staked amount of all groups
+    uint256 internal _totalStaked;
+
     // ============ Constructor ============
 
     constructor(
@@ -111,6 +114,7 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
         group.isActive = true;
         group.deactivatedRound = 0;
         _activeGroupIds.push(groupId);
+        _totalStaked += stakedAmount;
 
         emit GroupActivated(
             groupId,
@@ -146,6 +150,7 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
             ? stakedCapacity
             : maxCapacity;
         group.capacity = newCapacity;
+        _totalStaked += additionalStake;
 
         emit GroupExpanded(groupId, additionalStake, newCapacity);
     }
@@ -168,6 +173,7 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
         _removeFromActiveGroupIds(groupId);
 
         uint256 stakedAmount = group.stakedAmount;
+        _totalStaked -= stakedAmount;
         IERC20(STAKE_TOKEN_ADDRESS).transfer(msg.sender, stakedAmount);
 
         emit GroupDeactivated(groupId, currentRound, stakedAmount);
@@ -279,6 +285,10 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
         return _totalStakedByOwner(owner);
     }
 
+    function totalStaked() public view returns (uint256) {
+        return _totalStaked;
+    }
+
     function expandableInfo(
         address owner
     )
@@ -358,7 +368,7 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
 
     function _totalStakedByOwner(
         address owner
-    ) internal view returns (uint256 totalStaked) {
+    ) internal view returns (uint256 staked) {
         uint256 nftBalance = ILOVE20Group(GROUP_ADDRESS).balanceOf(owner);
         for (uint256 i = 0; i < nftBalance; i++) {
             uint256 groupId = ILOVE20Group(GROUP_ADDRESS).tokenOfOwnerByIndex(
@@ -367,14 +377,14 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
             );
             GroupInfo storage group = _groupInfo[groupId];
             if (group.isActive) {
-                totalStaked += group.stakedAmount;
+                staked += group.stakedAmount;
             }
         }
     }
 
     function _totalCapacityAndStakeByOwner(
         address owner
-    ) internal view returns (uint256 totalCapacity, uint256 totalStaked) {
+    ) internal view returns (uint256 capacity, uint256 staked) {
         uint256 nftBalance = ILOVE20Group(GROUP_ADDRESS).balanceOf(owner);
         for (uint256 i = 0; i < nftBalance; i++) {
             uint256 groupId = ILOVE20Group(GROUP_ADDRESS).tokenOfOwnerByIndex(
@@ -383,8 +393,8 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
             );
             GroupInfo storage group = _groupInfo[groupId];
             if (group.isActive) {
-                totalCapacity += group.capacity;
-                totalStaked += group.stakedAmount;
+                capacity += group.capacity;
+                staked += group.stakedAmount;
             }
         }
     }
