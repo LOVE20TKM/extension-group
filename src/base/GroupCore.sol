@@ -5,12 +5,12 @@ import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
-import {ExtensionCore} from "@extension/src/base/ExtensionCore.sol";
+import {ExtensionReward} from "@extension/src/base/ExtensionReward.sol";
 import {IGroupCore} from "../interface/base/IGroupCore.sol";
 
 /// @title GroupCore
 /// @notice Base contract for managing groups with LOVE20Group NFT integration
-abstract contract GroupCore is ExtensionCore, IGroupCore {
+abstract contract GroupCore is ExtensionReward, IGroupCore {
     // ============ Immutables ============
 
     address public immutable GROUP_ADDRESS;
@@ -42,7 +42,7 @@ abstract contract GroupCore is ExtensionCore, IGroupCore {
         uint256 stakingMultiplier_,
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
-    ) ExtensionCore(factory_, tokenAddress_) {
+    ) ExtensionReward(factory_, tokenAddress_) {
         GROUP_ADDRESS = groupAddress_;
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         MIN_GOV_VOTE_RATIO_BPS = minGovVoteRatioBps_;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ExtensionCore} from "@extension/src/base/ExtensionCore.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 import {ExtensionReward} from "@extension/src/base/ExtensionReward.sol";
 import {
@@ -47,7 +46,7 @@ contract LOVE20ExtensionGroupService is
         address factory_,
         address tokenAddress_,
         address groupActionAddress_
-    ) ExtensionCore(factory_, tokenAddress_) {
+    ) ExtensionReward(factory_, tokenAddress_) {
         GROUP_ACTION_ADDRESS = groupActionAddress_;
     }
 
