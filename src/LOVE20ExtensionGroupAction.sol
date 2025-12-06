@@ -11,7 +11,6 @@ import {
     ExtensionVerificationInfo
 } from "@extension/src/base/ExtensionVerificationInfo.sol";
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
-import {IExtensionExit} from "@extension/src/interface/base/IExtensionExit.sol";
 import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 
 /// @title LOVE20ExtensionGroupAction
@@ -67,7 +66,7 @@ contract LOVE20ExtensionGroupAction is
 
     // ============ Override: Exit ============
 
-    function exit() public override(GroupTokenJoin, IExtensionExit) {
+    function exit() public override(GroupTokenJoin) {
         GroupTokenJoin.exit();
     }
 
