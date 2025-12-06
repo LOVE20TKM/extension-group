@@ -6,8 +6,8 @@ pragma solidity =0.8.17;
 interface IGroupTokenJoin {
     // ============ Errors ============
 
-    error InvalidAddress();
-    error InvalidAmount();
+    error InvalidJoinTokenAddress();
+    error JoinAmountZero();
     error AlreadyInOtherGroup();
     error NotInGroup();
     error AmountBelowMinimum();
@@ -21,13 +21,13 @@ interface IGroupTokenJoin {
         uint256 indexed groupId,
         address indexed account,
         uint256 amount,
-        uint256 round
+        uint256 indexed round
     );
     event Exit(
         uint256 indexed groupId,
         address indexed account,
         uint256 amount,
-        uint256 round
+        uint256 indexed round
     );
 
     // ============ Structs ============

@@ -43,7 +43,7 @@ abstract contract GroupTokenJoin is
     // ============ Constructor ============
 
     constructor(address joinTokenAddress_) {
-        if (joinTokenAddress_ == address(0)) revert InvalidAddress();
+        if (joinTokenAddress_ == address(0)) revert InvalidJoinTokenAddress();
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         _joinToken = IERC20(joinTokenAddress_);
     }
@@ -51,7 +51,7 @@ abstract contract GroupTokenJoin is
     // ============ Write Functions ============
 
     function join(uint256 groupId, uint256 amount) public virtual nonReentrant {
-        if (amount == 0) revert InvalidAmount();
+        if (amount == 0) revert JoinAmountZero();
 
         _beforeJoin(groupId, msg.sender);
 

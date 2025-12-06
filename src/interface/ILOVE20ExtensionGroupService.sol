@@ -21,7 +21,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
 
     event RecipientsUpdated(
         address indexed account,
-        uint256 round,
+        uint256 indexed round,
         address[] recipients,
         uint256[] basisPoints
     );

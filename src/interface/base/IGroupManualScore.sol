@@ -6,7 +6,6 @@ pragma solidity =0.8.17;
 interface IGroupSnapshot {
     // ============ Errors ============
 
-    error SnapshotAlreadyExists();
     error NoSnapshotForFutureRound();
 
     // ============ Events ============

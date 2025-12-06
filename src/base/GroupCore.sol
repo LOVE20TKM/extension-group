@@ -78,11 +78,11 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         GroupInfo storage group = _groupInfo[groupId];
 
         if (group.isActive) revert GroupAlreadyActivated();
-        if (stakedAmount == 0) revert InvalidGroupParameters();
+        if (stakedAmount == 0) revert ZeroStakeAmount();
         if (
             groupMaxJoinAmount != 0 && groupMaxJoinAmount < groupMinJoinAmount
         ) {
-            revert InvalidGroupParameters();
+            revert InvalidMinMaxJoinAmount();
         }
 
         address owner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
@@ -130,7 +130,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         uint256 groupId,
         uint256 additionalStake
     ) public virtual onlyGroupOwner(groupId) groupActive(groupId) {
-        if (additionalStake == 0) revert InvalidGroupParameters();
+        if (additionalStake == 0) revert ZeroStakeAmount();
 
         GroupInfo storage group = _groupInfo[groupId];
         uint256 newStakedAmount = group.stakedAmount + additionalStake;
@@ -186,7 +186,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         uint256 newMaxJoinAmount
     ) public virtual onlyGroupOwner(groupId) groupActive(groupId) {
         if (newMaxJoinAmount != 0 && newMaxJoinAmount < newMinJoinAmount) {
-            revert InvalidGroupParameters();
+            revert InvalidMinMaxJoinAmount();
         }
 
         GroupInfo storage group = _groupInfo[groupId];
@@ -306,7 +306,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
             MIN_GOV_VOTE_RATIO_BPS *
             CAPACITY_MULTIPLIER) / 1e4;
         uint256 minStake = minCapacity / STAKING_MULTIPLIER;
-        if (stakedAmount < minStake) revert InvalidGroupParameters();
+        if (stakedAmount < minStake) revert MinStakeNotMet();
 
         // Check owner has enough governance votes
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
@@ -314,14 +314,14 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
             totalGovVotes == 0 ||
             (ownerGovVotes * 1e4) / totalGovVotes < MIN_GOV_VOTE_RATIO_BPS
         ) {
-            revert InvalidGroupParameters();
+            revert InsufficientGovVotes();
         }
 
         // Check total stake doesn't exceed max
         uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
         uint256 maxStake = maxCapacity / STAKING_MULTIPLIER;
         uint256 newTotalStake = _totalStakedByOwner(owner) + stakedAmount;
-        if (newTotalStake > maxStake) revert InvalidGroupParameters();
+        if (newTotalStake > maxStake) revert ExceedsMaxStake();
     }
 
     function _checkCanExpandGroup(
@@ -334,7 +334,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
         uint256 maxStake = maxCapacity / STAKING_MULTIPLIER;
         if (otherGroupsStake + newStakedAmount > maxStake)
-            revert InvalidGroupParameters();
+            revert ExceedsMaxStake();
     }
 
     function _calculateMaxCapacityForOwner(

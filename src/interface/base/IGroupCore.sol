@@ -8,7 +8,11 @@ interface IGroupCore {
     error GroupAlreadyActivated();
     error GroupAlreadyDeactivated();
     error GroupNotActive();
-    error InvalidGroupParameters();
+    error ZeroStakeAmount();
+    error InvalidMinMaxJoinAmount();
+    error InsufficientGovVotes();
+    error ExceedsMaxStake();
+    error MinStakeNotMet();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
 
