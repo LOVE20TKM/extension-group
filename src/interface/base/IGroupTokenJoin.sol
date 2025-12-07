@@ -37,9 +37,9 @@ interface IGroupTokenJoin {
     // ============ Structs ============
 
     struct JoinInfo {
-        uint256 groupId;
-        uint256 amount;
         uint256 joinedRound;
+        uint256 amount;
+        uint256 groupId;
     }
 
     // ============ Write Functions ============
@@ -49,7 +49,12 @@ interface IGroupTokenJoin {
 
     // ============ View Functions ============
 
-    function joinInfo(address account) external view returns (JoinInfo memory);
+    function joinInfo(
+        address account
+    )
+        external
+        view
+        returns (uint256 joinedRound, uint256 amount, uint256 groupId);
 
     function accountsByGroupId(
         uint256 groupId

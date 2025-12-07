@@ -156,8 +156,15 @@ abstract contract GroupTokenJoin is
 
     // ============ View Functions ============
 
-    function joinInfo(address account) external view returns (JoinInfo memory) {
-        return _joinInfo[account];
+    function joinInfo(
+        address account
+    )
+        external
+        view
+        returns (uint256 joinedRound, uint256 amount, uint256 groupId)
+    {
+        JoinInfo storage info = _joinInfo[account];
+        return (info.joinedRound, info.amount, info.groupId);
     }
 
     function accountsByGroupId(
