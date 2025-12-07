@@ -51,6 +51,8 @@ abstract contract GroupTokenJoin is
     // ============ Write Functions ============
 
     function join(uint256 groupId, uint256 amount) public virtual nonReentrant {
+        _autoInitialize();
+
         if (amount == 0) revert JoinAmountZero();
 
         _beforeJoin(groupId, msg.sender);
