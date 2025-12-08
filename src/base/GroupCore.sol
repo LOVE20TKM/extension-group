@@ -98,7 +98,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         // Initialize group
         {
             uint256 stakedCapacity = stakedAmount * STAKING_MULTIPLIER;
-            uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
+            uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
             group.capacity = stakedCapacity < maxCapacity
                 ? stakedCapacity
                 : maxCapacity;
@@ -148,7 +148,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
 
         group.stakedAmount = newStakedAmount;
         uint256 stakedCapacity = newStakedAmount * STAKING_MULTIPLIER;
-        uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
+        uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
         uint256 newCapacity = stakedCapacity < maxCapacity
             ? stakedCapacity
             : maxCapacity;
@@ -278,8 +278,8 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
             MAX_JOIN_AMOUNT_MULTIPLIER;
     }
 
-    function maxCapacityForOwner(address owner) public view returns (uint256) {
-        return _calculateMaxCapacityForOwner(owner);
+    function maxCapacityByOwner(address owner) public view returns (uint256) {
+        return _calculateMaxCapacityByOwner(owner);
     }
 
     function totalStakedByOwner(address owner) public view returns (uint256) {
@@ -304,7 +304,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         )
     {
         (currentCapacity, currentStake) = _totalCapacityAndStakeByOwner(owner);
-        maxCapacity = _calculateMaxCapacityForOwner(owner);
+        maxCapacity = _calculateMaxCapacityByOwner(owner);
         maxStake = maxCapacity / STAKING_MULTIPLIER;
         if (maxStake > currentStake) {
             additionalStakeAllowed = maxStake - currentStake;
@@ -337,7 +337,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         }
 
         // Check total stake doesn't exceed max
-        uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
+        uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
         uint256 maxStake = maxCapacity / STAKING_MULTIPLIER;
         uint256 newTotalStake = _totalStakedByOwner(owner) + stakedAmount;
         if (newTotalStake > maxStake) revert ExceedsMaxStake();
@@ -350,13 +350,13 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
     ) internal view virtual {
         uint256 otherGroupsStake = _totalStakedByOwner(owner) -
             _groupInfo[groupId].stakedAmount;
-        uint256 maxCapacity = _calculateMaxCapacityForOwner(owner);
+        uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
         uint256 maxStake = maxCapacity / STAKING_MULTIPLIER;
         if (otherGroupsStake + newStakedAmount > maxStake)
             revert ExceedsMaxStake();
     }
 
-    function _calculateMaxCapacityForOwner(
+    function _calculateMaxCapacityByOwner(
         address owner
     ) internal view returns (uint256) {
         uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();

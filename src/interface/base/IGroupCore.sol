@@ -115,7 +115,7 @@ interface IGroupCore {
 
     // --- Capacity ---
     function calculateJoinMaxAmount() external view returns (uint256);
-    function maxCapacityForOwner(address owner) external view returns (uint256);
+    function maxCapacityByOwner(address owner) external view returns (uint256);
     function totalStakedByOwner(address owner) external view returns (uint256);
     function totalStaked() external view returns (uint256);
     function expandableInfo(
