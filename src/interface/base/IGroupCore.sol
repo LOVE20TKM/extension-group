@@ -67,6 +67,33 @@ interface IGroupCore {
         uint256 deactivatedRound; // 0 = never deactivated
     }
 
+    // --- Config Parameters (immutable) ---
+    function GROUP_ADDRESS() external view returns (address);
+    function STAKE_TOKEN_ADDRESS() external view returns (address);
+    function MIN_GOV_VOTE_RATIO_BPS() external view returns (uint256);
+    function CAPACITY_MULTIPLIER() external view returns (uint256);
+    function STAKING_MULTIPLIER() external view returns (uint256);
+    function MAX_JOIN_AMOUNT_MULTIPLIER() external view returns (uint256);
+    function MIN_JOIN_AMOUNT() external view returns (uint256);
+
+    // --- Capacity ---
+    function calculateJoinMaxAmount() external view returns (uint256);
+    function maxCapacityByOwner(address owner) external view returns (uint256);
+    function totalStakedByOwner(address owner) external view returns (uint256);
+    function totalStaked() external view returns (uint256);
+    function expandableInfo(
+        address owner
+    )
+        external
+        view
+        returns (
+            uint256 currentCapacity,
+            uint256 maxCapacity,
+            uint256 currentStake,
+            uint256 maxStake,
+            uint256 additionalStakeAllowed
+        );
+
     // ============ Write Functions ============
 
     function activateGroup(
@@ -106,31 +133,4 @@ interface IGroupCore {
     ) external view returns (uint256 groupId);
 
     function isGroupActive(uint256 groupId) external view returns (bool);
-
-    // --- Config Parameters (immutable) ---
-    function GROUP_ADDRESS() external view returns (address);
-    function STAKE_TOKEN_ADDRESS() external view returns (address);
-    function MIN_GOV_VOTE_RATIO_BPS() external view returns (uint256);
-    function CAPACITY_MULTIPLIER() external view returns (uint256);
-    function STAKING_MULTIPLIER() external view returns (uint256);
-    function MAX_JOIN_AMOUNT_MULTIPLIER() external view returns (uint256);
-    function MIN_JOIN_AMOUNT() external view returns (uint256);
-
-    // --- Capacity ---
-    function calculateJoinMaxAmount() external view returns (uint256);
-    function maxCapacityByOwner(address owner) external view returns (uint256);
-    function totalStakedByOwner(address owner) external view returns (uint256);
-    function totalStaked() external view returns (uint256);
-    function expandableInfo(
-        address owner
-    )
-        external
-        view
-        returns (
-            uint256 currentCapacity,
-            uint256 maxCapacity,
-            uint256 currentStake,
-            uint256 maxStake,
-            uint256 additionalStakeAllowed
-        );
 }
