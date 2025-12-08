@@ -2,7 +2,7 @@
 pragma solidity =0.8.17;
 
 import {GroupTokenJoin} from "./GroupTokenJoin.sol";
-import {IGroupSnapshot} from "../interface/base/IGroupManualScore.sol";
+import {IGroupSnapshot} from "../interface/base/IGroupSnapshot.sol";
 
 /// @title GroupTokenJoinSnapshot
 /// @notice Handles snapshot creation for token-join group participation data

@@ -4,7 +4,7 @@ pragma solidity =0.8.17;
 import {
     GroupTokenJoinSnapshotManualScore
 } from "./GroupTokenJoinSnapshotManualScore.sol";
-import {IGroupDistrust} from "../interface/base/IGroupManualScore.sol";
+import {IGroupDistrust} from "../interface/base/IGroupDistrust.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
 /// @title GroupTokenJoinSnapshotManualScoreDistrust

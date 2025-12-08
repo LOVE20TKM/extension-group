@@ -5,7 +5,7 @@ import {GroupTokenJoinSnapshot} from "./GroupTokenJoinSnapshot.sol";
 import {
     MAX_ORIGIN_SCORE,
     IGroupScore
-} from "../interface/base/IGroupManualScore.sol";
+} from "../interface/base/IGroupScore.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
 /// @title GroupTokenJoinSnapshotManualScore
