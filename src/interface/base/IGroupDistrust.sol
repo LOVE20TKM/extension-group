@@ -31,6 +31,7 @@ interface IGroupDistrust {
     ) external;
 
     // ============ View Functions ============
+    function totalVerifyVotes(uint256 round) external view returns (uint256);
 
     function distrustVotesByGroupOwner(
         uint256 round,
@@ -42,26 +43,15 @@ interface IGroupDistrust {
         uint256 groupId
     ) external view returns (uint256);
 
-    /// @notice Get distrust ratio components for a group owner
-    /// @return distrustVotes Distrust votes received by the group owner (numerator)
-    /// @return totalVerifyVotes Total non-abstain verify votes (denominator)
-    function distrustRatioByGroupOwner(
-        uint256 round,
-        address groupOwner
-    ) external view returns (uint256 distrustVotes, uint256 totalVerifyVotes);
-
-    /// @notice Get distrust votes for a specific groupOwner by a voter
     function distrustVotesByVoterByGroupOwner(
         uint256 round,
         address voter,
         address groupOwner
     ) external view returns (uint256);
 
-    /// @notice Get distrust reason for a specific groupOwner by a voter
     function distrustReason(
         uint256 round,
         address voter,
         address groupOwner
     ) external view returns (string memory);
 }
-

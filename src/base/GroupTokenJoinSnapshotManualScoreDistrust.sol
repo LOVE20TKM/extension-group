@@ -97,12 +97,8 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
     }
 
     /// @inheritdoc IGroupDistrust
-    function distrustRatioByGroupOwner(
-        uint256 round,
-        address groupOwner
-    ) external view returns (uint256 distrustVotes, uint256 totalVerifyVotes) {
-        distrustVotes = _distrustVotesByGroupOwner[round][groupOwner];
-        totalVerifyVotes = _getTotalNonAbstainVerifyVotes(round);
+    function totalVerifyVotes(uint256 round) external view returns (uint256) {
+        return _totalVerifyVotes(round);
     }
 
     /// @inheritdoc IGroupDistrust
@@ -130,7 +126,7 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
         address groupOwner
     ) internal {
         uint256 distrustVotes = _distrustVotesByGroupOwner[round][groupOwner];
-        uint256 totalVerifyVotes = _getTotalNonAbstainVerifyVotes(round);
+        uint256 total = _totalVerifyVotes(round);
 
         uint256[] storage groupIds = _groupIdsByVerifier[round][groupOwner];
         for (uint256 i = 0; i < groupIds.length; i++) {
@@ -139,19 +135,16 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
             uint256 oldScore = _scoreByGroupId[round][groupId];
             uint256 groupAmount = _snapshotAmountByGroupId[round][groupId];
 
-            uint256 newScore = totalVerifyVotes == 0
+            uint256 newScore = total == 0
                 ? groupAmount
-                : (groupAmount * (totalVerifyVotes - distrustVotes)) /
-                    totalVerifyVotes;
+                : (groupAmount * (total - distrustVotes)) / total;
 
             _scoreByGroupId[round][groupId] = newScore;
             _score[round] = _score[round] - oldScore + newScore;
         }
     }
 
-    function _getTotalNonAbstainVerifyVotes(
-        uint256 round
-    ) internal view returns (uint256) {
+    function _totalVerifyVotes(uint256 round) internal view returns (uint256) {
         return
             _verify.scoreByActionIdByAccount(
                 tokenAddress,
@@ -171,12 +164,11 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
         address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
         uint256 groupAmount = _snapshotAmountByGroupId[round][groupId];
         uint256 distrustVotes = _distrustVotesByGroupOwner[round][groupOwner];
-        uint256 totalVerifyVotes = _getTotalNonAbstainVerifyVotes(round);
+        uint256 total = _totalVerifyVotes(round);
 
         return
-            totalVerifyVotes == 0
+            total == 0
                 ? groupAmount
-                : (groupAmount * (totalVerifyVotes - distrustVotes)) /
-                    totalVerifyVotes;
+                : (groupAmount * (total - distrustVotes)) / total;
     }
 }
