@@ -77,7 +77,10 @@ interface IGroupCore {
         uint256 groupMaxJoinAmount
     ) external returns (bool);
 
-    function expandGroup(uint256 groupId, uint256 additionalStake) external;
+    function expandGroup(
+        uint256 groupId,
+        uint256 additionalStake
+    ) external returns (uint256 newStakedAmount, uint256 newCapacity);
 
     function deactivateGroup(uint256 groupId) external;
 

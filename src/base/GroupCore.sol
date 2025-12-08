@@ -132,11 +132,17 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
     function expandGroup(
         uint256 groupId,
         uint256 additionalStake
-    ) public virtual onlyGroupOwner(groupId) groupActive(groupId) {
+    )
+        public
+        virtual
+        onlyGroupOwner(groupId)
+        groupActive(groupId)
+        returns (uint256 newStakedAmount, uint256 newCapacity)
+    {
         if (additionalStake == 0) revert ZeroStakeAmount();
 
         GroupInfo storage group = _groupInfo[groupId];
-        uint256 newStakedAmount = group.stakedAmount + additionalStake;
+        newStakedAmount = group.stakedAmount + additionalStake;
         address owner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
 
         _checkCanExpandGroup(owner, groupId, newStakedAmount);
@@ -149,7 +155,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         group.stakedAmount = newStakedAmount;
         uint256 stakedCapacity = newStakedAmount * STAKING_MULTIPLIER;
         uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
-        uint256 newCapacity = stakedCapacity < maxCapacity
+        newCapacity = stakedCapacity < maxCapacity
             ? stakedCapacity
             : maxCapacity;
         group.capacity = newCapacity;
@@ -163,6 +169,8 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
             additionalStake,
             newCapacity
         );
+
+        return (newStakedAmount, newCapacity);
     }
 
     function deactivateGroup(
