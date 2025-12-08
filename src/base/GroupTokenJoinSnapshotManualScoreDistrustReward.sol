@@ -52,11 +52,11 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrustReward is
     }
 
     /// @inheritdoc IGroupReward
-    function rewardByGroupOwner(
+    function rewardByVerifier(
         uint256 round,
-        address groupOwner
+        address verifier
     ) external view returns (uint256 amount) {
-        uint256[] storage groupIds = _groupIdsByVerifier[round][groupOwner];
+        uint256[] storage groupIds = _groupIdsByVerifier[round][verifier];
         for (uint256 i = 0; i < groupIds.length; i++) {
             amount += _calculateRewardByGroupId(round, groupIds[i]);
         }

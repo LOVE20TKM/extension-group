@@ -31,8 +31,8 @@ interface IGroupReward is IExtensionReward {
         uint256 groupId
     ) external view returns (uint256);
 
-    function rewardByGroupOwner(
+    function rewardByVerifier(
         uint256 round,
-        address groupOwner
+        address verifier
     ) external view returns (uint256);
 }

@@ -239,7 +239,7 @@ contract LOVE20ExtensionGroupService is
 
         uint256 groupActionReward = ILOVE20ExtensionGroupAction(
             GROUP_ACTION_ADDRESS
-        ).rewardByGroupOwner(round, account);
+        ).rewardByVerifier(round, account);
         if (groupActionReward == 0) return 0;
 
         uint256 groupActionTotalReward = ILOVE20ExtensionGroupAction(
