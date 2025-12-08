@@ -37,7 +37,7 @@ interface IGroupScore {
 
     function submitOriginScore(
         uint256 groupId,
-        uint256[] calldata scores
+        uint256[] calldata originScores
     ) external;
 
     function setGroupDelegatedVerifier(
@@ -107,4 +107,3 @@ interface IGroupScore {
         uint256 index
     ) external view returns (uint256);
 }
-

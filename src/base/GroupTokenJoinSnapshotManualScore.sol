@@ -2,10 +2,7 @@
 pragma solidity =0.8.17;
 
 import {GroupTokenJoinSnapshot} from "./GroupTokenJoinSnapshot.sol";
-import {
-    MAX_ORIGIN_SCORE,
-    IGroupScore
-} from "../interface/base/IGroupScore.sol";
+import {MAX_ORIGIN_SCORE, IGroupScore} from "../interface/base/IGroupScore.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
 /// @title GroupTokenJoinSnapshotManualScore
@@ -69,7 +66,7 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     /// @inheritdoc IGroupScore
     function submitOriginScore(
         uint256 groupId,
-        uint256[] calldata scores
+        uint256[] calldata originScores
     ) external virtual {
         _snapshotIfNeeded(groupId);
 
@@ -98,7 +95,7 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         address[] storage accounts = _snapshotAccountsByGroupId[currentRound][
             groupId
         ];
-        if (scores.length != accounts.length) {
+        if (originScores.length != accounts.length) {
             revert ScoresCountMismatch();
         }
 
@@ -116,12 +113,12 @@ abstract contract GroupTokenJoinSnapshotManualScore is
 
         // Process scores and calculate total score
         uint256 totalScore = 0;
-        for (uint256 i = 0; i < scores.length; i++) {
-            if (scores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
+        for (uint256 i = 0; i < originScores.length; i++) {
+            if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
             address account = accounts[i];
-            _originScoreByAccount[currentRound][account] = scores[i];
+            _originScoreByAccount[currentRound][account] = originScores[i];
             totalScore +=
-                scores[i] *
+                originScores[i] *
                 _snapshotAmountByAccount[currentRound][account];
         }
 
