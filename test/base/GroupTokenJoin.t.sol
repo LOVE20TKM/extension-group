@@ -242,12 +242,11 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
     function test_Join_RevertGroupCapacityFull() public {
         // Get current capacity
-        ILOVE20GroupManager.GroupInfo memory info = groupManager.groupInfo(
+        (, , , uint256 capacity, , , , , ) = groupManager.groupInfo(
             address(token),
             ACTION_ID,
             groupId1
         );
-        uint256 capacity = info.capacity;
         uint256 maxPerAccount = groupManager.calculateJoinMaxAmount(
             address(token),
             ACTION_ID

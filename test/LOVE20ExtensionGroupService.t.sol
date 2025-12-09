@@ -86,17 +86,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         prepareExtensionInit(address(groupAction), address(token), ACTION_ID);
 
         // Prepare extension init for groupService
-        submit.setActionInfo(
+        prepareExtensionInit(
+            address(groupService),
             address(token),
-            SERVICE_ACTION_ID,
-            address(groupService)
-        );
-        vote.setVotedActionIds(
-            address(token),
-            join.currentRound(),
             SERVICE_ACTION_ID
         );
-        token.mint(address(groupService), 1e18);
 
         // Activate groups
         uint256 stakeAmount = 10000e18;

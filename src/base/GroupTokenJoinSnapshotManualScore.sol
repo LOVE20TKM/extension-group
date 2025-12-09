@@ -280,7 +280,11 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         // Add current group's capacity
         verifiedCapacity += _snapshotAmountByGroupId[round][currentGroupId];
 
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(groupOwner);
+        uint256 maxCapacity = _groupManager.maxCapacityByOwner(
+            tokenAddress,
+            actionId,
+            groupOwner
+        );
         if (verifiedCapacity > maxCapacity) {
             revert VerifierCapacityExceeded();
         }

@@ -7,46 +7,53 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
+import {
+    ILOVE20ExtensionCenter
+} from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
 
 /// @title LOVE20GroupManager
-/// @notice Singleton contract managing groups, keyed by (tokenAddress, actionId)
+/// @notice Singleton contract managing groups, keyed by extension address
 /// @dev Users call directly, uses tx.origin for owner verification and transfers
 contract LOVE20GroupManager is ILOVE20GroupManager {
     // ============ Immutables ============
 
+    address public immutable override CENTER_ADDRESS;
     address public immutable override GROUP_ADDRESS;
     address public immutable override STAKE_ADDRESS;
     address public immutable override JOIN_ADDRESS;
 
+    ILOVE20ExtensionCenter internal immutable _center;
     ILOVE20Group internal immutable _group;
     ILOVE20Stake internal immutable _stake;
     ILOVE20Join internal immutable _join;
 
     // ============ State ============
 
-    /// @notice Config per (tokenAddress, actionId)
-    mapping(address => mapping(uint256 => GroupConfig)) internal _configs;
+    /// @notice Config per extension address
+    mapping(address => GroupConfig) internal _configs;
 
-    /// @notice Group info per (tokenAddress, actionId, groupId)
-    mapping(address => mapping(uint256 => mapping(uint256 => GroupInfo)))
-        internal _groupInfo;
+    /// @notice Group info per (extension, groupId)
+    mapping(address => mapping(uint256 => GroupInfo)) internal _groupInfo;
 
-    /// @notice Active group IDs per (tokenAddress, actionId)
-    mapping(address => mapping(uint256 => uint256[])) internal _activeGroupIds;
+    /// @notice Active group IDs per extension
+    mapping(address => uint256[]) internal _activeGroupIds;
 
-    /// @notice Total staked per (tokenAddress, actionId)
-    mapping(address => mapping(uint256 => uint256)) internal _totalStaked;
+    /// @notice Total staked per extension
+    mapping(address => uint256) internal _totalStaked;
 
     // ============ Constructor ============
 
     constructor(
+        address centerAddress_,
         address groupAddress_,
         address stakeAddress_,
         address joinAddress_
     ) {
+        CENTER_ADDRESS = centerAddress_;
         GROUP_ADDRESS = groupAddress_;
         STAKE_ADDRESS = stakeAddress_;
         JOIN_ADDRESS = joinAddress_;
+        _center = ILOVE20ExtensionCenter(centerAddress_);
         _group = ILOVE20Group(groupAddress_);
         _stake = ILOVE20Stake(stakeAddress_);
         _join = ILOVE20Join(joinAddress_);
@@ -55,8 +62,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     // ============ Config Functions ============
 
     function setConfig(
-        address tokenAddress,
-        uint256 actionId,
         address stakeTokenAddress,
         uint256 minGovVoteRatioBps,
         uint256 capacityMultiplier,
@@ -64,10 +69,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 maxJoinAmountMultiplier,
         uint256 minJoinAmount
     ) external override {
-        if (_configs[tokenAddress][actionId].stakeTokenAddress != address(0))
+        address extension = msg.sender;
+        if (_configs[extension].stakeTokenAddress != address(0))
             revert ConfigAlreadySet();
 
-        _configs[tokenAddress][actionId] = GroupConfig({
+        _configs[extension] = GroupConfig({
             stakeTokenAddress: stakeTokenAddress,
             minGovVoteRatioBps: minGovVoteRatioBps,
             capacityMultiplier: capacityMultiplier,
@@ -76,30 +82,59 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             minJoinAmount: minJoinAmount
         });
 
-        emit ConfigSet(tokenAddress, actionId, stakeTokenAddress);
+        emit ConfigSet(extension, stakeTokenAddress);
     }
 
     function config(
         address tokenAddress,
         uint256 actionId
-    ) external view override returns (GroupConfig memory) {
-        return _configs[tokenAddress][actionId];
+    )
+        external
+        view
+        override
+        returns (
+            address stakeTokenAddress,
+            uint256 minGovVoteRatioBps,
+            uint256 capacityMultiplier,
+            uint256 stakingMultiplier,
+            uint256 maxJoinAmountMultiplier,
+            uint256 minJoinAmount
+        )
+    {
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupConfig storage cfg = _configs[extension];
+        return (
+            cfg.stakeTokenAddress,
+            cfg.minGovVoteRatioBps,
+            cfg.capacityMultiplier,
+            cfg.stakingMultiplier,
+            cfg.maxJoinAmountMultiplier,
+            cfg.minJoinAmount
+        );
     }
 
     function isConfigSet(
         address tokenAddress,
         uint256 actionId
     ) external view override returns (bool) {
-        return _configs[tokenAddress][actionId].stakeTokenAddress != address(0);
+        address extension = _center.extension(tokenAddress, actionId);
+        return _configs[extension].stakeTokenAddress != address(0);
     }
 
     // ============ Internal Helpers ============
 
-    function _getConfig(
+    function _getExtension(
         address tokenAddress,
         uint256 actionId
+    ) internal view returns (address extension) {
+        extension = _center.extension(tokenAddress, actionId);
+        if (extension == address(0)) revert NotRegisteredExtension();
+    }
+
+    function _getConfig(
+        address extension
     ) internal view returns (GroupConfig storage) {
-        GroupConfig storage cfg = _configs[tokenAddress][actionId];
+        GroupConfig storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) revert ConfigNotSet();
         return cfg;
     }
@@ -119,10 +154,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 groupMinJoinAmount,
         uint256 groupMaxJoinAmount
     ) external override returns (bool) {
-        GroupConfig storage cfg = _getConfig(tokenAddress, actionId);
+        address extension = _getExtension(tokenAddress, actionId);
+        GroupConfig storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
-        GroupInfo storage group = _groupInfo[tokenAddress][actionId][groupId];
+        GroupInfo storage group = _groupInfo[extension][groupId];
 
         if (group.isActive) revert GroupAlreadyActivated();
         if (stakedAmount == 0) revert ZeroStakeAmount();
@@ -135,7 +171,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address owner = tx.origin;
         _checkCanActivateGroup(
             tokenAddress,
-            actionId,
+            extension,
             cfg,
             owner,
             stakedAmount
@@ -169,8 +205,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         group.isActive = true;
         group.deactivatedRound = 0;
-        _activeGroupIds[tokenAddress][actionId].push(groupId);
-        _totalStaked[tokenAddress][actionId] += stakedAmount;
+        _activeGroupIds[extension].push(groupId);
+        _totalStaked[extension] += stakedAmount;
 
         emit GroupActivate(
             tokenAddress,
@@ -190,10 +226,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 groupId,
         uint256 additionalStake
     ) external override returns (uint256 newStakedAmount, uint256 newCapacity) {
-        GroupConfig storage cfg = _getConfig(tokenAddress, actionId);
+        address extension = _getExtension(tokenAddress, actionId);
+        GroupConfig storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
-        GroupInfo storage group = _groupInfo[tokenAddress][actionId][groupId];
+        GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
         if (additionalStake == 0) revert ZeroStakeAmount();
 
@@ -202,7 +239,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         _checkCanExpandGroup(
             tokenAddress,
-            actionId,
+            extension,
             cfg,
             owner,
             groupId,
@@ -225,7 +262,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             ? stakedCapacity
             : maxCapacity;
         group.capacity = newCapacity;
-        _totalStaked[tokenAddress][actionId] += additionalStake;
+        _totalStaked[extension] += additionalStake;
 
         emit GroupExpand(
             tokenAddress,
@@ -244,10 +281,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId
     ) external override {
-        GroupConfig storage cfg = _getConfig(tokenAddress, actionId);
+        address extension = _getExtension(tokenAddress, actionId);
+        GroupConfig storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
-        GroupInfo storage group = _groupInfo[tokenAddress][actionId][groupId];
+        GroupInfo storage group = _groupInfo[extension][groupId];
 
         if (group.activatedRound == 0) revert GroupNotFound();
         if (!group.isActive) revert GroupAlreadyDeactivated();
@@ -259,10 +297,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         group.isActive = false;
         group.deactivatedRound = currentRound;
 
-        _removeFromActiveGroupIds(tokenAddress, actionId, groupId);
+        _removeFromActiveGroupIds(extension, groupId);
 
         uint256 stakedAmount = group.stakedAmount;
-        _totalStaked[tokenAddress][actionId] -= stakedAmount;
+        _totalStaked[extension] -= stakedAmount;
         IERC20(cfg.stakeTokenAddress).transfer(tx.origin, stakedAmount);
 
         emit GroupDeactivate(
@@ -282,10 +320,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount
     ) external override {
-        _getConfig(tokenAddress, actionId); // Validate config exists
+        address extension = _getExtension(tokenAddress, actionId);
+        _getConfig(extension); // Validate config exists
         _checkGroupOwner(groupId);
 
-        GroupInfo storage group = _groupInfo[tokenAddress][actionId][groupId];
+        GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
 
         if (newMaxJoinAmount != 0 && newMaxJoinAmount < newMinJoinAmount) {
@@ -313,8 +352,35 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address tokenAddress,
         uint256 actionId,
         uint256 groupId
-    ) external view override returns (GroupInfo memory) {
-        return _groupInfo[tokenAddress][actionId][groupId];
+    )
+        external
+        view
+        override
+        returns (
+            uint256 groupId_,
+            string memory description,
+            uint256 stakedAmount,
+            uint256 capacity,
+            uint256 groupMinJoinAmount,
+            uint256 groupMaxJoinAmount,
+            bool isActive,
+            uint256 activatedRound,
+            uint256 deactivatedRound
+        )
+    {
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupInfo storage info = _groupInfo[extension][groupId];
+        return (
+            info.groupId,
+            info.description,
+            info.stakedAmount,
+            info.capacity,
+            info.groupMinJoinAmount,
+            info.groupMaxJoinAmount,
+            info.isActive,
+            info.activatedRound,
+            info.deactivatedRound
+        );
     }
 
     function activeGroupIdsByOwner(
@@ -322,7 +388,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         address owner
     ) external view override returns (uint256[] memory) {
-        GroupConfig storage cfg = _configs[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupConfig storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return new uint256[](0);
 
         uint256 nftBalance = _group.balanceOf(owner);
@@ -331,7 +398,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         for (uint256 i = 0; i < nftBalance; i++) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
-            if (_groupInfo[tokenAddress][actionId][gId].isActive) {
+            if (_groupInfo[extension][gId].isActive) {
                 tempResult[count++] = gId;
             }
         }
@@ -347,14 +414,16 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address tokenAddress,
         uint256 actionId
     ) external view override returns (uint256[] memory) {
-        return _activeGroupIds[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        return _activeGroupIds[extension];
     }
 
     function activeGroupIdsCount(
         address tokenAddress,
         uint256 actionId
     ) external view override returns (uint256) {
-        return _activeGroupIds[tokenAddress][actionId].length;
+        address extension = _center.extension(tokenAddress, actionId);
+        return _activeGroupIds[extension].length;
     }
 
     function activeGroupIdsAtIndex(
@@ -362,7 +431,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         uint256 index
     ) external view override returns (uint256 groupId) {
-        return _activeGroupIds[tokenAddress][actionId][index];
+        address extension = _center.extension(tokenAddress, actionId);
+        return _activeGroupIds[extension][index];
     }
 
     function isGroupActive(
@@ -370,7 +440,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId
     ) external view override returns (bool) {
-        return _groupInfo[tokenAddress][actionId][groupId].isActive;
+        address extension = _center.extension(tokenAddress, actionId);
+        return _groupInfo[extension][groupId].isActive;
     }
 
     // ============ Capacity View Functions ============
@@ -379,7 +450,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address tokenAddress,
         uint256 actionId
     ) public view override returns (uint256) {
-        GroupConfig storage cfg = _configs[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupConfig storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
         return
             ILOVE20Token(tokenAddress).totalSupply() /
@@ -391,7 +463,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         address owner
     ) public view override returns (uint256) {
-        GroupConfig storage cfg = _configs[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupConfig storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
         return _calculateMaxCapacityByOwner(tokenAddress, cfg, owner);
     }
@@ -401,16 +474,18 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         address owner
     ) public view override returns (uint256) {
-        GroupConfig storage cfg = _configs[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupConfig storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
-        return _totalStakedByOwner(tokenAddress, actionId, owner);
+        return _totalStakedByOwner(extension, owner);
     }
 
     function totalStaked(
         address tokenAddress,
         uint256 actionId
     ) public view override returns (uint256) {
-        return _totalStaked[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        return _totalStaked[extension];
     }
 
     function expandableInfo(
@@ -429,12 +504,12 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             uint256 additionalStakeAllowed
         )
     {
-        GroupConfig storage cfg = _configs[tokenAddress][actionId];
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupConfig storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return (0, 0, 0, 0, 0);
 
         (currentCapacity, currentStake) = _totalCapacityAndStakeByOwner(
-            tokenAddress,
-            actionId,
+            extension,
             owner
         );
         maxCapacity = _calculateMaxCapacityByOwner(tokenAddress, cfg, owner);
@@ -448,7 +523,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     function _checkCanActivateGroup(
         address tokenAddress,
-        uint256 actionId,
+        address extension,
         GroupConfig storage cfg,
         address owner,
         uint256 stakedAmount
@@ -476,27 +551,21 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             owner
         );
         uint256 maxStake = maxCapacity / cfg.stakingMultiplier;
-        uint256 newTotalStake = _totalStakedByOwner(
-            tokenAddress,
-            actionId,
-            owner
-        ) + stakedAmount;
+        uint256 newTotalStake = _totalStakedByOwner(extension, owner) +
+            stakedAmount;
         if (newTotalStake > maxStake) revert ExceedsMaxStake();
     }
 
     function _checkCanExpandGroup(
         address tokenAddress,
-        uint256 actionId,
+        address extension,
         GroupConfig storage cfg,
         address owner,
         uint256 groupId,
         uint256 newStakedAmount
     ) internal view {
-        uint256 otherGroupsStake = _totalStakedByOwner(
-            tokenAddress,
-            actionId,
-            owner
-        ) - _groupInfo[tokenAddress][actionId][groupId].stakedAmount;
+        uint256 otherGroupsStake = _totalStakedByOwner(extension, owner) -
+            _groupInfo[extension][groupId].stakedAmount;
         uint256 maxCapacity = _calculateMaxCapacityByOwner(
             tokenAddress,
             cfg,
@@ -522,28 +591,26 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     }
 
     function _totalStakedByOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address owner
     ) internal view returns (uint256 staked) {
         uint256 nftBalance = _group.balanceOf(owner);
         for (uint256 i = 0; i < nftBalance; i++) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
-            if (_groupInfo[tokenAddress][actionId][gId].isActive) {
-                staked += _groupInfo[tokenAddress][actionId][gId].stakedAmount;
+            if (_groupInfo[extension][gId].isActive) {
+                staked += _groupInfo[extension][gId].stakedAmount;
             }
         }
     }
 
     function _totalCapacityAndStakeByOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address owner
     ) internal view returns (uint256 capacity, uint256 staked) {
         uint256 nftBalance = _group.balanceOf(owner);
         for (uint256 i = 0; i < nftBalance; i++) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
-            GroupInfo storage group = _groupInfo[tokenAddress][actionId][gId];
+            GroupInfo storage group = _groupInfo[extension][gId];
             if (group.isActive) {
                 capacity += group.capacity;
                 staked += group.stakedAmount;
@@ -552,11 +619,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     }
 
     function _removeFromActiveGroupIds(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) internal {
-        uint256[] storage ids = _activeGroupIds[tokenAddress][actionId];
+        uint256[] storage ids = _activeGroupIds[extension];
         uint256 length = ids.length;
         for (uint256 i = 0; i < length; i++) {
             if (ids[i] == groupId) {

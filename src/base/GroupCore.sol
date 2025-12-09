@@ -49,10 +49,8 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         MAX_JOIN_AMOUNT_MULTIPLIER = maxJoinAmountMultiplier_;
         MIN_JOIN_AMOUNT = minJoinAmount_;
 
-        // Register config in GroupManager (actionId is 0 at construction time)
+        // Register config in GroupManager (msg.sender is this extension)
         _groupManager.setConfig(
-            tokenAddress_,
-            actionId,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
             capacityMultiplier_,
@@ -60,27 +58,5 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
             maxJoinAmountMultiplier_,
             minJoinAmount_
         );
-    }
-
-    // ============ Internal Helpers ============
-
-    function _getGroupInfo(
-        uint256 groupId
-    ) internal view returns (ILOVE20GroupManager.GroupInfo memory) {
-        return _groupManager.groupInfo(tokenAddress, actionId, groupId);
-    }
-
-    function _isGroupActive(uint256 groupId) internal view returns (bool) {
-        return _groupManager.isGroupActive(tokenAddress, actionId, groupId);
-    }
-
-    function _calculateMaxCapacityByOwner(
-        address owner
-    ) internal view returns (uint256) {
-        return _groupManager.maxCapacityByOwner(tokenAddress, actionId, owner);
-    }
-
-    function _calculateJoinMaxAmount() internal view returns (uint256) {
-        return _groupManager.calculateJoinMaxAmount(tokenAddress, actionId);
     }
 }

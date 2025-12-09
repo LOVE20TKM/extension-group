@@ -111,9 +111,8 @@ abstract contract GroupTokenJoinSnapshot is GroupTokenJoin, IGroupSnapshot {
     function _snapshotIfNeeded(uint256 groupId) internal {
         uint256 round = _verify.currentRound();
         if (_hasSnapshot[round][groupId]) return;
-
-        ILOVE20GroupManager.GroupInfo memory group = _getGroupInfo(groupId);
-        if (!group.isActive) return;
+        if (!_groupManager.isGroupActive(tokenAddress, actionId, groupId))
+            return;
 
         _hasSnapshot[round][groupId] = true;
         _snapshotGroupIds[round].push(groupId);

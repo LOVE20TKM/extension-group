@@ -171,8 +171,11 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 additionalStake = 50e18;
         setupUser(groupOwner1, additionalStake, address(groupManager));
 
-        ILOVE20GroupManager.GroupInfo memory infoBefore = groupManager
-            .groupInfo(address(token), ACTION_ID, groupId1);
+        (, , uint256 stakedBefore, , , , , , ) = groupManager.groupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1
+        );
 
         vm.prank(groupOwner1, groupOwner1);
         (uint256 newStaked, uint256 newCapacity) = groupManager.expandGroup(
@@ -182,15 +185,21 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             additionalStake
         );
 
-        ILOVE20GroupManager.GroupInfo memory infoAfter = groupManager.groupInfo(
-            address(token),
-            ACTION_ID,
-            groupId1
-        );
+        (
+            ,
+            ,
+            uint256 stakedAfter,
+            uint256 capacityAfter,
+            ,
+            ,
+            ,
+            ,
 
-        assertEq(newStaked, infoBefore.stakedAmount + additionalStake);
-        assertEq(infoAfter.stakedAmount, newStaked);
-        assertTrue(newCapacity >= infoAfter.capacity);
+        ) = groupManager.groupInfo(address(token), ACTION_ID, groupId1);
+
+        assertEq(newStaked, stakedBefore + additionalStake);
+        assertEq(stakedAfter, newStaked);
+        assertTrue(newCapacity >= capacityAfter);
     }
 
     function test_DelegatedVerification() public {
@@ -411,14 +420,20 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             newMax
         );
 
-        ILOVE20GroupManager.GroupInfo memory info = groupManager.groupInfo(
-            address(token),
-            ACTION_ID,
-            groupId1
-        );
-        assertEq(info.description, newDesc);
-        assertEq(info.groupMinJoinAmount, newMin);
-        assertEq(info.groupMaxJoinAmount, newMax);
+        (
+            ,
+            string memory desc,
+            ,
+            ,
+            uint256 minJoin,
+            uint256 maxJoin,
+            ,
+            ,
+
+        ) = groupManager.groupInfo(address(token), ACTION_ID, groupId1);
+        assertEq(desc, newDesc);
+        assertEq(minJoin, newMin);
+        assertEq(maxJoin, newMax);
     }
 
     // ============ Verifier Capacity Tests ============

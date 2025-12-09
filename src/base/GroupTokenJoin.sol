@@ -66,32 +66,43 @@ abstract contract GroupTokenJoin is
         _beforeJoin(groupId, msg.sender);
 
         JoinInfo storage info = _joinInfo[msg.sender];
-        ILOVE20GroupManager.GroupInfo memory group = _getGroupInfo(groupId);
         bool isFirstJoin = info.groupId == 0;
-
-        // Validate group and membership
-        if (!isFirstJoin && info.groupId != groupId)
-            revert AlreadyInOtherGroup();
-        if (!group.isActive) revert CannotJoinDeactivatedGroup();
-
-        // Validate amount
-        if (isFirstJoin) {
-            uint256 minAmount = _max(group.groupMinJoinAmount, MIN_JOIN_AMOUNT);
-            if (amount < minAmount) revert AmountBelowMinimum();
-        }
-
         uint256 newTotal = info.amount + amount;
-        if (
-            group.groupMaxJoinAmount > 0 && newTotal > group.groupMaxJoinAmount
-        ) {
-            revert AmountExceedsAccountCap();
-        }
-        if (newTotal > _calculateJoinMaxAmount())
-            revert AmountExceedsAccountCap();
 
-        uint256 currentGroupTotal = _totalJoinedAmountByGroupId[groupId];
-        if (currentGroupTotal + amount > group.capacity)
-            revert GroupCapacityFull();
+        // Validate group and membership in scoped block to reduce stack depth
+        {
+            (
+                ,
+                ,
+                ,
+                uint256 capacity,
+                uint256 groupMinJoinAmount,
+                uint256 groupMaxJoinAmount,
+                bool isActive,
+                ,
+
+            ) = _groupManager.groupInfo(tokenAddress, actionId, groupId);
+
+            if (!isFirstJoin && info.groupId != groupId)
+                revert AlreadyInOtherGroup();
+            if (!isActive) revert CannotJoinDeactivatedGroup();
+
+            if (isFirstJoin) {
+                uint256 minAmount = _max(groupMinJoinAmount, MIN_JOIN_AMOUNT);
+                if (amount < minAmount) revert AmountBelowMinimum();
+            }
+
+            if (groupMaxJoinAmount > 0 && newTotal > groupMaxJoinAmount) {
+                revert AmountExceedsAccountCap();
+            }
+            if (
+                newTotal >
+                _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
+            ) revert AmountExceedsAccountCap();
+
+            if (_totalJoinedAmountByGroupId[groupId] + amount > capacity)
+                revert GroupCapacityFull();
+        }
 
         // Transfer tokens and update state
         _joinToken.transferFrom(msg.sender, address(this), amount);
@@ -101,7 +112,7 @@ abstract contract GroupTokenJoin is
         info.amount = newTotal;
 
         // Update local totalJoinedAmount
-        uint256 newGroupTotal = currentGroupTotal + amount;
+        uint256 newGroupTotal = _totalJoinedAmountByGroupId[groupId] + amount;
         _totalJoinedAmountByGroupId[groupId] = newGroupTotal;
         _totalJoinedAmountHistoryByGroupId[groupId].record(
             currentRound,

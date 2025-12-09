@@ -6,6 +6,7 @@ interface ILOVE20GroupManager {
 
     error ConfigAlreadySet();
     error ConfigNotSet();
+    error NotRegisteredExtension();
     error GroupNotFound();
     error GroupAlreadyActivated();
     error GroupAlreadyDeactivated();
@@ -20,11 +21,7 @@ interface ILOVE20GroupManager {
 
     // ============ Events ============
 
-    event ConfigSet(
-        address indexed tokenAddress,
-        uint256 indexed actionId,
-        address stakeTokenAddress
-    );
+    event ConfigSet(address indexed extension, address stakeTokenAddress);
 
     event GroupActivate(
         address indexed tokenAddress,
@@ -85,6 +82,9 @@ interface ILOVE20GroupManager {
 
     // ============ Config Functions ============
 
+    /// @notice Returns the ExtensionCenter contract address
+    function CENTER_ADDRESS() external view returns (address);
+
     /// @notice Returns the Group NFT contract address (set at construction)
     function GROUP_ADDRESS() external view returns (address);
 
@@ -94,10 +94,8 @@ interface ILOVE20GroupManager {
     /// @notice Returns the Join contract address (set at construction)
     function JOIN_ADDRESS() external view returns (address);
 
-    /// @notice Set config for (tokenAddress, actionId)
+    /// @notice Set config for extension (msg.sender is the extension)
     function setConfig(
-        address tokenAddress,
-        uint256 actionId,
         address stakeTokenAddress,
         uint256 minGovVoteRatioBps,
         uint256 capacityMultiplier,
@@ -109,7 +107,17 @@ interface ILOVE20GroupManager {
     function config(
         address tokenAddress,
         uint256 actionId
-    ) external view returns (GroupConfig memory);
+    )
+        external
+        view
+        returns (
+            address stakeTokenAddress,
+            uint256 minGovVoteRatioBps,
+            uint256 capacityMultiplier,
+            uint256 stakingMultiplier,
+            uint256 maxJoinAmountMultiplier,
+            uint256 minJoinAmount
+        );
 
     function isConfigSet(
         address tokenAddress,
@@ -156,7 +164,20 @@ interface ILOVE20GroupManager {
         address tokenAddress,
         uint256 actionId,
         uint256 groupId
-    ) external view returns (GroupInfo memory);
+    )
+        external
+        view
+        returns (
+            uint256 groupId_,
+            string memory description,
+            uint256 stakedAmount,
+            uint256 capacity,
+            uint256 groupMinJoinAmount,
+            uint256 groupMaxJoinAmount,
+            bool isActive,
+            uint256 activatedRound,
+            uint256 deactivatedRound
+        );
 
     function activeGroupIdsByOwner(
         address tokenAddress,

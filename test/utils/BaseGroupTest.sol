@@ -2,7 +2,9 @@
 pragma solidity =0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
-import {LOVE20ExtensionCenter} from "@extension/src/LOVE20ExtensionCenter.sol";
+
+// Import local mock contracts
+import {MockExtensionCenter} from "../mocks/MockExtensionCenter.sol";
 
 // Import mock contracts from extension
 import {MockERC20} from "@extension/test/mocks/MockERC20.sol";
@@ -36,7 +38,7 @@ import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
 abstract contract BaseGroupTest is Test {
     // ============ Core Contracts ============
 
-    LOVE20ExtensionCenter public center;
+    MockExtensionCenter public center;
     MockGroupToken public token;
     MockGroup public group;
     MockUniswapV2Factory public uniswapFactory;
@@ -96,8 +98,8 @@ abstract contract BaseGroupTest is Test {
         random = new MockRandom();
         uniswapFactory = new MockUniswapV2Factory();
 
-        // Deploy extension center
-        center = new LOVE20ExtensionCenter(
+        // Deploy extension center (using MockExtensionCenter for testing)
+        center = new MockExtensionCenter(
             address(uniswapFactory),
             address(launch),
             address(stake),
@@ -114,6 +116,7 @@ abstract contract BaseGroupTest is Test {
 
         // Deploy GroupManager singleton
         groupManager = new LOVE20GroupManager(
+            address(center),
             address(group),
             address(stake),
             address(join)
@@ -184,7 +187,7 @@ abstract contract BaseGroupTest is Test {
     }
 
     /**
-     * @notice Prepare extension initialization
+     * @notice Prepare extension initialization and register to center
      */
     function prepareExtensionInit(
         address extensionAddress,
@@ -194,6 +197,14 @@ abstract contract BaseGroupTest is Test {
         submit.setActionInfo(tokenAddr, actionId, extensionAddress);
         vote.setVotedActionIds(tokenAddr, join.currentRound(), actionId);
         token.mint(extensionAddress, 1e18);
+        // Register extension to center for GroupManager lookup
+        center.setExtension(tokenAddr, actionId, extensionAddress);
+        // Mock center.registerExtension() to always succeed (called by _autoInitialize)
+        vm.mockCall(
+            address(center),
+            abi.encodeWithSignature("registerExtension()"),
+            abi.encode()
+        );
     }
 
     /**
