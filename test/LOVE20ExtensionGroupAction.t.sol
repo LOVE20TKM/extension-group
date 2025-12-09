@@ -2,11 +2,16 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
-import {LOVE20ExtensionGroupAction} from "../src/LOVE20ExtensionGroupAction.sol";
+import {
+    LOVE20ExtensionGroupAction
+} from "../src/LOVE20ExtensionGroupAction.sol";
 import {IGroupCore} from "../src/interface/base/IGroupCore.sol";
 import {IGroupTokenJoin} from "../src/interface/base/IGroupTokenJoin.sol";
 import {IGroupSnapshot} from "../src/interface/base/IGroupSnapshot.sol";
-import {IGroupScore, MAX_ORIGIN_SCORE} from "../src/interface/base/IGroupScore.sol";
+import {
+    IGroupScore,
+    MAX_ORIGIN_SCORE
+} from "../src/interface/base/IGroupScore.sol";
 import {IGroupDistrust} from "../src/interface/base/IGroupDistrust.sol";
 import {IGroupReward} from "../src/interface/base/IGroupReward.sol";
 import {IGroupManualScore} from "../src/interface/base/IGroupManualScore.sol";
@@ -55,10 +60,22 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(groupOwner2, stakeAmount, address(groupAction));
 
         vm.prank(groupOwner1);
-        groupAction.activateGroup(groupId1, "Group1", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        groupAction.activateGroup(
+            groupId1,
+            "Group1",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
         vm.prank(groupOwner2);
-        groupAction.activateGroup(groupId2, "Group2", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        groupAction.activateGroup(
+            groupId2,
+            "Group2",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
     }
 
     // ============ Integration Tests ============
@@ -71,10 +88,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount1);
+        groupAction.join(groupId1, joinAmount1, new string[](0));
 
         vm.prank(user2);
-        groupAction.join(groupId1, joinAmount2);
+        groupAction.join(groupId1, joinAmount2, new string[](0));
 
         // Verify join state
         assertEq(groupAction.totalJoinedAmount(), joinAmount1 + joinAmount2);
@@ -109,7 +126,11 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         advanceRound();
         // Setup actionIds for new round
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
 
         vm.prank(groupOwner1);
         groupAction.deactivateGroup(groupId1);
@@ -122,17 +143,22 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.CannotJoinDeactivatedGroup.selector);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
     }
 
     function test_GroupExpansion() public {
         uint256 additionalStake = 50e18;
         setupUser(groupOwner1, additionalStake, address(groupAction));
 
-        IGroupCore.GroupInfo memory infoBefore = groupAction.groupInfo(groupId1);
+        IGroupCore.GroupInfo memory infoBefore = groupAction.groupInfo(
+            groupId1
+        );
 
         vm.prank(groupOwner1);
-        (uint256 newStaked, uint256 newCapacity) = groupAction.expandGroup(groupId1, additionalStake);
+        (uint256 newStaked, uint256 newCapacity) = groupAction.expandGroup(
+            groupId1,
+            additionalStake
+        );
 
         IGroupCore.GroupInfo memory infoAfter = groupAction.groupInfo(groupId1);
 
@@ -152,7 +178,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger fresh snapshot
         advanceRound();
@@ -175,7 +201,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger fresh snapshot
         advanceRound();
@@ -209,10 +235,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        groupAction.join(groupId2, joinAmount);
+        groupAction.join(groupId2, joinAmount, new string[](0));
 
         // Advance round and trigger fresh snapshots
         advanceRound();
@@ -245,10 +271,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount1);
+        groupAction.join(groupId1, joinAmount1, new string[](0));
 
         vm.prank(user2);
-        groupAction.join(groupId2, joinAmount2);
+        groupAction.join(groupId2, joinAmount2, new string[](0));
 
         assertEq(groupAction.joinedValue(), joinAmount1 + joinAmount2);
     }
@@ -258,7 +284,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         assertEq(groupAction.joinedValueByAccount(user1), joinAmount);
         assertEq(groupAction.joinedValueByAccount(user2), 0);
@@ -280,7 +306,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         // First join
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         assertEq(groupAction.totalJoinedAmount(), joinAmount);
 
@@ -292,7 +318,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         // Rejoin (possibly different group)
         vm.prank(user1);
-        groupAction.join(groupId2, joinAmount);
+        groupAction.join(groupId2, joinAmount, new string[](0));
 
         assertEq(groupAction.totalJoinedAmount(), joinAmount);
         (, , uint256 groupId) = groupAction.joinInfo(user1);
@@ -304,7 +330,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger fresh snapshot
         advanceRound();
@@ -325,7 +351,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger fresh snapshot
         advanceRound();
@@ -338,7 +364,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         groupAction.submitOriginScore(groupId1, scores);
 
         uint256 round = verify.currentRound();
-        assertEq(groupAction.originScoreByAccount(round, user1), MAX_ORIGIN_SCORE);
+        assertEq(
+            groupAction.originScoreByAccount(round, user1),
+            MAX_ORIGIN_SCORE
+        );
     }
 
     function test_GroupInfoUpdate() public {
@@ -363,6 +392,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         // Get max capacity for owner
         uint256 maxCapacity = groupAction.maxCapacityByOwner(groupOwner1);
         uint256 maxPerAccount = groupAction.calculateJoinMaxAmount();
+        assertTrue(maxCapacity > 0, "maxCapacity should be > 0");
+        assertTrue(maxPerAccount > 0, "maxPerAccount should be > 0");
 
         // Use a small amount that's within limits
         uint256 joinAmount = MIN_JOIN_AMOUNT;
@@ -371,14 +402,18 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         // Verify join was successful
         assertEq(groupAction.accountsByGroupIdCount(groupId1), 1);
 
         // Capacity check is done during submitOriginScore, so let's test that path
         advanceRound();
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
         groupAction.snapshotIfNeeded(groupId1);
 
         uint256[] memory scores = new uint256[](1);
@@ -399,7 +434,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupAction));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount);
+        groupAction.join(groupId1, joinAmount, new string[](0));
 
         // Advance round to get fresh snapshot for round 1
         advanceRound();
@@ -433,4 +468,3 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         assertEq(groupAction.originScoreByAccount(round2, user1), 90);
     }
 }
-

@@ -8,6 +8,7 @@ import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
+import {VerificationInfo} from "@extension/src/base/VerificationInfo.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
 
@@ -16,6 +17,7 @@ using RoundHistoryUint256 for RoundHistoryUint256.History;
 abstract contract GroupTokenJoin is
     GroupCore,
     ReentrancyGuard,
+    VerificationInfo,
     IGroupTokenJoin
 {
     // ============ Immutables ============
@@ -50,7 +52,11 @@ abstract contract GroupTokenJoin is
 
     // ============ Write Functions ============
 
-    function join(uint256 groupId, uint256 amount) public virtual nonReentrant {
+    function join(
+        uint256 groupId,
+        uint256 amount,
+        string[] memory verificationInfos
+    ) public virtual nonReentrant {
         _autoInitialize();
 
         if (amount == 0) revert JoinAmountZero();
@@ -104,6 +110,8 @@ abstract contract GroupTokenJoin is
             _addAccountToGroup(groupId, msg.sender);
             _addAccount(msg.sender);
         }
+
+        updateVerificationInfo(verificationInfos);
 
         emit Join(
             tokenAddress,

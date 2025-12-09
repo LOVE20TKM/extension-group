@@ -402,6 +402,7 @@ contract GroupCoreTest is BaseGroupTest {
             uint256 additionalStakeAllowed
         ) = groupCore.expandableInfo(groupOwner1);
 
+        assertTrue(currentCapacity > 0);
         assertEq(currentStake, stakeAmount);
         assertTrue(maxCapacity > 0);
         assertTrue(maxStake > 0);

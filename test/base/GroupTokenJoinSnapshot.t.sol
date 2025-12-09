@@ -121,7 +121,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         // Advance round to get fresh snapshot
         advanceRound();
@@ -145,7 +145,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         uint256 round = verify.currentRound();
 
@@ -183,7 +183,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount1);
+        snapshotContract.join(groupId1, joinAmount1, new string[](0));
 
         uint256 round = verify.currentRound();
 
@@ -194,7 +194,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
 
         // Second join sees existing snapshot, doesn't create new one
         vm.prank(user2);
-        snapshotContract.join(groupId1, joinAmount2);
+        snapshotContract.join(groupId1, joinAmount2, new string[](0));
 
         // Snapshot still shows empty (captured before first join)
         address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(round, groupId1);
@@ -209,7 +209,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
 
         // First join creates snapshot with empty state
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         // Advance round so we get a new snapshot on exit
         advanceRound();
@@ -235,10 +235,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger new snapshot to capture current state
         advanceRound();
@@ -255,7 +255,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger new snapshot
         advanceRound();
@@ -270,7 +270,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         // Advance round and trigger new snapshot
         advanceRound();
@@ -287,10 +287,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount1);
+        snapshotContract.join(groupId1, joinAmount1, new string[](0));
 
         vm.prank(user2);
-        snapshotContract.join(groupId1, joinAmount2);
+        snapshotContract.join(groupId1, joinAmount2, new string[](0));
 
         // Advance round and trigger new snapshot
         advanceRound();
@@ -307,10 +307,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount1);
+        snapshotContract.join(groupId1, joinAmount1, new string[](0));
 
         vm.prank(user2);
-        snapshotContract.join(groupId2, joinAmount2);
+        snapshotContract.join(groupId2, joinAmount2, new string[](0));
 
         // Advance round and trigger new snapshots
         advanceRound();
@@ -327,10 +327,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        snapshotContract.join(groupId2, joinAmount);
+        snapshotContract.join(groupId2, joinAmount, new string[](0));
 
         snapshotContract.triggerSnapshot(groupId1);
         snapshotContract.triggerSnapshot(groupId2);
@@ -346,7 +346,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         snapshotContract.triggerSnapshot(groupId1);
 
@@ -361,7 +361,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         uint256 round1 = verify.currentRound();
         snapshotContract.triggerSnapshot(groupId1);
@@ -393,7 +393,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(snapshotContract));
 
         vm.prank(user1);
-        snapshotContract.join(groupId1, joinAmount);
+        snapshotContract.join(groupId1, joinAmount, new string[](0));
 
         // Advance round to allow new snapshot
         advanceRound();

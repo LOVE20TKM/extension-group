@@ -7,7 +7,6 @@ import {
 import {GroupTokenJoin} from "./base/GroupTokenJoin.sol";
 import {GroupCore} from "./base/GroupCore.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
-import {VerificationInfo} from "@extension/src/base/VerificationInfo.sol";
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
 import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 
@@ -17,7 +16,6 @@ import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 contract LOVE20ExtensionGroupAction is
     GroupTokenJoinSnapshotManualScoreDistrustReward,
     ExtensionAccounts,
-    VerificationInfo,
     ILOVE20Extension,
     IGroupManualScore
 {

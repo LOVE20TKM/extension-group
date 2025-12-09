@@ -132,7 +132,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         (uint256 joinedRound, uint256 amount, uint256 groupId) = groupTokenJoin.joinInfo(user1);
         assertEq(amount, joinAmount);
@@ -148,8 +148,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, initialAmount + additionalAmount, address(groupTokenJoin));
 
         vm.startPrank(user1);
-        groupTokenJoin.join(groupId1, initialAmount);
-        groupTokenJoin.join(groupId1, additionalAmount);
+        groupTokenJoin.join(groupId1, initialAmount, new string[](0));
+        groupTokenJoin.join(groupId1, additionalAmount, new string[](0));
         vm.stopPrank();
 
         (, uint256 amount, ) = groupTokenJoin.joinInfo(user1);
@@ -161,7 +161,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.JoinAmountZero.selector);
-        groupTokenJoin.join(groupId1, 0);
+        groupTokenJoin.join(groupId1, 0, new string[](0));
     }
 
     function test_Join_RevertAlreadyInOtherGroup() public {
@@ -169,10 +169,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount * 2, address(groupTokenJoin));
 
         vm.startPrank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.expectRevert(IGroupTokenJoin.AlreadyInOtherGroup.selector);
-        groupTokenJoin.join(groupId2, joinAmount);
+        groupTokenJoin.join(groupId2, joinAmount, new string[](0));
         vm.stopPrank();
     }
 
@@ -189,7 +189,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.CannotJoinDeactivatedGroup.selector);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
     }
 
     function test_Join_RevertAmountBelowMinimum() public {
@@ -198,7 +198,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.AmountBelowMinimum.selector);
-        groupTokenJoin.join(groupId1, tooLowAmount);
+        groupTokenJoin.join(groupId1, tooLowAmount, new string[](0));
     }
 
     function test_Join_RevertGroupCapacityFull() public {
@@ -216,7 +216,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             address testUser = address(uint160(0x1000 + i));
             setupUser(testUser, maxPerAccount, address(groupTokenJoin));
             vm.prank(testUser);
-            groupTokenJoin.join(groupId1, maxPerAccount);
+            groupTokenJoin.join(groupId1, maxPerAccount, new string[](0));
         }
 
         // If there's remaining space that's >= MIN_JOIN_AMOUNT, fill it
@@ -224,7 +224,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             address partialUser = address(uint160(0x1000 + fullUsers));
             setupUser(partialUser, remaining, address(groupTokenJoin));
             vm.prank(partialUser);
-            groupTokenJoin.join(groupId1, remaining);
+            groupTokenJoin.join(groupId1, remaining, new string[](0));
         }
 
         // Now capacity should be full - try to join with another user
@@ -233,7 +233,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         vm.prank(extraUser);
         vm.expectRevert(IGroupTokenJoin.GroupCapacityFull.selector);
-        groupTokenJoin.join(groupId1, MIN_JOIN_AMOUNT);
+        groupTokenJoin.join(groupId1, MIN_JOIN_AMOUNT, new string[](0));
     }
 
     function test_Join_RevertAmountExceedsAccountCap() public {
@@ -246,7 +246,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.AmountExceedsAccountCap.selector);
-        groupTokenJoin.join(groupId1, exceedingAmount);
+        groupTokenJoin.join(groupId1, exceedingAmount, new string[](0));
     }
 
     // ============ exit Tests ============
@@ -256,7 +256,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         uint256 balanceBefore = token.balanceOf(user1);
 
@@ -283,7 +283,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         (uint256 joinedRound, uint256 amount, uint256 groupId) = groupTokenJoin.joinInfo(user1);
         assertEq(joinedRound, verify.currentRound());
@@ -297,10 +297,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         address[] memory accounts = groupTokenJoin.accountsByGroupId(groupId1);
         assertEq(accounts.length, 2);
@@ -314,7 +314,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         uint256 currentRound = verify.currentRound();
         assertEq(groupTokenJoin.groupIdByAccountByRound(user1, currentRound), groupId1);
@@ -327,10 +327,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount1);
+        groupTokenJoin.join(groupId1, joinAmount1, new string[](0));
 
         vm.prank(user2);
-        groupTokenJoin.join(groupId1, joinAmount2);
+        groupTokenJoin.join(groupId1, joinAmount2, new string[](0));
 
         uint256 currentRound = verify.currentRound();
         assertEq(
@@ -346,10 +346,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user2, joinAmount2, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount1);
+        groupTokenJoin.join(groupId1, joinAmount1, new string[](0));
 
         vm.prank(user2);
-        groupTokenJoin.join(groupId2, joinAmount2);
+        groupTokenJoin.join(groupId2, joinAmount2, new string[](0));
 
         uint256 currentRound = verify.currentRound();
         assertEq(
@@ -367,7 +367,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         assertEq(groupTokenJoin.getAccounts().length, 0);
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         address[] memory accounts = groupTokenJoin.getAccounts();
         assertEq(accounts.length, 1);
@@ -379,7 +379,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user1);
         groupTokenJoin.exit();
@@ -396,13 +396,13 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user3, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user3);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         assertEq(groupTokenJoin.totalJoinedAmount(), joinAmount * 3);
         assertEq(groupTokenJoin.accountsByGroupIdCount(groupId1), 3);
@@ -414,10 +414,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        groupTokenJoin.join(groupId2, joinAmount);
+        groupTokenJoin.join(groupId2, joinAmount, new string[](0));
 
         assertEq(groupTokenJoin.accountsByGroupIdCount(groupId1), 1);
         assertEq(groupTokenJoin.accountsByGroupIdCount(groupId2), 1);
@@ -430,13 +430,13 @@ contract GroupTokenJoinTest is BaseGroupTest {
         setupUser(user3, joinAmount, address(groupTokenJoin));
 
         vm.prank(user1);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user3);
-        groupTokenJoin.join(groupId1, joinAmount);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         // user2 exits (middle user)
         vm.prank(user2);

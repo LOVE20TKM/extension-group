@@ -146,7 +146,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         for (uint256 i = 0; i < members.length; i++) {
             setupUser(members[i], amounts[i], address(rewardContract));
             vm.prank(members[i]);
-            rewardContract.join(groupId, amounts[i]);
+            rewardContract.join(groupId, amounts[i], new string[](0));
         }
 
         // Advance round to get fresh snapshot that captures members
@@ -188,10 +188,10 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         setupUser(user2, amount2, address(rewardContract));
 
         vm.prank(user1);
-        rewardContract.join(groupId1, amount1);
+        rewardContract.join(groupId1, amount1, new string[](0));
 
         vm.prank(user2);
-        rewardContract.join(groupId2, amount2);
+        rewardContract.join(groupId2, amount2, new string[](0));
 
         // Advance round once and submit scores for both groups in same round
         advanceRound();
@@ -310,10 +310,10 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         setupUser(user2, 30e18, address(rewardContract));
 
         vm.prank(user1);
-        rewardContract.join(groupId1, 10e18);
+        rewardContract.join(groupId1, 10e18, new string[](0));
 
         vm.prank(user2);
-        rewardContract.join(groupId1, 30e18);
+        rewardContract.join(groupId1, 30e18, new string[](0));
 
         // Advance round and trigger fresh snapshot
         advanceRound();
@@ -344,7 +344,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         setupUser(user1, 10e18, address(rewardContract));
 
         vm.prank(user1);
-        rewardContract.join(groupId1, 10e18);
+        rewardContract.join(groupId1, 10e18, new string[](0));
 
         // Advance round and trigger fresh snapshot
         advanceRound();
@@ -439,7 +439,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(rewardContract));
 
         vm.prank(user1);
-        rewardContract.join(groupId1, joinAmount);
+        rewardContract.join(groupId1, joinAmount, new string[](0));
 
         // Now user exits to reset state
         vm.prank(user1);
@@ -470,10 +470,10 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(rewardContract));
 
         vm.prank(user1);
-        rewardContract.join(groupId1, joinAmount);
+        rewardContract.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        rewardContract.join(groupId2, joinAmount);
+        rewardContract.join(groupId2, joinAmount, new string[](0));
 
         // Advance round and submit scores for both groups
         advanceRound();

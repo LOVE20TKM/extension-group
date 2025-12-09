@@ -45,7 +45,11 @@ interface IGroupTokenJoin {
     // ============ Write Functions ============
 
     /// @notice Join a group with tokens (can add more tokens by calling again)
-    function join(uint256 groupId, uint256 amount) external;
+    function join(
+        uint256 groupId,
+        uint256 amount,
+        string[] memory verificationInfos
+    ) external;
 
     // ============ View Functions ============
 

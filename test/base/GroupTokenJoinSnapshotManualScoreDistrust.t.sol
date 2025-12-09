@@ -164,7 +164,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         // Submit scores first
         submitScores(groupId1, groupOwner1, 1);
@@ -189,7 +189,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -212,7 +212,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -241,7 +241,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -258,7 +258,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -276,7 +276,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -307,7 +307,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -342,10 +342,10 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user2, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         vm.prank(user2);
-        distrustContract.join(groupId3, joinAmount);
+        distrustContract.join(groupId3, joinAmount, new string[](0));
 
         // Submit scores for both groups
         submitScores(groupId1, groupOwner1, 1);
@@ -382,7 +382,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -402,7 +402,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         setupGovernor(governor1, 100e18);
         setupGovernor(governor2, 50e18);
@@ -418,7 +418,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -450,7 +450,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
@@ -466,7 +466,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(distrustContract));
 
         vm.prank(user1);
-        distrustContract.join(groupId1, joinAmount);
+        distrustContract.join(groupId1, joinAmount, new string[](0));
 
         submitScores(groupId1, groupOwner1, 1);
 
