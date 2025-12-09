@@ -13,8 +13,10 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
 
     struct ExtensionParams {
         address tokenAddress;
-        address groupAddress;
-        uint256 minGovernanceVoteRatio;
+        address groupManagerAddress;
+        address groupDistrustAddress;
+        address stakeTokenAddress;
+        uint256 minGovVoteRatioBps;
         uint256 capacityMultiplier;
         uint256 stakingMultiplier;
         uint256 maxJoinAmountMultiplier;
@@ -32,18 +34,12 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
     // ============ Factory Functions ============
 
     /// @notice Create a new LOVE20ExtensionGroupAction extension
-    /// @param tokenAddress_ The token address
-    /// @param groupAddress_ The group NFT contract address
-    /// @param minGovernanceVoteRatio_ Minimum governance vote ratio in basis points
-    /// @param capacityMultiplier_ Multiplier for capacity calculation
-    /// @param stakingMultiplier_ Multiplier for staking calculation
-    /// @param maxJoinAmountMultiplier_ Multiplier for max join amount
-    /// @param minJoinAmount_ Minimum join amount
-    /// @return extension The address of the created extension
     function createExtension(
         address tokenAddress_,
-        address groupAddress_,
-        uint256 minGovernanceVoteRatio_,
+        address groupManagerAddress_,
+        address groupDistrustAddress_,
+        address stakeTokenAddress_,
+        uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
         uint256 maxJoinAmountMultiplier_,
@@ -53,8 +49,10 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
             new LOVE20ExtensionGroupAction(
                 address(this),
                 tokenAddress_,
-                groupAddress_,
-                minGovernanceVoteRatio_,
+                groupManagerAddress_,
+                groupDistrustAddress_,
+                stakeTokenAddress_,
+                minGovVoteRatioBps_,
                 capacityMultiplier_,
                 stakingMultiplier_,
                 maxJoinAmountMultiplier_,
@@ -64,8 +62,10 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
 
         _extensionParams[extension] = ExtensionParams({
             tokenAddress: tokenAddress_,
-            groupAddress: groupAddress_,
-            minGovernanceVoteRatio: minGovernanceVoteRatio_,
+            groupManagerAddress: groupManagerAddress_,
+            groupDistrustAddress: groupDistrustAddress_,
+            stakeTokenAddress: stakeTokenAddress_,
+            minGovVoteRatioBps: minGovVoteRatioBps_,
             capacityMultiplier: capacityMultiplier_,
             stakingMultiplier: stakingMultiplier_,
             maxJoinAmountMultiplier: maxJoinAmountMultiplier_,
@@ -80,29 +80,7 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
     /// @notice Get the parameters of an extension
     function extensionParams(
         address extension_
-    )
-        external
-        view
-        returns (
-            address tokenAddress,
-            address groupAddress,
-            uint256 minGovernanceVoteRatio,
-            uint256 capacityMultiplier,
-            uint256 stakingMultiplier,
-            uint256 maxJoinAmountMultiplier,
-            uint256 minJoinAmount
-        )
-    {
-        ExtensionParams memory params = _extensionParams[extension_];
-        return (
-            params.tokenAddress,
-            params.groupAddress,
-            params.minGovernanceVoteRatio,
-            params.capacityMultiplier,
-            params.stakingMultiplier,
-            params.maxJoinAmountMultiplier,
-            params.minJoinAmount
-        );
+    ) external view returns (ExtensionParams memory) {
+        return _extensionParams[extension_];
     }
 }
-

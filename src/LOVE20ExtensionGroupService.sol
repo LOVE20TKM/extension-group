@@ -12,6 +12,7 @@ import {
 import {
     ILOVE20ExtensionGroupService
 } from "./interface/ILOVE20ExtensionGroupService.sol";
+import {ILOVE20GroupManager} from "./interface/ILOVE20GroupManager.sol";
 import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -71,8 +72,16 @@ contract LOVE20ExtensionGroupService is
     function join(
         string[] memory verificationInfos
     ) public override(IJoin, JoinBase) {
-        uint256 stakedAmount = ILOVE20ExtensionGroupAction(GROUP_ACTION_ADDRESS)
-            .totalStakedByOwner(msg.sender);
+        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+            GROUP_ACTION_ADDRESS
+        );
+        uint256 stakedAmount = ILOVE20GroupManager(
+            groupAction.GROUP_MANAGER_ADDRESS()
+        ).totalStakedByOwner(
+                groupAction.tokenAddress(),
+                groupAction.actionId(),
+                msg.sender
+            );
         if (stakedAmount == 0) revert NoActiveGroups();
 
         super.join(verificationInfos);
@@ -214,16 +223,31 @@ contract LOVE20ExtensionGroupService is
     }
 
     function joinedValue() external view returns (uint256) {
-        return ILOVE20ExtensionGroupAction(GROUP_ACTION_ADDRESS).totalStaked();
+        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+            GROUP_ACTION_ADDRESS
+        );
+        return
+            ILOVE20GroupManager(groupAction.GROUP_MANAGER_ADDRESS())
+                .totalStaked(
+                    groupAction.tokenAddress(),
+                    groupAction.actionId()
+                );
     }
 
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
         if (!_accounts.contains(account)) return 0;
+        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+            GROUP_ACTION_ADDRESS
+        );
         return
-            ILOVE20ExtensionGroupAction(GROUP_ACTION_ADDRESS)
-                .totalStakedByOwner(account);
+            ILOVE20GroupManager(groupAction.GROUP_MANAGER_ADDRESS())
+                .totalStakedByOwner(
+                    groupAction.tokenAddress(),
+                    groupAction.actionId(),
+                    account
+                );
     }
 
     // ============ Internal Functions ============

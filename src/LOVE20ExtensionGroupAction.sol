@@ -24,20 +24,22 @@ contract LOVE20ExtensionGroupAction is
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupAddress_,
-        uint256 minGovernanceVoteRatio_,
+        address groupManagerAddress_,
+        address groupDistrustAddress_,
+        address stakeTokenAddress_,
+        uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
         uint256 stakingMultiplier_,
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
     )
-        GroupTokenJoinSnapshotManualScoreDistrustReward()
+        GroupTokenJoinSnapshotManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
             factory_,
             tokenAddress_,
-            groupAddress_,
-            tokenAddress_, // stakeTokenAddress = tokenAddress
-            minGovernanceVoteRatio_,
+            groupManagerAddress_,
+            stakeTokenAddress_,
+            minGovVoteRatioBps_,
             capacityMultiplier_,
             stakingMultiplier_,
             maxJoinAmountMultiplier_,

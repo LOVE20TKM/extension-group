@@ -5,6 +5,9 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     LOVE20ExtensionGroupAction
 } from "../src/LOVE20ExtensionGroupAction.sol";
+import {LOVE20GroupManager} from "../src/LOVE20GroupManager.sol";
+import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
+import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 import {IGroupCore} from "../src/interface/base/IGroupCore.sol";
 import {IGroupTokenJoin} from "../src/interface/base/IGroupTokenJoin.sol";
 import {IGroupSnapshot} from "../src/interface/base/IGroupSnapshot.sol";
@@ -22,6 +25,7 @@ import {IGroupManualScore} from "../src/interface/base/IGroupManualScore.sol";
  */
 contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     LOVE20ExtensionGroupAction public groupAction;
+    LOVE20GroupDistrust public groupDistrust;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -29,11 +33,20 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
+        // Deploy GroupDistrust singleton
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
         // Deploy the actual GroupAction contract
         groupAction = new LOVE20ExtensionGroupAction(
             address(mockFactory),
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token), // stakeTokenAddress
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -51,16 +64,18 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
         groupId2 = setupGroupOwner(groupOwner2, 10000e18, "TestGroup2");
 
-        // Prepare extension init
+        // Prepare extension init (config already set in GroupCore constructor)
         prepareExtensionInit(address(groupAction), address(token), ACTION_ID);
 
-        // Activate groups
+        // Activate groups (through GroupManager directly)
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupAction));
-        setupUser(groupOwner2, stakeAmount, address(groupAction));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner2, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        groupAction.activateGroup(
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
             groupId1,
             "Group1",
             stakeAmount,
@@ -68,8 +83,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             0
         );
 
-        vm.prank(groupOwner2);
-        groupAction.activateGroup(
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
             groupId2,
             "Group2",
             stakeAmount,
@@ -122,7 +139,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     }
 
     function test_GroupActivationAndDeactivation() public {
-        assertTrue(groupAction.isGroupActive(groupId1));
+        assertTrue(
+            groupManager.isGroupActive(address(token), ACTION_ID, groupId1)
+        );
 
         advanceRound();
         // Setup actionIds for new round
@@ -132,10 +151,12 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             ACTION_ID
         );
 
-        vm.prank(groupOwner1);
-        groupAction.deactivateGroup(groupId1);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
-        assertFalse(groupAction.isGroupActive(groupId1));
+        assertFalse(
+            groupManager.isGroupActive(address(token), ACTION_ID, groupId1)
+        );
 
         // Cannot join deactivated group
         uint256 joinAmount = 10e18;
@@ -148,19 +169,24 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
     function test_GroupExpansion() public {
         uint256 additionalStake = 50e18;
-        setupUser(groupOwner1, additionalStake, address(groupAction));
+        setupUser(groupOwner1, additionalStake, address(groupManager));
 
-        IGroupCore.GroupInfo memory infoBefore = groupAction.groupInfo(
-            groupId1
-        );
+        ILOVE20GroupManager.GroupInfo memory infoBefore = groupManager
+            .groupInfo(address(token), ACTION_ID, groupId1);
 
-        vm.prank(groupOwner1);
-        (uint256 newStaked, uint256 newCapacity) = groupAction.expandGroup(
+        vm.prank(groupOwner1, groupOwner1);
+        (uint256 newStaked, uint256 newCapacity) = groupManager.expandGroup(
+            address(token),
+            ACTION_ID,
             groupId1,
             additionalStake
         );
 
-        IGroupCore.GroupInfo memory infoAfter = groupAction.groupInfo(groupId1);
+        ILOVE20GroupManager.GroupInfo memory infoAfter = groupManager.groupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1
+        );
 
         assertEq(newStaked, infoBefore.stakedAmount + additionalStake);
         assertEq(infoAfter.stakedAmount, newStaked);
@@ -221,7 +247,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 scoreBefore = groupAction.scoreByGroupId(round, groupId1);
 
         // Cast distrust vote
-        vm.prank(governor);
+        vm.prank(governor, governor);
         groupAction.distrustVote(groupOwner1, 50e18, "Bad behavior");
 
         uint256 scoreAfter = groupAction.scoreByGroupId(round, groupId1);
@@ -375,10 +401,21 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 newMin = 5e18;
         uint256 newMax = 50e18;
 
-        vm.prank(groupOwner1);
-        groupAction.updateGroupInfo(groupId1, newDesc, newMin, newMax);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.updateGroupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            newDesc,
+            newMin,
+            newMax
+        );
 
-        IGroupCore.GroupInfo memory info = groupAction.groupInfo(groupId1);
+        ILOVE20GroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1
+        );
         assertEq(info.description, newDesc);
         assertEq(info.groupMinJoinAmount, newMin);
         assertEq(info.groupMaxJoinAmount, newMax);
@@ -390,8 +427,15 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         // Test that verifier capacity is limited by governance votes
 
         // Get max capacity for owner
-        uint256 maxCapacity = groupAction.maxCapacityByOwner(groupOwner1);
-        uint256 maxPerAccount = groupAction.calculateJoinMaxAmount();
+        uint256 maxCapacity = groupManager.maxCapacityByOwner(
+            address(token),
+            ACTION_ID,
+            groupOwner1
+        );
+        uint256 maxPerAccount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
         assertTrue(maxCapacity > 0, "maxCapacity should be > 0");
         assertTrue(maxPerAccount > 0, "maxPerAccount should be > 0");
 

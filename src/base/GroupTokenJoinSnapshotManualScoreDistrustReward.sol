@@ -13,6 +13,11 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrustReward is
     GroupTokenJoinSnapshotManualScoreDistrust,
     IGroupReward
 {
+    // ============ Constructor ============
+
+    constructor(
+        address groupDistrustAddress_
+    ) GroupTokenJoinSnapshotManualScoreDistrust(groupDistrustAddress_) {}
     // ============ State ============
 
     /// @dev round => burned amount

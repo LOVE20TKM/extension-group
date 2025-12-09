@@ -13,13 +13,21 @@ import {MockSubmit} from "@extension/test/mocks/MockSubmit.sol";
 import {MockLaunch} from "@extension/test/mocks/MockLaunch.sol";
 import {MockVote} from "@extension/test/mocks/MockVote.sol";
 import {MockRandom} from "@extension/test/mocks/MockRandom.sol";
-import {MockUniswapV2Factory} from "@extension/test/mocks/MockUniswapV2Factory.sol";
-import {MockExtensionFactory} from "@extension/test/mocks/MockExtensionFactory.sol";
+import {
+    MockUniswapV2Factory
+} from "@extension/test/mocks/MockUniswapV2Factory.sol";
+import {
+    MockExtensionFactory
+} from "@extension/test/mocks/MockExtensionFactory.sol";
 
 // Import local mock contracts
 import {MockGroup} from "../mocks/MockGroup.sol";
 import {MockGroupToken} from "../mocks/MockGroupToken.sol";
 import {MockVerifyExtended} from "../mocks/MockVerifyExtended.sol";
+
+// Import GroupManager
+import {LOVE20GroupManager} from "../../src/LOVE20GroupManager.sol";
+import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
 
 /**
  * @title BaseGroupTest
@@ -33,6 +41,10 @@ abstract contract BaseGroupTest is Test {
     MockGroup public group;
     MockUniswapV2Factory public uniswapFactory;
     MockExtensionFactory public mockFactory;
+
+    // ============ GroupManager (singleton) ============
+
+    LOVE20GroupManager public groupManager;
 
     // ============ Mock Contracts ============
 
@@ -57,7 +69,7 @@ abstract contract BaseGroupTest is Test {
 
     // ============ Constants ============
 
-    uint256 constant ACTION_ID = 1;
+    uint256 constant ACTION_ID = 0; // Config is set at construction time with actionId=0
     uint256 constant WAITING_BLOCKS = 100;
 
     // Group configuration constants
@@ -66,7 +78,7 @@ abstract contract BaseGroupTest is Test {
     uint256 constant STAKING_MULTIPLIER = 100;
     uint256 constant MAX_JOIN_AMOUNT_MULTIPLIER = 100;
     uint256 constant MIN_JOIN_AMOUNT = 1e18;
-    uint256 constant DEFAULT_STAKE_AMOUNT = 10000e18;  // Min stake based on total supply
+    uint256 constant DEFAULT_STAKE_AMOUNT = 10000e18; // Min stake based on total supply
 
     // ============ Setup Functions ============
 
@@ -100,6 +112,13 @@ abstract contract BaseGroupTest is Test {
         // Deploy mock factory
         mockFactory = new MockExtensionFactory(address(center));
 
+        // Deploy GroupManager singleton
+        groupManager = new LOVE20GroupManager(
+            address(group),
+            address(stake),
+            address(join)
+        );
+
         // Setup initial token supply
         token.mint(address(this), 1_000_000e18);
 
@@ -109,6 +128,25 @@ abstract contract BaseGroupTest is Test {
         // Initialize current round
         verify.setCurrentRound(1);
         join.setCurrentRound(1);
+    }
+
+    /**
+     * @notice Create default GroupConfig for testing
+     */
+    function createDefaultGroupConfig()
+        internal
+        view
+        returns (ILOVE20GroupManager.GroupConfig memory)
+    {
+        return
+            ILOVE20GroupManager.GroupConfig({
+                stakeTokenAddress: address(token),
+                minGovVoteRatioBps: MIN_GOV_VOTE_RATIO_BPS,
+                capacityMultiplier: CAPACITY_MULTIPLIER,
+                stakingMultiplier: STAKING_MULTIPLIER,
+                maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER,
+                minJoinAmount: MIN_JOIN_AMOUNT
+            });
     }
 
     // ============ Helper Functions ============
@@ -131,11 +169,7 @@ abstract contract BaseGroupTest is Test {
     /**
      * @notice Setup user with tokens and approval
      */
-    function setupUser(
-        address user,
-        uint256 amount,
-        address spender
-    ) internal {
+    function setupUser(address user, uint256 amount, address spender) internal {
         token.mint(user, amount);
         vm.prank(user);
         token.approve(spender, type(uint256).max);
@@ -144,10 +178,7 @@ abstract contract BaseGroupTest is Test {
     /**
      * @notice Register factory to center
      */
-    function registerFactory(
-        address tokenAddr,
-        address factory
-    ) internal {
+    function registerFactory(address tokenAddr, address factory) internal {
         submit.setCanSubmit(tokenAddr, address(this), true);
         center.addFactory(tokenAddr, factory);
     }
@@ -207,12 +238,13 @@ abstract contract BaseGroupTest is Test {
         uint256 actionId,
         address extensionAddress
     ) internal view returns (uint256) {
-        return verify.scoreByActionIdByAccount(
-            address(token),
-            verify.currentRound(),
-            actionId,
-            extensionAddress
-        );
+        return
+            verify.scoreByActionIdByAccount(
+                address(token),
+                verify.currentRound(),
+                actionId,
+                extensionAddress
+            );
     }
 
     // ============ Array Assertion Helpers ============
@@ -231,7 +263,11 @@ abstract contract BaseGroupTest is Test {
             assertEq(
                 actual[i],
                 expected[i],
-                string.concat(message, ": element mismatch at index ", vm.toString(i))
+                string.concat(
+                    message,
+                    ": element mismatch at index ",
+                    vm.toString(i)
+                )
             );
         }
     }
@@ -250,9 +286,12 @@ abstract contract BaseGroupTest is Test {
             assertEq(
                 actual[i],
                 expected[i],
-                string.concat(message, ": element mismatch at index ", vm.toString(i))
+                string.concat(
+                    message,
+                    ": element mismatch at index ",
+                    vm.toString(i)
+                )
             );
         }
     }
 }
-

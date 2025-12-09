@@ -11,6 +11,8 @@ import {
 import {
     LOVE20ExtensionGroupActionFactory
 } from "../src/LOVE20ExtensionGroupActionFactory.sol";
+import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
+import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 
 /**
  * @title LOVE20ExtensionGroupServiceFactoryTest
@@ -19,6 +21,7 @@ import {
 contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     LOVE20ExtensionGroupServiceFactory public factory;
     LOVE20ExtensionGroupActionFactory public actionFactory;
+    LOVE20GroupDistrust public groupDistrust;
     address public groupActionAddress;
 
     uint256 constant MAX_RECIPIENTS = 10;
@@ -26,13 +29,22 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
+        // Deploy GroupDistrust singleton
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
         // Deploy GroupAction factory and create a GroupAction first
         actionFactory = new LOVE20ExtensionGroupActionFactory(address(center));
         token.approve(address(actionFactory), 1e18);
 
         groupActionAddress = actionFactory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -207,4 +219,3 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         assertFalse(factory.exists(address(0)));
     }
 }
-

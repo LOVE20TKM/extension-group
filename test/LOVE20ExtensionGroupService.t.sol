@@ -2,9 +2,17 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
-import {LOVE20ExtensionGroupService} from "../src/LOVE20ExtensionGroupService.sol";
-import {LOVE20ExtensionGroupAction} from "../src/LOVE20ExtensionGroupAction.sol";
-import {ILOVE20ExtensionGroupService} from "../src/interface/ILOVE20ExtensionGroupService.sol";
+import {
+    LOVE20ExtensionGroupService
+} from "../src/LOVE20ExtensionGroupService.sol";
+import {
+    LOVE20ExtensionGroupAction
+} from "../src/LOVE20ExtensionGroupAction.sol";
+import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
+import {
+    ILOVE20ExtensionGroupService
+} from "../src/interface/ILOVE20ExtensionGroupService.sol";
+import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 import {IJoin} from "@extension/src/interface/base/IJoin.sol";
 
 /**
@@ -23,6 +31,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     );
     LOVE20ExtensionGroupService public groupService;
     LOVE20ExtensionGroupAction public groupAction;
+    LOVE20GroupDistrust public groupDistrust;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -33,11 +42,20 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
+        // Deploy GroupDistrust singleton
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
         // Deploy GroupAction first (as dependency)
         groupAction = new LOVE20ExtensionGroupAction(
             address(mockFactory),
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -64,24 +82,48 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
         groupId2 = setupGroupOwner(groupOwner2, 10000e18, "TestGroup2");
 
-        // Prepare extension init for groupAction
+        // Prepare extension init for groupAction (config already set in GroupCore constructor)
         prepareExtensionInit(address(groupAction), address(token), ACTION_ID);
 
         // Prepare extension init for groupService
-        submit.setActionInfo(address(token), SERVICE_ACTION_ID, address(groupService));
-        vote.setVotedActionIds(address(token), join.currentRound(), SERVICE_ACTION_ID);
+        submit.setActionInfo(
+            address(token),
+            SERVICE_ACTION_ID,
+            address(groupService)
+        );
+        vote.setVotedActionIds(
+            address(token),
+            join.currentRound(),
+            SERVICE_ACTION_ID
+        );
         token.mint(address(groupService), 1e18);
 
         // Activate groups
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupAction));
-        setupUser(groupOwner2, stakeAmount, address(groupAction));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner2, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        groupAction.activateGroup(groupId1, "Group1", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
-        vm.prank(groupOwner2);
-        groupAction.activateGroup(groupId2, "Group2", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            "Group2",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
     }
 
     /**
@@ -102,7 +144,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         // Advance round and setup actionIds for new round
         advanceRound();
         _setupActionIdsForCurrentRound();
-        
+
         groupAction.snapshotIfNeeded(groupId);
 
         uint256[] memory scores = new uint256[](1);
@@ -148,8 +190,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         advanceRound();
         _setupActionIdsForCurrentRound();
 
-        vm.prank(groupOwner1);
-        groupAction.deactivateGroup(groupId1);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         vm.prank(groupOwner1);
         vm.expectRevert(ILOVE20ExtensionGroupService.NoActiveGroups.selector);
@@ -176,7 +218,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.setRecipients(recipients, basisPoints);
 
         uint256 round = verify.currentRound();
-        (address[] memory addrs, uint256[] memory points) = groupService.recipients(groupOwner1, round);
+        (address[] memory addrs, uint256[] memory points) = groupService
+            .recipients(groupOwner1, round);
 
         assertEq(addrs.length, 2);
         assertEq(addrs[0], recipients[0]);
@@ -211,7 +254,9 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5000;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(ILOVE20ExtensionGroupService.ArrayLengthMismatch.selector);
+        vm.expectRevert(
+            ILOVE20ExtensionGroupService.ArrayLengthMismatch.selector
+        );
         groupService.setRecipients(recipients, basisPoints);
     }
 
@@ -230,7 +275,9 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         }
 
         vm.prank(groupOwner1);
-        vm.expectRevert(ILOVE20ExtensionGroupService.TooManyRecipients.selector);
+        vm.expectRevert(
+            ILOVE20ExtensionGroupService.TooManyRecipients.selector
+        );
         groupService.setRecipients(recipients, basisPoints);
     }
 
@@ -283,7 +330,9 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[1] = 5000; // 50% - total > 100%
 
         vm.prank(groupOwner1);
-        vm.expectRevert(ILOVE20ExtensionGroupService.InvalidBasisPoints.selector);
+        vm.expectRevert(
+            ILOVE20ExtensionGroupService.InvalidBasisPoints.selector
+        );
         groupService.setRecipients(recipients, basisPoints);
     }
 
@@ -321,12 +370,14 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.setRecipients(recipients2, basisPoints2);
 
         // Check round 1 recipients
-        (address[] memory addrs1, uint256[] memory points1) = groupService.recipients(groupOwner1, round1);
+        (address[] memory addrs1, uint256[] memory points1) = groupService
+            .recipients(groupOwner1, round1);
         assertEq(addrs1[0], address(0x100));
         assertEq(points1[0], 3000);
 
         // Check round 2 recipients
-        (address[] memory addrs2, uint256[] memory points2) = groupService.recipients(groupOwner1, round2);
+        (address[] memory addrs2, uint256[] memory points2) = groupService
+            .recipients(groupOwner1, round2);
         assertEq(addrs2[0], address(0x200));
         assertEq(points2[0], 4000);
     }
@@ -345,7 +396,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         vm.prank(groupOwner1);
         groupService.setRecipients(recipients, basisPoints);
 
-        (address[] memory addrs, uint256[] memory points) = groupService.recipientsLatest(groupOwner1);
+        (address[] memory addrs, uint256[] memory points) = groupService
+            .recipientsLatest(groupOwner1);
         assertEq(addrs.length, 1);
         assertEq(addrs[0], address(0x100));
         assertEq(points[0], 3000);
@@ -374,7 +426,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 round = verify.currentRound();
 
         // RewardByRecipient returns 0 if no reward set
-        uint256 recipientReward = groupService.rewardByRecipient(round, groupOwner1, recipient);
+        uint256 recipientReward = groupService.rewardByRecipient(
+            round,
+            groupOwner1,
+            recipient
+        );
         // Since no reward is set, it should be 0
         assertEq(recipientReward, 0);
     }
@@ -398,7 +454,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 round = verify.currentRound();
 
         // Owner gets remaining (70%)
-        uint256 ownerReward = groupService.rewardByRecipient(round, groupOwner1, groupOwner1);
+        uint256 ownerReward = groupService.rewardByRecipient(
+            round,
+            groupOwner1,
+            groupOwner1
+        );
         assertEq(ownerReward, 0); // No reward set
     }
 
@@ -449,9 +509,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
         setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 80);
 
-        // joinedValue should return totalStaked from groupAction
-        uint256 joinedValue = groupService.joinedValue();
-        assertEq(joinedValue, groupAction.totalStaked());
+        // joinedValue should return totalStaked from groupManager
+        uint256 joinedVal = groupService.joinedValue();
+        assertEq(
+            joinedVal,
+            groupManager.totalStaked(address(token), ACTION_ID)
+        );
     }
 
     function test_JoinedValueByAccount() public {
@@ -461,7 +524,14 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.join(new string[](0));
 
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
-        assertEq(ownerValue, groupAction.totalStakedByOwner(groupOwner1));
+        assertEq(
+            ownerValue,
+            groupManager.totalStakedByOwner(
+                address(token),
+                ACTION_ID,
+                groupOwner1
+            )
+        );
 
         // Non-joined account
         uint256 user2Value = groupService.joinedValueByAccount(user2);
@@ -531,8 +601,14 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         // Verify independent recipients
         uint256 round = verify.currentRound();
 
-        (address[] memory addrs1, ) = groupService.recipients(groupOwner1, round);
-        (address[] memory addrs2, ) = groupService.recipients(groupOwner2, round);
+        (address[] memory addrs1, ) = groupService.recipients(
+            groupOwner1,
+            round
+        );
+        (address[] memory addrs2, ) = groupService.recipients(
+            groupOwner2,
+            round
+        );
 
         assertEq(addrs1[0], address(0x100));
         assertEq(addrs2[0], address(0x200));
@@ -554,7 +630,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.setRecipients(recipients, basisPoints);
 
         uint256 round = verify.currentRound();
-        (address[] memory addrs, uint256[] memory points) = groupService.recipients(groupOwner1, round);
+        (address[] memory addrs, uint256[] memory points) = groupService
+            .recipients(groupOwner1, round);
 
         assertEq(addrs.length, 0);
         assertEq(points.length, 0);
@@ -585,7 +662,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.setRecipients(recipients2, basisPoints2);
 
         uint256 round = verify.currentRound();
-        (address[] memory addrs, uint256[] memory points) = groupService.recipients(groupOwner1, round);
+        (address[] memory addrs, uint256[] memory points) = groupService
+            .recipients(groupOwner1, round);
 
         assertEq(addrs[0], address(0x200));
         assertEq(points[0], 5000);
@@ -607,10 +685,10 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.setRecipients(recipients, basisPoints);
 
         uint256 round = verify.currentRound();
-        (address[] memory addrs, uint256[] memory points) = groupService.recipients(groupOwner1, round);
+        (address[] memory addrs, uint256[] memory points) = groupService
+            .recipients(groupOwner1, round);
 
         assertEq(addrs[0], address(0x100));
         assertEq(points[0], 10000);
     }
 }
-

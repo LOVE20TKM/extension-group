@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import {GroupTokenJoin} from "./GroupTokenJoin.sol";
 import {IGroupSnapshot} from "../interface/base/IGroupSnapshot.sol";
+import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
 /// @title GroupTokenJoinSnapshot
 /// @notice Handles snapshot creation for token-join group participation data
@@ -111,7 +112,7 @@ abstract contract GroupTokenJoinSnapshot is GroupTokenJoin, IGroupSnapshot {
         uint256 round = _verify.currentRound();
         if (_hasSnapshot[round][groupId]) return;
 
-        GroupInfo storage group = _groupInfo[groupId];
+        ILOVE20GroupManager.GroupInfo memory group = _getGroupInfo(groupId);
         if (!group.isActive) return;
 
         _hasSnapshot[round][groupId] = true;
@@ -130,7 +131,7 @@ abstract contract GroupTokenJoinSnapshot is GroupTokenJoin, IGroupSnapshot {
         }
 
         // Snapshot group amount
-        uint256 groupAmount = group.totalJoinedAmount;
+        uint256 groupAmount = _totalJoinedAmountByGroupId[groupId];
         _snapshotAmountByGroupId[round][groupId] = groupAmount;
         _snapshotAmount[round] += groupAmount;
 

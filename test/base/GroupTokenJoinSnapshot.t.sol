@@ -2,21 +2,27 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
-import {GroupTokenJoinSnapshot} from "../../src/base/GroupTokenJoinSnapshot.sol";
+import {
+    GroupTokenJoinSnapshot
+} from "../../src/base/GroupTokenJoinSnapshot.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {IGroupSnapshot} from "../../src/interface/base/IGroupSnapshot.sol";
+import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupTokenJoinSnapshot
  * @notice Concrete implementation for testing
  */
-contract MockGroupTokenJoinSnapshot is GroupTokenJoinSnapshot, ExtensionAccounts {
+contract MockGroupTokenJoinSnapshot is
+    GroupTokenJoinSnapshot,
+    ExtensionAccounts
+{
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupAddress_,
+        address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
@@ -27,7 +33,7 @@ contract MockGroupTokenJoinSnapshot is GroupTokenJoinSnapshot, ExtensionAccounts
         GroupCore(
             factory_,
             tokenAddress_,
-            groupAddress_,
+            groupManagerAddress_,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
             capacityMultiplier_,
@@ -38,11 +44,15 @@ contract MockGroupTokenJoinSnapshot is GroupTokenJoinSnapshot, ExtensionAccounts
         GroupTokenJoin(tokenAddress_)
     {}
 
-    function _addAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _addAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._addAccount(account);
     }
 
-    function _removeAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _removeAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._removeAccount(account);
     }
 
@@ -54,11 +64,16 @@ contract MockGroupTokenJoinSnapshot is GroupTokenJoinSnapshot, ExtensionAccounts
         return totalJoinedAmount();
     }
 
-    function joinedValueByAccount(address account) external view returns (uint256) {
+    function joinedValueByAccount(
+        address account
+    ) external view returns (uint256) {
         return _joinInfo[account].amount;
     }
 
-    function _calculateReward(uint256, address) internal pure override returns (uint256) {
+    function _calculateReward(
+        uint256,
+        address
+    ) internal pure override returns (uint256) {
         return 0;
     }
 
@@ -84,7 +99,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract = new MockGroupTokenJoinSnapshot(
             address(mockFactory),
             address(token),
-            address(group),
+            address(groupManager),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
@@ -96,22 +111,45 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         registerFactory(address(token), address(mockFactory));
         token.mint(address(this), 1e18);
         token.approve(address(mockFactory), type(uint256).max);
-        mockFactory.registerExtension(address(snapshotContract), address(token));
+        mockFactory.registerExtension(
+            address(snapshotContract),
+            address(token)
+        );
 
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
         groupId2 = setupGroupOwner(groupOwner2, 10000e18, "TestGroup2");
 
-        prepareExtensionInit(address(snapshotContract), address(token), ACTION_ID);
+        prepareExtensionInit(
+            address(snapshotContract),
+            address(token),
+            ACTION_ID
+        );
 
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(snapshotContract));
-        setupUser(groupOwner2, stakeAmount, address(snapshotContract));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner2, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        snapshotContract.activateGroup(groupId1, "Group1", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
-        vm.prank(groupOwner2);
-        snapshotContract.activateGroup(groupId2, "Group2", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            "Group2",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
     }
 
     // ============ snapshotIfNeeded Tests ============
@@ -131,12 +169,21 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId1);
 
         // Verify snapshot data
-        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(round, groupId1);
+        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(
+            round,
+            groupId1
+        );
         assertEq(accounts.length, 1);
         assertEq(accounts[0], user1);
 
-        assertEq(snapshotContract.snapshotAmountByAccount(round, user1), joinAmount);
-        assertEq(snapshotContract.snapshotAmountByGroupId(round, groupId1), joinAmount);
+        assertEq(
+            snapshotContract.snapshotAmountByAccount(round, user1),
+            joinAmount
+        );
+        assertEq(
+            snapshotContract.snapshotAmountByGroupId(round, groupId1),
+            joinAmount
+        );
         assertEq(snapshotContract.snapshotAmount(round), joinAmount);
     }
 
@@ -161,8 +208,8 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
     function test_SnapshotIfNeeded_SkipsInactiveGroup() public {
         advanceRound();
 
-        vm.prank(groupOwner1);
-        snapshotContract.deactivateGroup(groupId1);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         uint256 round = verify.currentRound();
 
@@ -189,7 +236,8 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
 
         // First join triggers snapshot BEFORE user1 is added
         // Snapshot captures empty state
-        address[] memory accountsAfterFirst = snapshotContract.snapshotAccountsByGroupId(round, groupId1);
+        address[] memory accountsAfterFirst = snapshotContract
+            .snapshotAccountsByGroupId(round, groupId1);
         assertEq(accountsAfterFirst.length, 0);
 
         // Second join sees existing snapshot, doesn't create new one
@@ -197,7 +245,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.join(groupId1, joinAmount2, new string[](0));
 
         // Snapshot still shows empty (captured before first join)
-        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(round, groupId1);
+        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(
+            round,
+            groupId1
+        );
         assertEq(accounts.length, 0);
     }
 
@@ -221,10 +272,16 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.exit();
 
         // Snapshot should capture state before exit (with user1)
-        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(round, groupId1);
+        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(
+            round,
+            groupId1
+        );
         assertEq(accounts.length, 1);
         assertEq(accounts[0], user1);
-        assertEq(snapshotContract.snapshotAmountByAccount(round, user1), joinAmount);
+        assertEq(
+            snapshotContract.snapshotAmountByAccount(round, user1),
+            joinAmount
+        );
     }
 
     // ============ View Functions Tests ============
@@ -245,9 +302,15 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId1);
 
         uint256 round = verify.currentRound();
-        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(round, groupId1);
+        address[] memory accounts = snapshotContract.snapshotAccountsByGroupId(
+            round,
+            groupId1
+        );
         assertEq(accounts.length, 2);
-        assertEq(snapshotContract.snapshotAccountsByGroupIdCount(round, groupId1), 2);
+        assertEq(
+            snapshotContract.snapshotAccountsByGroupIdCount(round, groupId1),
+            2
+        );
     }
 
     function test_SnapshotAccountsByGroupIdAtIndex() public {
@@ -262,7 +325,14 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId1);
 
         uint256 round = verify.currentRound();
-        assertEq(snapshotContract.snapshotAccountsByGroupIdAtIndex(round, groupId1, 0), user1);
+        assertEq(
+            snapshotContract.snapshotAccountsByGroupIdAtIndex(
+                round,
+                groupId1,
+                0
+            ),
+            user1
+        );
     }
 
     function test_SnapshotAmountByAccount() public {
@@ -277,7 +347,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId1);
 
         uint256 round = verify.currentRound();
-        assertEq(snapshotContract.snapshotAmountByAccount(round, user1), joinAmount);
+        assertEq(
+            snapshotContract.snapshotAmountByAccount(round, user1),
+            joinAmount
+        );
     }
 
     function test_SnapshotAmountByGroupId() public {
@@ -297,7 +370,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId1);
 
         uint256 round = verify.currentRound();
-        assertEq(snapshotContract.snapshotAmountByGroupId(round, groupId1), joinAmount1 + joinAmount2);
+        assertEq(
+            snapshotContract.snapshotAmountByGroupId(round, groupId1),
+            joinAmount1 + joinAmount2
+        );
     }
 
     function test_SnapshotAmount() public {
@@ -318,7 +394,10 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId2);
 
         uint256 round = verify.currentRound();
-        assertEq(snapshotContract.snapshotAmount(round), joinAmount1 + joinAmount2);
+        assertEq(
+            snapshotContract.snapshotAmount(round),
+            joinAmount1 + joinAmount2
+        );
     }
 
     function test_SnapshotGroupIds() public {
@@ -398,7 +477,11 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         // Advance round to allow new snapshot
         advanceRound();
         // Setup actionId for new round
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
         uint256 round = verify.currentRound();
 
         vm.expectEmit(true, true, true, true);
@@ -407,4 +490,3 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
         snapshotContract.triggerSnapshot(groupId1);
     }
 }
-

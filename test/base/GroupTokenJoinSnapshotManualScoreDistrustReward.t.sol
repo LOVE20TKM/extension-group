@@ -2,25 +2,41 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
-import {GroupTokenJoinSnapshotManualScoreDistrustReward} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrustReward.sol";
-import {GroupTokenJoinSnapshotManualScoreDistrust} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrust.sol";
-import {GroupTokenJoinSnapshotManualScore} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
-import {GroupTokenJoinSnapshot} from "../../src/base/GroupTokenJoinSnapshot.sol";
+import {
+    GroupTokenJoinSnapshotManualScoreDistrustReward
+} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrustReward.sol";
+import {
+    GroupTokenJoinSnapshotManualScoreDistrust
+} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrust.sol";
+import {
+    GroupTokenJoinSnapshotManualScore
+} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
+import {
+    GroupTokenJoinSnapshot
+} from "../../src/base/GroupTokenJoinSnapshot.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
+import {LOVE20GroupDistrust} from "../../src/LOVE20GroupDistrust.sol";
 import {IGroupReward} from "../../src/interface/base/IGroupReward.sol";
-import {IExtensionReward} from "@extension/src/interface/base/IExtensionReward.sol";
+import {
+    IExtensionReward
+} from "@extension/src/interface/base/IExtensionReward.sol";
+import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupReward
  * @notice Concrete implementation for testing
  */
-contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward, ExtensionAccounts {
+contract MockGroupReward is
+    GroupTokenJoinSnapshotManualScoreDistrustReward,
+    ExtensionAccounts
+{
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupAddress_,
+        address groupManagerAddress_,
+        address groupDistrustAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
@@ -28,10 +44,11 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward, Ext
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
     )
+        GroupTokenJoinSnapshotManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
             factory_,
             tokenAddress_,
-            groupAddress_,
+            groupManagerAddress_,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
             capacityMultiplier_,
@@ -42,11 +59,15 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward, Ext
         GroupTokenJoin(tokenAddress_)
     {}
 
-    function _addAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _addAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._addAccount(account);
     }
 
-    function _removeAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _removeAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._removeAccount(account);
     }
 
@@ -58,7 +79,9 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward, Ext
         return totalJoinedAmount();
     }
 
-    function joinedValueByAccount(address account) external view returns (uint256) {
+    function joinedValueByAccount(
+        address account
+    ) external view returns (uint256) {
         return _joinInfo[account].amount;
     }
 
@@ -73,7 +96,10 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward, Ext
     }
 
     // Expose for testing
-    function calculateRewardByAccount(uint256 round, address account) external view returns (uint256) {
+    function calculateRewardByAccount(
+        uint256 round,
+        address account
+    ) external view returns (uint256) {
         return _calculateReward(round, account);
     }
 }
@@ -84,6 +110,7 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward, Ext
  */
 contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
     MockGroupReward public rewardContract;
+    LOVE20GroupDistrust public groupDistrust;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -99,10 +126,18 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
+        // Deploy GroupDistrust singleton
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
         rewardContract = new MockGroupReward(
             address(mockFactory),
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
@@ -119,17 +154,37 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
         groupId2 = setupGroupOwner(groupOwner2, 10000e18, "TestGroup2");
 
-        prepareExtensionInit(address(rewardContract), address(token), ACTION_ID);
+        prepareExtensionInit(
+            address(rewardContract),
+            address(token),
+            ACTION_ID
+        );
 
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(rewardContract));
-        setupUser(groupOwner2, stakeAmount, address(rewardContract));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner2, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        rewardContract.activateGroup(groupId1, "Group1", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
-        vm.prank(groupOwner2);
-        rewardContract.activateGroup(groupId2, "Group2", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            "Group2",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
     }
 
     /**
@@ -152,7 +207,11 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         // Advance round to get fresh snapshot that captures members
         advanceRound();
         // Setup actionIds for new round
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
         rewardContract.triggerSnapshot(groupId);
 
         vm.prank(owner);
@@ -195,7 +254,11 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
         // Advance round once and submit scores for both groups in same round
         advanceRound();
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
 
         rewardContract.triggerSnapshot(groupId1);
         rewardContract.triggerSnapshot(groupId2);
@@ -256,7 +319,10 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         uint256 totalReward = 1000e18;
         rewardContract.setReward(round, totalReward);
 
-        uint256 verifierReward = rewardContract.rewardByVerifier(round, groupOwner1);
+        uint256 verifierReward = rewardContract.rewardByVerifier(
+            round,
+            groupOwner1
+        );
         assertEq(verifierReward, totalReward);
     }
 
@@ -268,10 +334,18 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         stake.setValidGovVotes(address(token), groupOwner1, 30000e18);
 
         uint256 stakeAmount = 5000e18;
-        setupUser(groupOwner1, stakeAmount, address(rewardContract));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        rewardContract.activateGroup(groupId3, "Group3", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId3,
+            "Group3",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
         // Setup group1
         address[] memory members1 = new address[](1);
@@ -281,7 +355,13 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         uint256[] memory scores1 = new uint256[](1);
         scores1[0] = 80;
 
-        setupGroupWithScores(groupId1, groupOwner1, members1, amounts1, scores1);
+        setupGroupWithScores(
+            groupId1,
+            groupOwner1,
+            members1,
+            amounts1,
+            scores1
+        );
 
         // Setup group3
         address[] memory members3 = new address[](1);
@@ -291,14 +371,23 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         uint256[] memory scores3 = new uint256[](1);
         scores3[0] = 80;
 
-        setupGroupWithScores(groupId3, groupOwner1, members3, amounts3, scores3);
+        setupGroupWithScores(
+            groupId3,
+            groupOwner1,
+            members3,
+            amounts3,
+            scores3
+        );
 
         uint256 round = verify.currentRound();
         uint256 totalReward = 1000e18;
         rewardContract.setReward(round, totalReward);
 
         // Owner1 verified both groups
-        uint256 verifierReward = rewardContract.rewardByVerifier(round, groupOwner1);
+        uint256 verifierReward = rewardContract.rewardByVerifier(
+            round,
+            groupOwner1
+        );
         assertEq(verifierReward, totalReward);
     }
 
@@ -321,7 +410,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
         uint256[] memory scores = new uint256[](2);
         scores[0] = 100; // user1: score = 100 * 10e18 = 1000e18
-        scores[1] = 50;  // user2: score = 50 * 30e18 = 1500e18
+        scores[1] = 50; // user2: score = 50 * 30e18 = 1500e18
         // Total score: 2500e18
 
         vm.prank(groupOwner1);
@@ -332,11 +421,17 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.setReward(round, totalReward);
 
         // user1 reward = totalReward * (1000e18 / 2500e18) = 400e18
-        uint256 user1Reward = rewardContract.calculateRewardByAccount(round, user1);
+        uint256 user1Reward = rewardContract.calculateRewardByAccount(
+            round,
+            user1
+        );
         assertEq(user1Reward, 400e18);
 
         // user2 reward = totalReward * (1500e18 / 2500e18) = 600e18
-        uint256 user2Reward = rewardContract.calculateRewardByAccount(round, user2);
+        uint256 user2Reward = rewardContract.calculateRewardByAccount(
+            round,
+            user2
+        );
         assertEq(user2Reward, 600e18);
     }
 
@@ -454,7 +549,12 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         advanceRound();
 
         vm.expectEmit(true, true, true, true);
-        emit UnclaimedRewardBurn(address(token), round, ACTION_ID, rewardAmount);
+        emit UnclaimedRewardBurn(
+            address(token),
+            round,
+            ACTION_ID,
+            rewardAmount
+        );
 
         rewardContract.burnUnclaimedReward(round);
     }
@@ -477,7 +577,11 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
         // Advance round and submit scores for both groups
         advanceRound();
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
         rewardContract.triggerSnapshot(groupId1);
         rewardContract.triggerSnapshot(groupId2);
 
@@ -502,16 +606,27 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         // Apply distrust to group1 owner
         setupVerifyVotes(governor, ACTION_ID, address(rewardContract), 100e18);
 
-        vm.prank(governor);
+        vm.prank(governor, governor);
         rewardContract.distrustVote(groupOwner1, 50e18, "Bad");
 
         // After distrust, group1 should get less, group2 should get more
         uint256 reward1After = rewardContract.rewardByGroupId(round, groupId1);
         uint256 reward2After = rewardContract.rewardByGroupId(round, groupId2);
 
-        assertTrue(reward1After < reward1Before, "Group1 reward should decrease");
-        assertTrue(reward2After > reward2Before, "Group2 reward should increase");
-        assertApproxEqAbs(reward1After + reward2After, totalReward, 1, "Total reward should be preserved");
+        assertTrue(
+            reward1After < reward1Before,
+            "Group1 reward should decrease"
+        );
+        assertTrue(
+            reward2After > reward2Before,
+            "Group2 reward should increase"
+        );
+        assertApproxEqAbs(
+            reward1After + reward2After,
+            totalReward,
+            1,
+            "Total reward should be preserved"
+        );
     }
 
     function test_RewardDistribution_MultipleGroupsWithDistrust() public {
@@ -525,7 +640,13 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         uint256[] memory scores1 = new uint256[](1);
         scores1[0] = 80;
 
-        setupGroupWithScores(groupId1, groupOwner1, members1, amounts1, scores1);
+        setupGroupWithScores(
+            groupId1,
+            groupOwner1,
+            members1,
+            amounts1,
+            scores1
+        );
 
         // Setup group2
         address[] memory members2 = new address[](1);
@@ -535,7 +656,13 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         uint256[] memory scores2 = new uint256[](1);
         scores2[0] = 80;
 
-        setupGroupWithScores(groupId2, groupOwner2, members2, amounts2, scores2);
+        setupGroupWithScores(
+            groupId2,
+            groupOwner2,
+            members2,
+            amounts2,
+            scores2
+        );
 
         uint256 round = verify.currentRound();
         uint256 totalReward = 1000e18;
@@ -544,7 +671,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         // Apply 100% distrust to group1
         setupVerifyVotes(governor, ACTION_ID, address(rewardContract), 100e18);
 
-        vm.prank(governor);
+        vm.prank(governor, governor);
         rewardContract.distrustVote(groupOwner1, 100e18, "Bad");
 
         // Group1 should get 0
@@ -554,4 +681,3 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         assertEq(rewardContract.rewardByGroupId(round, groupId2), totalReward);
     }
 }
-

@@ -9,6 +9,7 @@ import {
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
 import {VerificationInfo} from "@extension/src/base/VerificationInfo.sol";
+import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
 
@@ -33,10 +34,11 @@ abstract contract GroupTokenJoin is
     mapping(address => RoundHistoryUint256.History)
         internal _groupIdHistoryByAccount;
 
-    // Group state
+    // Group state (local tracking)
     mapping(uint256 => address[]) internal _accountsByGroupId;
     mapping(uint256 => mapping(address => uint256))
         internal _accountIndexInGroup;
+    mapping(uint256 => uint256) internal _totalJoinedAmountByGroupId;
     mapping(uint256 => RoundHistoryUint256.History)
         internal _totalJoinedAmountHistoryByGroupId;
     RoundHistoryUint256.History internal _totalJoinedAmountHistory;
@@ -64,7 +66,7 @@ abstract contract GroupTokenJoin is
         _beforeJoin(groupId, msg.sender);
 
         JoinInfo storage info = _joinInfo[msg.sender];
-        GroupInfo storage group = _groupInfo[groupId];
+        ILOVE20GroupManager.GroupInfo memory group = _getGroupInfo(groupId);
         bool isFirstJoin = info.groupId == 0;
 
         // Validate group and membership
@@ -84,9 +86,11 @@ abstract contract GroupTokenJoin is
         ) {
             revert AmountExceedsAccountCap();
         }
-        if (newTotal > calculateJoinMaxAmount())
+        if (newTotal > _calculateJoinMaxAmount())
             revert AmountExceedsAccountCap();
-        if (group.totalJoinedAmount + amount > group.capacity)
+
+        uint256 currentGroupTotal = _totalJoinedAmountByGroupId[groupId];
+        if (currentGroupTotal + amount > group.capacity)
             revert GroupCapacityFull();
 
         // Transfer tokens and update state
@@ -95,11 +99,13 @@ abstract contract GroupTokenJoin is
         uint256 currentRound = _join.currentRound();
         info.groupId = groupId;
         info.amount = newTotal;
-        group.totalJoinedAmount += amount;
 
+        // Update local totalJoinedAmount
+        uint256 newGroupTotal = currentGroupTotal + amount;
+        _totalJoinedAmountByGroupId[groupId] = newGroupTotal;
         _totalJoinedAmountHistoryByGroupId[groupId].record(
             currentRound,
-            group.totalJoinedAmount
+            newGroupTotal
         );
         _totalJoinedAmount += amount;
         _totalJoinedAmountHistory.record(currentRound, _totalJoinedAmount);
@@ -133,14 +139,16 @@ abstract contract GroupTokenJoin is
         _beforeExit(groupId, msg.sender);
 
         uint256 currentRound = _join.currentRound();
-        GroupInfo storage group = _groupInfo[groupId];
 
         // Update state
         _groupIdHistoryByAccount[msg.sender].record(currentRound, 0);
-        group.totalJoinedAmount -= amount;
+
+        // Update local totalJoinedAmount
+        uint256 newGroupTotal = _totalJoinedAmountByGroupId[groupId] - amount;
+        _totalJoinedAmountByGroupId[groupId] = newGroupTotal;
         _totalJoinedAmountHistoryByGroupId[groupId].record(
             currentRound,
-            group.totalJoinedAmount
+            newGroupTotal
         );
         _totalJoinedAmount -= amount;
         _totalJoinedAmountHistory.record(currentRound, _totalJoinedAmount);
@@ -163,6 +171,12 @@ abstract contract GroupTokenJoin is
     }
 
     // ============ View Functions ============
+
+    function totalJoinedAmountByGroupId(
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _totalJoinedAmountByGroupId[groupId];
+    }
 
     function joinInfo(
         address account

@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import {GroupTokenJoinSnapshot} from "./GroupTokenJoinSnapshot.sol";
 import {MAX_ORIGIN_SCORE, IGroupScore} from "../interface/base/IGroupScore.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
+import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
 /// @title GroupTokenJoinSnapshotManualScore
 /// @notice Handles manual verification scoring logic for token-join groups
@@ -11,6 +12,20 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     GroupTokenJoinSnapshot,
     IGroupScore
 {
+    // ============ Modifiers ============
+
+    modifier onlyGroupOwner(uint256 groupId) {
+        if (ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId) != msg.sender)
+            revert ILOVE20GroupManager.OnlyGroupOwner();
+        _;
+    }
+
+    modifier groupActive(uint256 groupId) {
+        if (!_groupManager.isGroupActive(tokenAddress, actionId, groupId))
+            revert ILOVE20GroupManager.GroupNotActive();
+        _;
+    }
+
     // ============ State ============
 
     /// @dev groupId => delegated verifier address

@@ -2,40 +2,34 @@
 pragma solidity =0.8.17;
 
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
-import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ExtensionReward} from "@extension/src/base/ExtensionReward.sol";
 import {IGroupCore} from "../interface/base/IGroupCore.sol";
+import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
 /// @title GroupCore
-/// @notice Base contract for managing groups with LOVE20Group NFT integration
+/// @notice Base contract with config parameters from GroupManager
+/// @dev Users call GroupManager directly for all operations
 abstract contract GroupCore is ExtensionReward, IGroupCore {
     // ============ Immutables ============
 
+    address public immutable GROUP_MANAGER_ADDRESS;
+    ILOVE20GroupManager internal immutable _groupManager;
+
+    // Config parameters (copied from GroupManager for gas efficiency)
     address public immutable GROUP_ADDRESS;
     address public immutable STAKE_TOKEN_ADDRESS;
-    uint256 public immutable MIN_GOV_VOTE_RATIO_BPS; // e.g.,  100 = 1%
+    uint256 public immutable MIN_GOV_VOTE_RATIO_BPS;
     uint256 public immutable CAPACITY_MULTIPLIER;
     uint256 public immutable STAKING_MULTIPLIER;
     uint256 public immutable MAX_JOIN_AMOUNT_MULTIPLIER;
     uint256 public immutable MIN_JOIN_AMOUNT;
-
-    // ============ State ============
-
-    // groupId => GroupInfo
-    mapping(uint256 => GroupInfo) internal _groupInfo;
-    uint256[] internal _activeGroupIds;
-
-    // total staked amount of all groups
-    uint256 internal _totalStaked;
 
     // ============ Constructor ============
 
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupAddress_,
+        address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
@@ -43,379 +37,50 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
     ) ExtensionReward(factory_, tokenAddress_) {
-        GROUP_ADDRESS = groupAddress_;
+        GROUP_MANAGER_ADDRESS = groupManagerAddress_;
+        _groupManager = ILOVE20GroupManager(groupManagerAddress_);
+
+        // Store config locally for gas efficiency (GROUP_ADDRESS from GroupManager)
+        GROUP_ADDRESS = _groupManager.GROUP_ADDRESS();
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         MIN_GOV_VOTE_RATIO_BPS = minGovVoteRatioBps_;
         CAPACITY_MULTIPLIER = capacityMultiplier_;
         STAKING_MULTIPLIER = stakingMultiplier_;
         MAX_JOIN_AMOUNT_MULTIPLIER = maxJoinAmountMultiplier_;
         MIN_JOIN_AMOUNT = minJoinAmount_;
-    }
 
-    // ============ Modifiers ============
-
-    modifier onlyGroupOwner(uint256 groupId) {
-        if (ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId) != msg.sender)
-            revert OnlyGroupOwner();
-        _;
-    }
-
-    modifier groupActive(uint256 groupId) {
-        GroupInfo storage group = _groupInfo[groupId];
-        if (!group.isActive) revert GroupNotActive();
-        _;
-    }
-
-    // ============ Write Functions ============
-
-    function activateGroup(
-        uint256 groupId,
-        string memory description,
-        uint256 stakedAmount,
-        uint256 groupMinJoinAmount,
-        uint256 groupMaxJoinAmount
-    ) public virtual onlyGroupOwner(groupId) returns (bool) {
-        GroupInfo storage group = _groupInfo[groupId];
-
-        if (group.isActive) revert GroupAlreadyActivated();
-        if (stakedAmount == 0) revert ZeroStakeAmount();
-        if (
-            groupMaxJoinAmount != 0 && groupMaxJoinAmount < groupMinJoinAmount
-        ) {
-            revert InvalidMinMaxJoinAmount();
-        }
-
-        address owner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
-        _checkCanActivateGroup(owner, stakedAmount);
-
-        // Transfer stake
-        IERC20(STAKE_TOKEN_ADDRESS).transferFrom(
-            msg.sender,
-            address(this),
-            stakedAmount
-        );
-
-        // Initialize group
-        {
-            uint256 stakedCapacity = stakedAmount * STAKING_MULTIPLIER;
-            uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
-            group.capacity = stakedCapacity < maxCapacity
-                ? stakedCapacity
-                : maxCapacity;
-        }
-        uint256 currentRound = _join.currentRound();
-
-        group.groupId = groupId;
-        group.description = description;
-        group.stakedAmount = stakedAmount;
-        group.groupMinJoinAmount = groupMinJoinAmount;
-        group.groupMaxJoinAmount = groupMaxJoinAmount;
-        group.activatedRound = currentRound;
-
-        group.isActive = true;
-        group.deactivatedRound = 0;
-        _activeGroupIds.push(groupId);
-        _totalStaked += stakedAmount;
-
-        emit GroupActivate(
-            tokenAddress,
-            currentRound,
+        // Register config in GroupManager (actionId is 0 at construction time)
+        _groupManager.setConfig(
+            tokenAddress_,
             actionId,
-            groupId,
-            owner,
-            group.stakedAmount,
-            group.capacity
+            stakeTokenAddress_,
+            minGovVoteRatioBps_,
+            capacityMultiplier_,
+            stakingMultiplier_,
+            maxJoinAmountMultiplier_,
+            minJoinAmount_
         );
-        return true;
     }
 
-    function expandGroup(
-        uint256 groupId,
-        uint256 additionalStake
-    )
-        public
-        virtual
-        onlyGroupOwner(groupId)
-        groupActive(groupId)
-        returns (uint256 newStakedAmount, uint256 newCapacity)
-    {
-        if (additionalStake == 0) revert ZeroStakeAmount();
+    // ============ Internal Helpers ============
 
-        GroupInfo storage group = _groupInfo[groupId];
-        newStakedAmount = group.stakedAmount + additionalStake;
-        address owner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
-
-        _checkCanExpandGroup(owner, groupId, newStakedAmount);
-        IERC20(STAKE_TOKEN_ADDRESS).transferFrom(
-            msg.sender,
-            address(this),
-            additionalStake
-        );
-
-        group.stakedAmount = newStakedAmount;
-        uint256 stakedCapacity = newStakedAmount * STAKING_MULTIPLIER;
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
-        newCapacity = stakedCapacity < maxCapacity
-            ? stakedCapacity
-            : maxCapacity;
-        group.capacity = newCapacity;
-        _totalStaked += additionalStake;
-
-        emit GroupExpand(
-            tokenAddress,
-            _join.currentRound(),
-            actionId,
-            groupId,
-            additionalStake,
-            newCapacity
-        );
-
-        return (newStakedAmount, newCapacity);
-    }
-
-    function deactivateGroup(
+    function _getGroupInfo(
         uint256 groupId
-    ) public virtual onlyGroupOwner(groupId) {
-        GroupInfo storage group = _groupInfo[groupId];
-
-        if (group.activatedRound == 0) revert GroupNotFound();
-        if (!group.isActive) revert GroupAlreadyDeactivated();
-
-        uint256 currentRound = _join.currentRound();
-        if (currentRound == group.activatedRound)
-            revert CannotDeactivateInActivatedRound();
-
-        group.isActive = false;
-        group.deactivatedRound = currentRound;
-
-        _removeFromActiveGroupIds(groupId);
-
-        uint256 stakedAmount = group.stakedAmount;
-        _totalStaked -= stakedAmount;
-        IERC20(STAKE_TOKEN_ADDRESS).transfer(msg.sender, stakedAmount);
-
-        emit GroupDeactivate(
-            tokenAddress,
-            currentRound,
-            actionId,
-            groupId,
-            stakedAmount
-        );
+    ) internal view returns (ILOVE20GroupManager.GroupInfo memory) {
+        return _groupManager.groupInfo(tokenAddress, actionId, groupId);
     }
 
-    function updateGroupInfo(
-        uint256 groupId,
-        string memory newDescription,
-        uint256 newMinJoinAmount,
-        uint256 newMaxJoinAmount
-    ) public virtual onlyGroupOwner(groupId) groupActive(groupId) {
-        if (newMaxJoinAmount != 0 && newMaxJoinAmount < newMinJoinAmount) {
-            revert InvalidMinMaxJoinAmount();
-        }
-
-        GroupInfo storage group = _groupInfo[groupId];
-        group.description = newDescription;
-        group.groupMinJoinAmount = newMinJoinAmount;
-        group.groupMaxJoinAmount = newMaxJoinAmount;
-
-        emit GroupInfoUpdate(
-            tokenAddress,
-            _join.currentRound(),
-            actionId,
-            groupId,
-            newDescription,
-            newMinJoinAmount,
-            newMaxJoinAmount
-        );
-    }
-
-    // ============ View Functions ============
-
-    function groupInfo(
-        uint256 groupId
-    ) external view returns (GroupInfo memory) {
-        return _groupInfo[groupId];
-    }
-
-    function activeGroupIdsByOwner(
-        address owner
-    ) external view returns (uint256[] memory) {
-        uint256 nftBalance = ILOVE20Group(GROUP_ADDRESS).balanceOf(owner);
-        uint256[] memory tempResult = new uint256[](nftBalance);
-        uint256 count = 0;
-
-        for (uint256 i = 0; i < nftBalance; i++) {
-            uint256 groupId = ILOVE20Group(GROUP_ADDRESS).tokenOfOwnerByIndex(
-                owner,
-                i
-            );
-            GroupInfo storage group = _groupInfo[groupId];
-            if (group.isActive) {
-                tempResult[count++] = groupId;
-            }
-        }
-
-        uint256[] memory result = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            result[i] = tempResult[i];
-        }
-        return result;
-    }
-
-    function activeGroupIds() external view returns (uint256[] memory) {
-        return _activeGroupIds;
-    }
-    function activeGroupIdsCount() external view returns (uint256) {
-        return _activeGroupIds.length;
-    }
-    function activeGroupIdsAtIndex(
-        uint256 index
-    ) external view returns (uint256 groupId) {
-        return _activeGroupIds[index];
-    }
-
-    function isGroupActive(uint256 groupId) external view returns (bool) {
-        return _groupInfo[groupId].isActive;
-    }
-
-    // ============ Capacity View Functions ============
-
-    function calculateJoinMaxAmount() public view returns (uint256) {
-        return
-            ILOVE20Token(tokenAddress).totalSupply() /
-            MAX_JOIN_AMOUNT_MULTIPLIER;
-    }
-
-    function maxCapacityByOwner(address owner) public view returns (uint256) {
-        return _calculateMaxCapacityByOwner(owner);
-    }
-
-    function totalStakedByOwner(address owner) public view returns (uint256) {
-        return _totalStakedByOwner(owner);
-    }
-
-    function totalStaked() public view returns (uint256) {
-        return _totalStaked;
-    }
-
-    function expandableInfo(
-        address owner
-    )
-        public
-        view
-        returns (
-            uint256 currentCapacity,
-            uint256 maxCapacity,
-            uint256 currentStake,
-            uint256 maxStake,
-            uint256 additionalStakeAllowed
-        )
-    {
-        (currentCapacity, currentStake) = _totalCapacityAndStakeByOwner(owner);
-        maxCapacity = _calculateMaxCapacityByOwner(owner);
-        maxStake = maxCapacity / STAKING_MULTIPLIER;
-        if (maxStake > currentStake) {
-            additionalStakeAllowed = maxStake - currentStake;
-        }
-    }
-
-    // ============ Internal Functions ============
-
-    function _checkCanActivateGroup(
-        address owner,
-        uint256 stakedAmount
-    ) internal view virtual {
-        uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
-        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
-
-        // Check minimum stake
-        uint256 minCapacity = (totalMinted *
-            MIN_GOV_VOTE_RATIO_BPS *
-            CAPACITY_MULTIPLIER) / 1e4;
-        uint256 minStake = minCapacity / STAKING_MULTIPLIER;
-        if (stakedAmount < minStake) revert MinStakeNotMet();
-
-        // Check owner has enough governance votes
-        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
-        if (
-            totalGovVotes == 0 ||
-            (ownerGovVotes * 1e4) / totalGovVotes < MIN_GOV_VOTE_RATIO_BPS
-        ) {
-            revert InsufficientGovVotes();
-        }
-
-        // Check total stake doesn't exceed max
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
-        uint256 maxStake = maxCapacity / STAKING_MULTIPLIER;
-        uint256 newTotalStake = _totalStakedByOwner(owner) + stakedAmount;
-        if (newTotalStake > maxStake) revert ExceedsMaxStake();
-    }
-
-    function _checkCanExpandGroup(
-        address owner,
-        uint256 groupId,
-        uint256 newStakedAmount
-    ) internal view virtual {
-        uint256 otherGroupsStake = _totalStakedByOwner(owner) -
-            _groupInfo[groupId].stakedAmount;
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(owner);
-        uint256 maxStake = maxCapacity / STAKING_MULTIPLIER;
-        if (otherGroupsStake + newStakedAmount > maxStake)
-            revert ExceedsMaxStake();
+    function _isGroupActive(uint256 groupId) internal view returns (bool) {
+        return _groupManager.isGroupActive(tokenAddress, actionId, groupId);
     }
 
     function _calculateMaxCapacityByOwner(
         address owner
     ) internal view returns (uint256) {
-        uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
-        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
-        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
-        if (totalGovVotes == 0) return 0;
-        return
-            (totalMinted * ownerGovVotes * CAPACITY_MULTIPLIER) / totalGovVotes;
+        return _groupManager.maxCapacityByOwner(tokenAddress, actionId, owner);
     }
 
-    function _totalStakedByOwner(
-        address owner
-    ) internal view returns (uint256 staked) {
-        uint256 nftBalance = ILOVE20Group(GROUP_ADDRESS).balanceOf(owner);
-        for (uint256 i = 0; i < nftBalance; i++) {
-            uint256 groupId = ILOVE20Group(GROUP_ADDRESS).tokenOfOwnerByIndex(
-                owner,
-                i
-            );
-            GroupInfo storage group = _groupInfo[groupId];
-            if (group.isActive) {
-                staked += group.stakedAmount;
-            }
-        }
-    }
-
-    function _totalCapacityAndStakeByOwner(
-        address owner
-    ) internal view returns (uint256 capacity, uint256 staked) {
-        uint256 nftBalance = ILOVE20Group(GROUP_ADDRESS).balanceOf(owner);
-        for (uint256 i = 0; i < nftBalance; i++) {
-            uint256 groupId = ILOVE20Group(GROUP_ADDRESS).tokenOfOwnerByIndex(
-                owner,
-                i
-            );
-            GroupInfo storage group = _groupInfo[groupId];
-            if (group.isActive) {
-                capacity += group.capacity;
-                staked += group.stakedAmount;
-            }
-        }
-    }
-
-    function _removeFromActiveGroupIds(uint256 groupId) internal {
-        uint256 length = _activeGroupIds.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (_activeGroupIds[i] == groupId) {
-                _activeGroupIds[i] = _activeGroupIds[length - 1];
-                _activeGroupIds.pop();
-                break;
-            }
-        }
+    function _calculateJoinMaxAmount() internal view returns (uint256) {
+        return _groupManager.calculateJoinMaxAmount(tokenAddress, actionId);
     }
 }

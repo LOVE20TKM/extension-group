@@ -5,7 +5,11 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     LOVE20ExtensionGroupActionFactory
 } from "../src/LOVE20ExtensionGroupActionFactory.sol";
-import {LOVE20ExtensionGroupAction} from "../src/LOVE20ExtensionGroupAction.sol";
+import {
+    LOVE20ExtensionGroupAction
+} from "../src/LOVE20ExtensionGroupAction.sol";
+import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
+import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 
 /**
  * @title LOVE20ExtensionGroupActionFactoryTest
@@ -13,9 +17,18 @@ import {LOVE20ExtensionGroupAction} from "../src/LOVE20ExtensionGroupAction.sol"
  */
 contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
     LOVE20ExtensionGroupActionFactory public factory;
+    LOVE20GroupDistrust public groupDistrust;
 
     function setUp() public {
         setUpBase();
+
+        // Deploy GroupDistrust singleton
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
         factory = new LOVE20ExtensionGroupActionFactory(address(center));
     }
 
@@ -33,7 +46,9 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -50,7 +65,9 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -72,7 +89,9 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -90,7 +109,9 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -105,11 +126,22 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
     }
 
     function test_CreateExtension_MultipleExtensions() public {
-        token.approve(address(factory), 3e18);
+        // Create multiple tokens for multiple extensions
+        // (each token can only have one GroupAction extension with actionId=0)
+        MockGroupToken token2 = new MockGroupToken();
+        MockGroupToken token3 = new MockGroupToken();
+
+        token.approve(address(factory), 1e18);
+        token2.mint(address(this), 1e18);
+        token2.approve(address(factory), 1e18);
+        token3.mint(address(this), 1e18);
+        token3.approve(address(factory), 1e18);
 
         address ext1 = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -118,9 +150,11 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
 
         address ext2 = factory.createExtension(
-            address(token),
-            address(group),
-            200, // different ratio
+            address(token2),
+            address(groupManager),
+            address(groupDistrust),
+            address(token2),
+            MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
             MAX_JOIN_AMOUNT_MULTIPLIER,
@@ -128,9 +162,11 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
 
         address ext3 = factory.createExtension(
-            address(token),
-            address(group),
-            300,
+            address(token3),
+            address(groupManager),
+            address(groupDistrust),
+            address(token3),
+            MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
             MAX_JOIN_AMOUNT_MULTIPLIER,
@@ -150,7 +186,9 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -158,43 +196,24 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             MIN_JOIN_AMOUNT
         );
 
-        (
-            address tokenAddress,
-            address groupAddress,
-            uint256 minGovernanceVoteRatio,
-            uint256 capacityMultiplier,
-            uint256 stakingMultiplier,
-            uint256 maxJoinAmountMultiplier,
-            uint256 minJoinAmount
-        ) = factory.extensionParams(extension);
+        LOVE20ExtensionGroupActionFactory.ExtensionParams
+            memory params = factory.extensionParams(extension);
 
-        assertEq(tokenAddress, address(token));
-        assertEq(groupAddress, address(group));
-        assertEq(minGovernanceVoteRatio, MIN_GOV_VOTE_RATIO_BPS);
-        assertEq(capacityMultiplier, CAPACITY_MULTIPLIER);
-        assertEq(stakingMultiplier, STAKING_MULTIPLIER);
-        assertEq(maxJoinAmountMultiplier, MAX_JOIN_AMOUNT_MULTIPLIER);
-        assertEq(minJoinAmount, MIN_JOIN_AMOUNT);
+        assertEq(params.tokenAddress, address(token));
+        assertEq(params.groupManagerAddress, address(groupManager));
+        assertEq(params.groupDistrustAddress, address(groupDistrust));
+        assertEq(params.minGovVoteRatioBps, MIN_GOV_VOTE_RATIO_BPS);
+        assertEq(params.capacityMultiplier, CAPACITY_MULTIPLIER);
     }
 
     function test_ExtensionParams_ZeroForNonExistent() public view {
-        (
-            address tokenAddress,
-            address groupAddress,
-            uint256 minGovernanceVoteRatio,
-            uint256 capacityMultiplier,
-            uint256 stakingMultiplier,
-            uint256 maxJoinAmountMultiplier,
-            uint256 minJoinAmount
-        ) = factory.extensionParams(address(0x123));
+        LOVE20ExtensionGroupActionFactory.ExtensionParams
+            memory params = factory.extensionParams(address(0x123));
 
-        assertEq(tokenAddress, address(0));
-        assertEq(groupAddress, address(0));
-        assertEq(minGovernanceVoteRatio, 0);
-        assertEq(capacityMultiplier, 0);
-        assertEq(stakingMultiplier, 0);
-        assertEq(maxJoinAmountMultiplier, 0);
-        assertEq(minJoinAmount, 0);
+        assertEq(params.tokenAddress, address(0));
+        assertEq(params.groupManagerAddress, address(0));
+        assertEq(params.groupDistrustAddress, address(0));
+        assertEq(params.minGovVoteRatioBps, 0);
     }
 
     // ============ Exists Tests ============
@@ -204,7 +223,9 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(group),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
             STAKING_MULTIPLIER,
@@ -220,4 +241,3 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertFalse(factory.exists(address(0)));
     }
 }
-

@@ -5,27 +5,27 @@ import {
     GroupTokenJoinSnapshotManualScore
 } from "./GroupTokenJoinSnapshotManualScore.sol";
 import {IGroupDistrust} from "../interface/base/IGroupDistrust.sol";
+import {ILOVE20GroupDistrust} from "../interface/ILOVE20GroupDistrust.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
 /// @title GroupTokenJoinSnapshotManualScoreDistrust
 /// @notice Handles distrust voting mechanism against group owners
+/// @dev Delegates distrust logic and storage to LOVE20GroupDistrust singleton
 abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
     GroupTokenJoinSnapshotManualScore,
     IGroupDistrust
 {
-    // ============ State ============
+    // ============ Immutables ============
 
-    /// @dev round => groupOwner => total distrust votes
-    mapping(uint256 => mapping(address => uint256))
-        internal _distrustVotesByGroupOwner;
+    address public immutable GROUP_DISTRUST_ADDRESS;
+    ILOVE20GroupDistrust internal immutable _groupDistrust;
 
-    /// @dev round => voter => groupOwner => distrust votes for this groupOwner
-    mapping(uint256 => mapping(address => mapping(address => uint256)))
-        internal _distrustVotesByVoterByGroupOwner;
+    // ============ Constructor ============
 
-    /// @dev round => voter => groupOwner => reason
-    mapping(uint256 => mapping(address => mapping(address => string)))
-        internal _distrustReason;
+    constructor(address groupDistrustAddress_) {
+        GROUP_DISTRUST_ADDRESS = groupDistrustAddress_;
+        _groupDistrust = ILOVE20GroupDistrust(groupDistrustAddress_);
+    }
 
     // ============ IGroupDistrust Implementation ============
 
@@ -35,103 +35,44 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
         uint256 amount,
         string calldata reason
     ) external {
-        uint256 currentRound = _verify.currentRound();
-
-        // Check caller has voted for extension contract (non-abstain vote)
-        uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
+        // Delegate to GroupDistrust (handles verification and event)
+        _groupDistrust.distrustVote(
             tokenAddress,
-            currentRound,
-            msg.sender,
-            actionId,
-            address(this)
-        );
-        if (verifyVotes == 0) revert NotGovernor();
-
-        // Check accumulated votes don't exceed verify votes
-        if (
-            _distrustVotesByVoterByGroupOwner[currentRound][msg.sender][
-                groupOwner
-            ] +
-                amount >
-            verifyVotes
-        ) revert DistrustVoteExceedsLimit();
-
-        if (bytes(reason).length == 0) revert InvalidReason();
-
-        // Record vote
-        _distrustVotesByVoterByGroupOwner[currentRound][msg.sender][
-            groupOwner
-        ] += amount;
-        _distrustVotesByGroupOwner[currentRound][groupOwner] += amount;
-        _distrustReason[currentRound][msg.sender][groupOwner] = reason;
-
-        // Update distrust for all active groups owned by this owner
-        _updateDistrustForOwnerGroups(currentRound, groupOwner);
-
-        emit DistrustVote(
-            tokenAddress,
-            currentRound,
             actionId,
             groupOwner,
-            msg.sender,
             amount,
             reason
         );
-    }
 
-    /// @inheritdoc IGroupDistrust
-    function distrustVotesByGroupOwner(
-        uint256 round,
-        address groupOwner
-    ) external view returns (uint256) {
-        return _distrustVotesByGroupOwner[round][groupOwner];
-    }
-
-    /// @inheritdoc IGroupDistrust
-    function distrustVotesByGroupId(
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256) {
-        address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
-        return _distrustVotesByGroupOwner[round][groupOwner];
-    }
-
-    /// @inheritdoc IGroupDistrust
-    function totalVerifyVotes(uint256 round) external view returns (uint256) {
-        return _totalVerifyVotes(round);
-    }
-
-    /// @inheritdoc IGroupDistrust
-    function distrustVotesByVoterByGroupOwner(
-        uint256 round,
-        address voter,
-        address groupOwner
-    ) external view returns (uint256) {
-        return _distrustVotesByVoterByGroupOwner[round][voter][groupOwner];
-    }
-
-    /// @inheritdoc IGroupDistrust
-    function distrustReason(
-        uint256 round,
-        address voter,
-        address groupOwner
-    ) external view returns (string memory) {
-        return _distrustReason[round][voter][groupOwner];
+        // Update distrust for all active groups owned by this owner
+        _updateDistrustForOwnerGroups(_verify.currentRound(), groupOwner);
     }
 
     // ============ Internal Functions ============
+
+    function _getDistrustVotes(
+        uint256 round,
+        address groupOwner
+    ) internal view returns (uint256) {
+        return
+            _groupDistrust.distrustVotesByGroupOwner(
+                tokenAddress,
+                actionId,
+                round,
+                groupOwner
+            );
+    }
 
     function _updateDistrustForOwnerGroups(
         uint256 round,
         address groupOwner
     ) internal {
-        uint256 distrustVotes = _distrustVotesByGroupOwner[round][groupOwner];
+        uint256 distrustVotes = _getDistrustVotes(round, groupOwner);
         uint256 total = _totalVerifyVotes(round);
 
         uint256[] storage groupIds = _groupIdsByVerifier[round][groupOwner];
         for (uint256 i = 0; i < groupIds.length; i++) {
             uint256 groupId = groupIds[i];
-            // All groups in _groupIdsByVerifier are already verified
             uint256 oldScore = _scoreByGroupId[round][groupId];
             uint256 groupAmount = _snapshotAmountByGroupId[round][groupId];
 
@@ -163,7 +104,7 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
     ) internal view virtual override returns (uint256) {
         address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
         uint256 groupAmount = _snapshotAmountByGroupId[round][groupId];
-        uint256 distrustVotes = _distrustVotesByGroupOwner[round][groupOwner];
+        uint256 distrustVotes = _getDistrustVotes(round, groupOwner);
         uint256 total = _totalVerifyVotes(round);
 
         return

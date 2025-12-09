@@ -6,6 +6,7 @@ import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {IGroupTokenJoin} from "../../src/interface/base/IGroupTokenJoin.sol";
 import {IGroupCore} from "../../src/interface/base/IGroupCore.sol";
+import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
@@ -16,7 +17,7 @@ contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupAddress_,
+        address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
@@ -27,7 +28,7 @@ contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
         GroupCore(
             factory_,
             tokenAddress_,
-            groupAddress_,
+            groupManagerAddress_,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
             capacityMultiplier_,
@@ -38,11 +39,15 @@ contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
         GroupTokenJoin(tokenAddress_)
     {}
 
-    function _addAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _addAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._addAccount(account);
     }
 
-    function _removeAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _removeAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._removeAccount(account);
     }
 
@@ -54,11 +59,16 @@ contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
         return totalJoinedAmount();
     }
 
-    function joinedValueByAccount(address account) external view returns (uint256) {
+    function joinedValueByAccount(
+        address account
+    ) external view returns (uint256) {
         return _joinInfo[account].amount;
     }
 
-    function _calculateReward(uint256, address) internal pure override returns (uint256) {
+    function _calculateReward(
+        uint256,
+        address
+    ) internal pure override returns (uint256) {
         return 0;
     }
 
@@ -85,7 +95,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
         groupTokenJoin = new MockGroupTokenJoin(
             address(mockFactory),
             address(token),
-            address(group),
+            address(groupManager),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
@@ -104,19 +114,39 @@ contract GroupTokenJoinTest is BaseGroupTest {
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
         groupId2 = setupGroupOwner(groupOwner2, 10000e18, "TestGroup2");
 
-        // Prepare extension init
-        prepareExtensionInit(address(groupTokenJoin), address(token), ACTION_ID);
+        // Prepare extension init (config already set in GroupCore constructor)
+        prepareExtensionInit(
+            address(groupTokenJoin),
+            address(token),
+            ACTION_ID
+        );
 
-        // Activate groups
+        // Activate groups through GroupManager
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupTokenJoin));
-        setupUser(groupOwner2, stakeAmount, address(groupTokenJoin));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner2, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        groupTokenJoin.activateGroup(groupId1, "Group1", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
-        vm.prank(groupOwner2);
-        groupTokenJoin.activateGroup(groupId2, "Group2", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            "Group2",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
     }
 
     // ============ Constructor Tests ============
@@ -134,7 +164,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
         vm.prank(user1);
         groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
-        (uint256 joinedRound, uint256 amount, uint256 groupId) = groupTokenJoin.joinInfo(user1);
+        (uint256 joinedRound, uint256 amount, uint256 groupId) = groupTokenJoin
+            .joinInfo(user1);
         assertEq(amount, joinAmount);
         assertEq(groupId, groupId1);
         assertEq(joinedRound, verify.currentRound());
@@ -145,7 +176,11 @@ contract GroupTokenJoinTest is BaseGroupTest {
     function test_Join_AddMoreTokens() public {
         uint256 initialAmount = 10e18;
         uint256 additionalAmount = 5e18;
-        setupUser(user1, initialAmount + additionalAmount, address(groupTokenJoin));
+        setupUser(
+            user1,
+            initialAmount + additionalAmount,
+            address(groupTokenJoin)
+        );
 
         vm.startPrank(user1);
         groupTokenJoin.join(groupId1, initialAmount, new string[](0));
@@ -179,10 +214,14 @@ contract GroupTokenJoinTest is BaseGroupTest {
     function test_Join_RevertCannotJoinDeactivatedGroup() public {
         advanceRound();
         // Setup actionIds for new round
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
 
-        vm.prank(groupOwner1);
-        groupTokenJoin.deactivateGroup(groupId1);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(groupTokenJoin));
@@ -203,9 +242,16 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
     function test_Join_RevertGroupCapacityFull() public {
         // Get current capacity
-        IGroupCore.GroupInfo memory info = groupTokenJoin.groupInfo(groupId1);
+        ILOVE20GroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1
+        );
         uint256 capacity = info.capacity;
-        uint256 maxPerAccount = groupTokenJoin.calculateJoinMaxAmount();
+        uint256 maxPerAccount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
 
         // Calculate exact number needed to fill and amount for last user
         uint256 fullUsers = capacity / maxPerAccount;
@@ -238,8 +284,15 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
     function test_Join_RevertAmountExceedsAccountCap() public {
         // Update groupMaxJoinAmount to a small value
-        vm.prank(groupOwner1);
-        groupTokenJoin.updateGroupInfo(groupId1, "Group1", MIN_JOIN_AMOUNT, 5e18); // maxJoinAmount = 5e18
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.updateGroupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            MIN_JOIN_AMOUNT,
+            5e18
+        ); // maxJoinAmount = 5e18
 
         uint256 exceedingAmount = 6e18;
         setupUser(user1, exceedingAmount, address(groupTokenJoin));
@@ -285,7 +338,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
         vm.prank(user1);
         groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
-        (uint256 joinedRound, uint256 amount, uint256 groupId) = groupTokenJoin.joinInfo(user1);
+        (uint256 joinedRound, uint256 amount, uint256 groupId) = groupTokenJoin
+            .joinInfo(user1);
         assertEq(joinedRound, verify.currentRound());
         assertEq(amount, joinAmount);
         assertEq(groupId, groupId1);
@@ -317,7 +371,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
         uint256 currentRound = verify.currentRound();
-        assertEq(groupTokenJoin.groupIdByAccountByRound(user1, currentRound), groupId1);
+        assertEq(
+            groupTokenJoin.groupIdByAccountByRound(user1, currentRound),
+            groupId1
+        );
     }
 
     function test_TotalJoinedAmountByGroupIdByRound() public {
@@ -334,7 +391,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         uint256 currentRound = verify.currentRound();
         assertEq(
-            groupTokenJoin.totalJoinedAmountByGroupIdByRound(groupId1, currentRound),
+            groupTokenJoin.totalJoinedAmountByGroupIdByRound(
+                groupId1,
+                currentRound
+            ),
             joinAmount1 + joinAmount2
         );
     }
@@ -449,4 +509,3 @@ contract GroupTokenJoinTest is BaseGroupTest {
         assertTrue(accounts[0] == user3 || accounts[1] == user3);
     }
 }
-

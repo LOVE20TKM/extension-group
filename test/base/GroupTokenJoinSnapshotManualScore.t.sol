@@ -2,22 +2,33 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
-import {GroupTokenJoinSnapshotManualScore} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
-import {GroupTokenJoinSnapshot} from "../../src/base/GroupTokenJoinSnapshot.sol";
+import {
+    GroupTokenJoinSnapshotManualScore
+} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
+import {
+    GroupTokenJoinSnapshot
+} from "../../src/base/GroupTokenJoinSnapshot.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
-import {IGroupScore, MAX_ORIGIN_SCORE} from "../../src/interface/base/IGroupScore.sol";
+import {
+    IGroupScore,
+    MAX_ORIGIN_SCORE
+} from "../../src/interface/base/IGroupScore.sol";
+import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
 import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupManualScore
  * @notice Concrete implementation for testing
  */
-contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore, ExtensionAccounts {
+contract MockGroupManualScore is
+    GroupTokenJoinSnapshotManualScore,
+    ExtensionAccounts
+{
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupAddress_,
+        address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
         uint256 capacityMultiplier_,
@@ -28,7 +39,7 @@ contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore, ExtensionAcc
         GroupCore(
             factory_,
             tokenAddress_,
-            groupAddress_,
+            groupManagerAddress_,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
             capacityMultiplier_,
@@ -39,11 +50,15 @@ contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore, ExtensionAcc
         GroupTokenJoin(tokenAddress_)
     {}
 
-    function _addAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _addAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._addAccount(account);
     }
 
-    function _removeAccount(address account) internal override(ExtensionAccounts, GroupTokenJoin) {
+    function _removeAccount(
+        address account
+    ) internal override(ExtensionAccounts, GroupTokenJoin) {
         ExtensionAccounts._removeAccount(account);
     }
 
@@ -55,11 +70,16 @@ contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore, ExtensionAcc
         return totalJoinedAmount();
     }
 
-    function joinedValueByAccount(address account) external view returns (uint256) {
+    function joinedValueByAccount(
+        address account
+    ) external view returns (uint256) {
         return _joinInfo[account].amount;
     }
 
-    function _calculateReward(uint256, address) internal pure override returns (uint256) {
+    function _calculateReward(
+        uint256,
+        address
+    ) internal pure override returns (uint256) {
         return 0;
     }
 
@@ -101,7 +121,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         scoreContract = new MockGroupManualScore(
             address(mockFactory),
             address(token),
-            address(group),
+            address(groupManager),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
             CAPACITY_MULTIPLIER,
@@ -121,14 +141,30 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         prepareExtensionInit(address(scoreContract), address(token), ACTION_ID);
 
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(scoreContract));
-        setupUser(groupOwner2, stakeAmount, address(scoreContract));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner2, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        scoreContract.activateGroup(groupId1, "Group1", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
-        vm.prank(groupOwner2);
-        scoreContract.activateGroup(groupId2, "Group2", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            "Group2",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
     }
 
     // ============ setGroupDelegatedVerifier Tests ============
@@ -139,7 +175,10 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(groupOwner1);
         scoreContract.setGroupDelegatedVerifier(groupId1, delegatedVerifier);
 
-        assertEq(scoreContract.delegatedVerifierByGroupId(groupId1), delegatedVerifier);
+        assertEq(
+            scoreContract.delegatedVerifierByGroupId(groupId1),
+            delegatedVerifier
+        );
     }
 
     function test_SetGroupDelegatedVerifier_RevertNotOwner() public {
@@ -151,8 +190,8 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
     function test_SetGroupDelegatedVerifier_RevertNotActive() public {
         advanceRound();
 
-        vm.prank(groupOwner1);
-        scoreContract.deactivateGroup(groupId1);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         vm.prank(groupOwner1);
         vm.expectRevert();
@@ -254,8 +293,8 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         advanceRound();
 
         // Deactivate group so _snapshotIfNeeded won't create snapshot
-        vm.prank(groupOwner1);
-        scoreContract.deactivateGroup(groupId1);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         // Advance again so we're in a fresh round where group was never active
         advanceRound();
@@ -358,7 +397,10 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         scoreContract.submitOriginScore(groupId1, scores);
 
         // Group score = snapshot amount (without distrust applied)
-        assertEq(scoreContract.scoreByGroupId(round, groupId1), joinAmount1 + joinAmount2);
+        assertEq(
+            scoreContract.scoreByGroupId(round, groupId1),
+            joinAmount1 + joinAmount2
+        );
     }
 
     function test_TotalScore() public {
@@ -474,10 +516,18 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         uint256 groupId3 = group.mint(groupOwner1, "TestGroup3");
 
         uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(scoreContract));
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
 
-        vm.prank(groupOwner1);
-        scoreContract.activateGroup(groupId3, "Group3", stakeAmount, MIN_JOIN_AMOUNT, 0);
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId3,
+            "Group3",
+            stakeAmount,
+            MIN_JOIN_AMOUNT,
+            0
+        );
 
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
@@ -504,7 +554,10 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         scoreContract.submitOriginScore(groupId3, scores);
         vm.stopPrank();
 
-        uint256[] memory groupIds = scoreContract.groupIdsByVerifier(round, groupOwner1);
+        uint256[] memory groupIds = scoreContract.groupIdsByVerifier(
+            round,
+            groupOwner1
+        );
         assertEq(groupIds.length, 2);
         assertEq(scoreContract.groupIdsByVerifierCount(round, groupOwner1), 2);
     }
@@ -520,7 +573,11 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
 
         // Advance round and setup actionIds for new round
         advanceRound();
-        vote.setVotedActionIds(address(token), verify.currentRound(), ACTION_ID);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            ACTION_ID
+        );
         uint256 round = verify.currentRound();
         scoreContract.triggerSnapshot(groupId1);
 
@@ -546,10 +603,15 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         uint256 round = verify.currentRound();
 
         vm.expectEmit(true, true, true, true);
-        emit GroupDelegatedVerifierSet(address(token), round, ACTION_ID, groupId1, delegatedVerifier);
+        emit GroupDelegatedVerifierSet(
+            address(token),
+            round,
+            ACTION_ID,
+            groupId1,
+            delegatedVerifier
+        );
 
         vm.prank(groupOwner1);
         scoreContract.setGroupDelegatedVerifier(groupId1, delegatedVerifier);
     }
 }
-
