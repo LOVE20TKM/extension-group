@@ -114,7 +114,7 @@ contract LOVE20ExtensionGroupService is
         }
         if (totalBasisPoints > BASIS_POINTS_BASE) revert InvalidBasisPoints();
 
-        uint256 currentRound = _join.currentRound();
+        uint256 currentRound = _verify.currentRound();
         _recipientsHistory[account].record(currentRound, addrs);
         _basisPointsHistory[account].record(currentRound, basisPoints);
 
