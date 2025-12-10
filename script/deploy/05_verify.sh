@@ -10,10 +10,8 @@ if [ -z "$RPC_URL" ]; then
     source 00_init.sh $network
 fi
 
-# Ensure factory addresses are loaded
-if [ -z "$groupActionFactoryAddress" ] || [ -z "$groupServiceFactoryAddress" ]; then
-    source $network_dir/address.extension.group.params
-fi
+# Ensure addresses are loaded
+source $network_dir/address.extension.group.params
 
 verify_contract(){
   local contract_address=$1
@@ -39,6 +37,16 @@ verify_contract(){
 }
 echo "verify_contract() loaded"
 
+# Verify LOVE20GroupDistrust
+if [ -n "$groupDistrustAddress" ]; then
+    verify_contract $groupDistrustAddress "LOVE20GroupDistrust" "src/LOVE20GroupDistrust.sol"
+fi
+
+# Verify LOVE20GroupManager
+if [ -n "$groupManagerAddress" ]; then
+    verify_contract $groupManagerAddress "LOVE20GroupManager" "src/LOVE20GroupManager.sol"
+fi
+
 # Verify LOVE20ExtensionGroupActionFactory
 if [ -n "$groupActionFactoryAddress" ]; then
     verify_contract $groupActionFactoryAddress "LOVE20ExtensionGroupActionFactory" "src/LOVE20ExtensionGroupActionFactory.sol"
@@ -48,4 +56,3 @@ fi
 if [ -n "$groupServiceFactoryAddress" ]; then
     verify_contract $groupServiceFactoryAddress "LOVE20ExtensionGroupServiceFactory" "src/LOVE20ExtensionGroupServiceFactory.sol"
 fi
-

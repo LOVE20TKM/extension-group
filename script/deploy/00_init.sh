@@ -20,10 +20,14 @@ source $network_dir/address.group.params && \
 source $network_dir/address.extension.group.params
 
 # ------ Request keystore password ------
-echo -e "\nPlease enter keystore password (for $KEYSTORE_ACCOUNT):"
-read -s KEYSTORE_PASSWORD
-export KEYSTORE_PASSWORD
-echo "Password saved, will not be requested again in this session"
+if [ -z "$KEYSTORE_PASSWORD" ]; then
+    echo -e "\nPlease enter keystore password (for $KEYSTORE_ACCOUNT):"
+    read -s KEYSTORE_PASSWORD
+    export KEYSTORE_PASSWORD
+    echo "Password saved, will not be requested again in this session"
+else
+    echo -e "\nUsing KEYSTORE_PASSWORD from environment"
+fi
 
 cast_call() {
     local address=$1
@@ -75,24 +79,4 @@ forge_script() {
     $([[ "$network" != "anvil" ]] && [[ "$network" != thinkium* ]] && echo "--verify --etherscan-api-key $ETHERSCAN_API_KEY")
 }
 echo "forge_script() loaded"
-
-forge_script_deploy_group_action_factory() {
-  forge_script ../DeployGroupActionFactory.s.sol:DeployGroupActionFactory --sig "run()"
-}
-echo "forge_script_deploy_group_action_factory() loaded"
-
-forge_script_deploy_group_service_factory() {
-  forge_script ../DeployGroupServiceFactory.s.sol:DeployGroupServiceFactory --sig "run()"
-}
-echo "forge_script_deploy_group_service_factory() loaded"
-
-forge_script_deploy_group_distrust() {
-  forge_script ../DeployGroupDistrust.s.sol:DeployGroupDistrust --sig "run()"
-}
-echo "forge_script_deploy_group_distrust() loaded"
-
-forge_script_deploy_group_manager() {
-  forge_script ../DeployGroupManager.s.sol:DeployGroupManager --sig "run()"
-}
-echo "forge_script_deploy_group_manager() loaded"
 
