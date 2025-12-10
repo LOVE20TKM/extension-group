@@ -16,6 +16,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     error ZeroAddress();
     error ZeroBasisPoints();
     error ArrayLengthMismatch();
+    error DuplicateAddress();
 
     // ============ Events ============
 

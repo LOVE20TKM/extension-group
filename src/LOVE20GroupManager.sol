@@ -10,11 +10,16 @@ import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {
     ILOVE20ExtensionCenter
 } from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
+import {
+    EnumerableSet
+} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 /// @title LOVE20GroupManager
 /// @notice Singleton contract managing groups, keyed by extension address
 /// @dev Users call directly, uses msg.sender for owner verification and transfers
 contract LOVE20GroupManager is ILOVE20GroupManager {
+    using EnumerableSet for EnumerableSet.UintSet;
+
     // ============ Immutables ============
 
     address public immutable override CENTER_ADDRESS;
@@ -36,7 +41,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     mapping(address => mapping(uint256 => GroupInfo)) internal _groupInfo;
 
     /// @notice Active group IDs per extension
-    mapping(address => uint256[]) internal _activeGroupIds;
+    mapping(address => EnumerableSet.UintSet) internal _activeGroupIds;
 
     /// @notice Total staked per extension
     mapping(address => uint256) internal _totalStaked;
@@ -205,7 +210,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         group.isActive = true;
         group.deactivatedRound = 0;
-        _activeGroupIds[extension].push(groupId);
+        _activeGroupIds[extension].add(groupId);
         _totalStaked[extension] += stakedAmount;
 
         emit GroupActivate(
@@ -297,7 +302,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         group.isActive = false;
         group.deactivatedRound = currentRound;
 
-        _removeFromActiveGroupIds(extension, groupId);
+        _activeGroupIds[extension].remove(groupId);
 
         uint256 stakedAmount = group.stakedAmount;
         _totalStaked[extension] -= stakedAmount;
@@ -415,7 +420,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId
     ) external view override returns (uint256[] memory) {
         address extension = _center.extension(tokenAddress, actionId);
-        return _activeGroupIds[extension];
+        return _activeGroupIds[extension].values();
     }
 
     function activeGroupIdsCount(
@@ -423,7 +428,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId
     ) external view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
-        return _activeGroupIds[extension].length;
+        return _activeGroupIds[extension].length();
     }
 
     function activeGroupIdsAtIndex(
@@ -432,7 +437,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 index
     ) external view override returns (uint256 groupId) {
         address extension = _center.extension(tokenAddress, actionId);
-        return _activeGroupIds[extension][index];
+        return _activeGroupIds[extension].at(index);
     }
 
     function isGroupActive(
@@ -614,21 +619,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             if (group.isActive) {
                 capacity += group.capacity;
                 staked += group.stakedAmount;
-            }
-        }
-    }
-
-    function _removeFromActiveGroupIds(
-        address extension,
-        uint256 groupId
-    ) internal {
-        uint256[] storage ids = _activeGroupIds[extension];
-        uint256 length = ids.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (ids[i] == groupId) {
-                ids[i] = ids[length - 1];
-                ids.pop();
-                break;
             }
         }
     }

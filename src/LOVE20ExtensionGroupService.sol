@@ -103,16 +103,21 @@ contract LOVE20ExtensionGroupService is
         address[] memory addrs,
         uint256[] memory basisPoints
     ) internal {
-        if (addrs.length != basisPoints.length) revert ArrayLengthMismatch();
-        if (addrs.length > MAX_RECIPIENTS) revert TooManyRecipients();
+        uint256 len = addrs.length;
+        if (len != basisPoints.length) revert ArrayLengthMismatch();
+        if (len > MAX_RECIPIENTS) revert TooManyRecipients();
 
+        // Validate and calculate total basis points
         uint256 totalBasisPoints;
-        for (uint256 i = 0; i < addrs.length; i++) {
+        for (uint256 i = 0; i < len; i++) {
             if (addrs[i] == address(0)) revert ZeroAddress();
             if (basisPoints[i] == 0) revert ZeroBasisPoints();
             totalBasisPoints += basisPoints[i];
         }
         if (totalBasisPoints > BASIS_POINTS_BASE) revert InvalidBasisPoints();
+
+        // Check for duplicate addresses (separate loop for clarity)
+        _checkNoDuplicates(addrs);
 
         uint256 currentRound = _verify.currentRound();
         _recipientsHistory[account].record(currentRound, addrs);
@@ -126,6 +131,18 @@ contract LOVE20ExtensionGroupService is
             addrs,
             basisPoints
         );
+    }
+
+    /// @dev Check that address array has no duplicates
+    /// @notice Uses O(n²) comparison which is acceptable for small arrays (MAX_RECIPIENTS is typically small)
+    function _checkNoDuplicates(address[] memory addrs) internal pure {
+        uint256 len = addrs.length;
+        for (uint256 i = 1; i < len; i++) {
+            address addr = addrs[i];
+            for (uint256 j = 0; j < i; j++) {
+                if (addrs[j] == addr) revert DuplicateAddress();
+            }
+        }
     }
 
     // ============ View Functions ============
