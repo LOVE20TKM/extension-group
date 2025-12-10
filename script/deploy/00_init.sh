@@ -86,3 +86,13 @@ forge_script_deploy_group_service_factory() {
 }
 echo "forge_script_deploy_group_service_factory() loaded"
 
+forge_script_deploy_group_distrust() {
+  forge_script ../DeployGroupDistrust.s.sol:DeployGroupDistrust --sig "run()"
+}
+echo "forge_script_deploy_group_distrust() loaded"
+
+forge_script_deploy_group_manager() {
+  forge_script ../DeployGroupManager.s.sol:DeployGroupManager --sig "run()"
+}
+echo "forge_script_deploy_group_manager() loaded"
+

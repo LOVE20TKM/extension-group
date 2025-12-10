@@ -7,11 +7,13 @@ import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
 /**
  * @title DeployGroupDistrust
  * @notice Script for deploying LOVE20GroupDistrust singleton contract
+ * @dev Requires extensionCenter, verify, and group contracts to be deployed first
  */
 contract DeployGroupDistrust is BaseScript {
     address public groupDistrustAddress;
 
     function run() external {
+        // Read addresses from params files
         address extensionCenterAddress = readAddressParamsFile(
             "address.extension.center.params",
             "extensionCenterAddress"
@@ -21,15 +23,28 @@ contract DeployGroupDistrust is BaseScript {
             "verifyAddress"
         );
         address groupAddress = readAddressParamsFile(
-            "address.params",
+            "address.group.params",
             "groupAddress"
         );
+
+        // Validate addresses are not zero
         require(
             extensionCenterAddress != address(0),
-            "extensionCenterAddress not found"
+            "extensionCenterAddress not found in params"
         );
-        require(verifyAddress != address(0), "verifyAddress not found");
-        require(groupAddress != address(0), "groupAddress not found");
+        require(
+            verifyAddress != address(0),
+            "verifyAddress not found in params"
+        );
+        require(groupAddress != address(0), "groupAddress not found in params");
+
+        // Validate contracts are deployed (have code)
+        require(
+            extensionCenterAddress.code.length > 0,
+            "extensionCenter contract not deployed"
+        );
+        require(verifyAddress.code.length > 0, "verify contract not deployed");
+        require(groupAddress.code.length > 0, "group contract not deployed");
 
         vm.startBroadcast();
         groupDistrustAddress = address(

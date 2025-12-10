@@ -9,19 +9,28 @@ import {
 /**
  * @title DeployGroupServiceFactory
  * @notice Script for deploying LOVE20ExtensionGroupServiceFactory contract
- * @dev Reads extensionCenterAddress from params and writes deployed address to address.extension.group.params
+ * @dev Requires extensionCenter contract to be deployed first
  */
 contract DeployGroupServiceFactory is BaseScript {
     address public groupServiceFactoryAddress;
 
     function run() external {
+        // Read address from params file
         address extensionCenterAddress = readAddressParamsFile(
             "address.extension.center.params",
             "extensionCenterAddress"
         );
+
+        // Validate address is not zero
         require(
             extensionCenterAddress != address(0),
-            "extensionCenterAddress not found"
+            "extensionCenterAddress not found in params"
+        );
+
+        // Validate contract is deployed (has code)
+        require(
+            extensionCenterAddress.code.length > 0,
+            "extensionCenter contract not deployed"
         );
 
         vm.startBroadcast();

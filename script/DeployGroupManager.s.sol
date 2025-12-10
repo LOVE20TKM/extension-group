@@ -7,12 +7,13 @@ import {LOVE20GroupManager} from "../src/LOVE20GroupManager.sol";
 /**
  * @title DeployGroupManager
  * @notice Script for deploying LOVE20GroupManager singleton contract
- * @dev Reads centerAddress, groupAddress, stakeAddress and joinAddress from params
+ * @dev Requires extensionCenter, group, stake, and join contracts to be deployed first
  */
 contract DeployGroupManager is BaseScript {
     address public groupManagerAddress;
 
     function run() external {
+        // Read addresses from params files
         address centerAddress = readAddressParamsFile(
             "address.extension.center.params",
             "extensionCenterAddress"
@@ -29,10 +30,24 @@ contract DeployGroupManager is BaseScript {
             "address.params",
             "joinAddress"
         );
-        require(centerAddress != address(0), "centerAddress not found");
-        require(groupAddress != address(0), "groupAddress not found");
-        require(stakeAddress != address(0), "stakeAddress not found");
-        require(joinAddress != address(0), "joinAddress not found");
+
+        // Validate addresses are not zero
+        require(
+            centerAddress != address(0),
+            "centerAddress not found in params"
+        );
+        require(groupAddress != address(0), "groupAddress not found in params");
+        require(stakeAddress != address(0), "stakeAddress not found in params");
+        require(joinAddress != address(0), "joinAddress not found in params");
+
+        // Validate contracts are deployed (have code)
+        require(
+            centerAddress.code.length > 0,
+            "extensionCenter contract not deployed"
+        );
+        require(groupAddress.code.length > 0, "group contract not deployed");
+        require(stakeAddress.code.length > 0, "stake contract not deployed");
+        require(joinAddress.code.length > 0, "join contract not deployed");
 
         vm.startBroadcast();
         groupManagerAddress = address(
