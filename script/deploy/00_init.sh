@@ -14,10 +14,10 @@ network_dir="../network/$network"
 
 source $network_dir/.account && \
 source $network_dir/network.params && \
-source $network_dir/LOVE20.params && \
-source $network_dir/WETH.params && \
 source $network_dir/address.params && \
-source $network_dir/address.extension.center.params
+source $network_dir/address.extension.center.params && \
+source $network_dir/address.group.params && \
+source $network_dir/address.extension.group.params
 
 # ------ Request keystore password ------
 echo -e "\nPlease enter keystore password (for $KEYSTORE_ACCOUNT):"
