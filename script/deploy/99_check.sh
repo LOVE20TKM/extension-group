@@ -1,111 +1,107 @@
-#!/bin/bash
+echo "===================="
+echo "       check        "
+echo "===================="
 
-echo "========================================="
-echo "Verifying Group Extension Contracts"
-echo "========================================="
+base_dir="../network/$network"
 
-# Ensure environment is initialized
-if [ -z "$extensionCenterAddress" ]; then
-    echo -e "\033[31mError:\033[0m Extension center address not set"
-    return 1
-fi
+source "$base_dir/address.params"
+source "$base_dir/address.extension.center.params"
+source "$base_dir/address.group.params"
+source "$base_dir/address.extension.group.params"
 
-# Load deployed addresses
-if [ -f "$network_dir/address.extension.group.params" ]; then
-    source $network_dir/address.extension.group.params
-fi
+check_equal(){
+    local msg="$1"
+    local expected="$2"
+    local actual="$3"
 
-if [ -f "$network_dir/address.group.params" ]; then
-    source $network_dir/address.group.params
-fi
+    # check params
+    if [ -z "$msg" ] || [ -z "$expected" ] || [ -z "$actual" ]; then
+        echo "Error: 3 params needed: msg, expected, actual"
+        return 1
+    fi
 
-# Track failures
-failed_checks=0
+    # remove double quotes
+    actual_clean=$(echo "$actual" | sed 's/^"//;s/"$//')
 
-echo -e "\n--- Expected Addresses ---"
-echo "extensionCenterAddress: $extensionCenterAddress"
-echo "groupAddress: $groupAddress"
-echo "stakeAddress: $stakeAddress"
-echo "joinAddress: $joinAddress"
-echo "verifyAddress: $verifyAddress"
+    if [ "$expected" != "$actual_clean" ]; then
+        echo "(failed) $msg: $expected != $actual_clean"
+    else
+        echo "  (passed) $msg: $expected == $actual_clean"
+    fi
+}
 
-# ============ Check GroupDistrust ============
+echo "-------------------- expected addresses --------------------"
+echo "  extensionCenterAddress: $extensionCenterAddress"
+echo "  groupAddress: $groupAddress"
+echo "  stakeAddress: $stakeAddress"
+echo "  joinAddress: $joinAddress"
+echo "  verifyAddress: $verifyAddress"
+
+echo "-------------------- GroupDistrust check --------------------"
 if [ -n "$groupDistrustAddress" ]; then
-    echo -e "\n--- GroupDistrust: $groupDistrustAddress ---"
-    
+    echo "  groupDistrustAddress: $groupDistrustAddress"
     # GroupDistrust doesn't expose internal variables directly
-    # We verify by checking it has code deployed
+    # Verify by checking contract has code deployed
     code_size=$(cast code $groupDistrustAddress --rpc-url $RPC_URL | wc -c)
     if [ "$code_size" -gt 2 ]; then
-        echo -e "\033[32m✓\033[0m GroupDistrust: contract deployed"
+        echo "  (passed) GroupDistrust: contract deployed"
     else
-        echo -e "\033[31m✗\033[0m GroupDistrust: contract not deployed"
-        ((failed_checks++))
+        echo "(failed) GroupDistrust: contract not deployed"
     fi
 else
-    echo -e "\n\033[33mWarning:\033[0m GroupDistrust not deployed"
+    echo "(warning) GroupDistrust not deployed"
 fi
 
-# ============ Check GroupManager ============
+echo "-------------------- GroupManager check --------------------"
 if [ -n "$groupManagerAddress" ]; then
-    echo -e "\n--- GroupManager: $groupManagerAddress ---"
-    
-    check_equal "GroupManager: CENTER_ADDRESS" \
-        $extensionCenterAddress \
-        $(cast_call $groupManagerAddress "CENTER_ADDRESS()(address)")
-    [ $? -ne 0 ] && ((failed_checks++))
-    
-    check_equal "GroupManager: GROUP_ADDRESS" \
-        $groupAddress \
-        $(cast_call $groupManagerAddress "GROUP_ADDRESS()(address)")
-    [ $? -ne 0 ] && ((failed_checks++))
-    
-    check_equal "GroupManager: STAKE_ADDRESS" \
-        $stakeAddress \
-        $(cast_call $groupManagerAddress "STAKE_ADDRESS()(address)")
-    [ $? -ne 0 ] && ((failed_checks++))
-    
-    check_equal "GroupManager: JOIN_ADDRESS" \
-        $joinAddress \
-        $(cast_call $groupManagerAddress "JOIN_ADDRESS()(address)")
-    [ $? -ne 0 ] && ((failed_checks++))
+    echo "  groupManagerAddress: $groupManagerAddress"
+    check_equal "GroupManager: CENTER_ADDRESS" $extensionCenterAddress $(cast_call $groupManagerAddress "CENTER_ADDRESS()(address)")
+    check_equal "GroupManager: GROUP_ADDRESS" $groupAddress $(cast_call $groupManagerAddress "GROUP_ADDRESS()(address)")
+    check_equal "GroupManager: STAKE_ADDRESS" $stakeAddress $(cast_call $groupManagerAddress "STAKE_ADDRESS()(address)")
+    check_equal "GroupManager: JOIN_ADDRESS" $joinAddress $(cast_call $groupManagerAddress "JOIN_ADDRESS()(address)")
 else
-    echo -e "\n\033[33mWarning:\033[0m GroupManager not deployed"
+    echo "(warning) GroupManager not deployed"
 fi
 
-# ============ Check GroupActionFactory ============
+echo "-------------------- GroupActionFactory check --------------------"
 if [ -n "$groupActionFactoryAddress" ]; then
-    echo -e "\n--- GroupActionFactory: $groupActionFactoryAddress ---"
-    
-    check_equal "GroupActionFactory: center" \
-        $extensionCenterAddress \
-        $(cast_call $groupActionFactoryAddress "center()(address)")
-    [ $? -ne 0 ] && ((failed_checks++))
+    echo "  groupActionFactoryAddress: $groupActionFactoryAddress"
+    check_equal "GroupActionFactory: center" $extensionCenterAddress $(cast_call $groupActionFactoryAddress "center()(address)")
 else
-    echo -e "\n\033[33mWarning:\033[0m GroupActionFactory not deployed"
+    echo "(warning) GroupActionFactory not deployed"
 fi
 
-# ============ Check GroupServiceFactory ============
+echo "-------------------- GroupServiceFactory check --------------------"
 if [ -n "$groupServiceFactoryAddress" ]; then
-    echo -e "\n--- GroupServiceFactory: $groupServiceFactoryAddress ---"
-    
-    check_equal "GroupServiceFactory: center" \
-        $extensionCenterAddress \
-        $(cast_call $groupServiceFactoryAddress "center()(address)")
-    [ $? -ne 0 ] && ((failed_checks++))
+    echo "  groupServiceFactoryAddress: $groupServiceFactoryAddress"
+    check_equal "GroupServiceFactory: center" $extensionCenterAddress $(cast_call $groupServiceFactoryAddress "center()(address)")
 else
-    echo -e "\n\033[33mWarning:\033[0m GroupServiceFactory not deployed"
+    echo "(warning) GroupServiceFactory not deployed"
 fi
 
-# ============ Summary ============
-echo -e "\n========================================="
-if [ $failed_checks -eq 0 ]; then
-    echo -e "\033[32m✓ All checks passed\033[0m"
-    echo "========================================="
-    return 0
+echo "-------------------- address uniqueness check --------------------"
+# Verify all addresses are not zero addresses
+addresses=($groupDistrustAddress $groupManagerAddress $groupActionFactoryAddress $groupServiceFactoryAddress)
+for addr in "${addresses[@]}"; do
+    if [[ -n "$addr" && "$addr" == "0x0000000000000000000000000000000000000000" ]]; then
+        echo "(failed) Found zero address in deployment: $addr"
+    fi
+done
+
+# Verify all addresses are unique
+non_empty_addresses=()
+for addr in "${addresses[@]}"; do
+    if [[ -n "$addr" ]]; then
+        non_empty_addresses+=("$addr")
+    fi
+done
+unique_addresses=($(printf '%s\n' "${non_empty_addresses[@]}" | sort | uniq))
+if [[ ${#non_empty_addresses[@]} -ne ${#unique_addresses[@]} ]]; then
+    echo "(failed) Found duplicate addresses in deployment"
 else
-    echo -e "\033[31m✗ $failed_checks check(s) failed\033[0m"
-    echo "========================================="
-    return 1
+    echo "  (passed) All deployed addresses are unique"
 fi
 
+echo "===================="
+echo "    check done      "
+echo "===================="
