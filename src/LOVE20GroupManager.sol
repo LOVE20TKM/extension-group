@@ -13,7 +13,7 @@ import {
 
 /// @title LOVE20GroupManager
 /// @notice Singleton contract managing groups, keyed by extension address
-/// @dev Users call directly, uses tx.origin for owner verification and transfers
+/// @dev Users call directly, uses msg.sender for owner verification and transfers
 contract LOVE20GroupManager is ILOVE20GroupManager {
     // ============ Immutables ============
 
@@ -140,7 +140,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     }
 
     function _checkGroupOwner(uint256 groupId) internal view {
-        if (_group.ownerOf(groupId) != tx.origin) revert OnlyGroupOwner();
+        if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
     }
 
     // ============ Write Functions ============
@@ -168,7 +168,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             revert InvalidMinMaxJoinAmount();
         }
 
-        address owner = tx.origin;
+        address owner = msg.sender;
         _checkCanActivateGroup(
             tokenAddress,
             extension,
@@ -178,7 +178,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         );
 
         IERC20(cfg.stakeTokenAddress).transferFrom(
-            tx.origin,
+            msg.sender,
             address(this),
             stakedAmount
         );
@@ -235,7 +235,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         if (additionalStake == 0) revert ZeroStakeAmount();
 
         newStakedAmount = group.stakedAmount + additionalStake;
-        address owner = tx.origin;
+        address owner = msg.sender;
 
         _checkCanExpandGroup(
             tokenAddress,
@@ -246,7 +246,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             newStakedAmount
         );
         IERC20(cfg.stakeTokenAddress).transferFrom(
-            tx.origin,
+            msg.sender,
             address(this),
             additionalStake
         );
@@ -301,7 +301,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         uint256 stakedAmount = group.stakedAmount;
         _totalStaked[extension] -= stakedAmount;
-        IERC20(cfg.stakeTokenAddress).transfer(tx.origin, stakedAmount);
+        IERC20(cfg.stakeTokenAddress).transfer(msg.sender, stakedAmount);
 
         emit GroupDeactivate(
             tokenAddress,

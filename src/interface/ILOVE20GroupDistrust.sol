@@ -32,12 +32,14 @@ interface ILOVE20GroupDistrust {
     /// @param groupOwner The group owner being voted against
     /// @param amount The vote amount
     /// @param reason The reason for distrust
+    /// @param voter The address of the voter
     function distrustVote(
         address tokenAddress,
         uint256 actionId,
         address groupOwner,
         uint256 amount,
-        string calldata reason
+        string calldata reason,
+        address voter
     ) external;
 
     // ============ View Functions ============

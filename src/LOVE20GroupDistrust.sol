@@ -52,7 +52,8 @@ contract LOVE20GroupDistrust is ILOVE20GroupDistrust {
         uint256 actionId,
         address groupOwner,
         uint256 amount,
-        string calldata reason
+        string calldata reason,
+        address voter
     ) external override {
         // Verify msg.sender is a registered extension for this token/actionId
         address registeredExtension = _center.extension(tokenAddress, actionId);
@@ -60,11 +61,11 @@ contract LOVE20GroupDistrust is ILOVE20GroupDistrust {
 
         uint256 currentRound = _verify.currentRound();
 
-        // Check voter (tx.origin) has voted for GroupAction (msg.sender)
+        // Check voter has voted for GroupAction (msg.sender)
         uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
             tokenAddress,
             currentRound,
-            tx.origin,
+            voter,
             actionId,
             msg.sender
         );
@@ -73,29 +74,27 @@ contract LOVE20GroupDistrust is ILOVE20GroupDistrust {
         // Check accumulated votes don't exceed verify votes
         uint256 currentVotes = _distrustVotesByVoterByGroupOwner[msg.sender][
             currentRound
-        ][tx.origin][groupOwner];
+        ][voter][groupOwner];
         if (currentVotes + amount > verifyVotes)
             revert DistrustVoteExceedsLimit();
 
         if (bytes(reason).length == 0) revert InvalidReason();
 
         // Record vote
-        _distrustVotesByVoterByGroupOwner[msg.sender][currentRound][tx.origin][
+        _distrustVotesByVoterByGroupOwner[msg.sender][currentRound][voter][
             groupOwner
         ] += amount;
         _distrustVotesByGroupOwner[msg.sender][currentRound][
             groupOwner
         ] += amount;
-        _distrustReason[msg.sender][currentRound][tx.origin][
-            groupOwner
-        ] = reason;
+        _distrustReason[msg.sender][currentRound][voter][groupOwner] = reason;
 
         emit DistrustVote(
             tokenAddress,
             currentRound,
             actionId,
             groupOwner,
-            tx.origin,
+            voter,
             amount,
             reason
         );

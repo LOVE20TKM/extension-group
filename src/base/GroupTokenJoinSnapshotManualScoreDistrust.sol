@@ -41,7 +41,8 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
             actionId,
             groupOwner,
             amount,
-            reason
+            reason,
+            msg.sender
         );
 
         // Update distrust for all active groups owned by this owner
