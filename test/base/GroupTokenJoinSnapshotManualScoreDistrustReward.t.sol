@@ -22,16 +22,12 @@ import {
     IExtensionReward
 } from "@extension/src/interface/base/IExtensionReward.sol";
 import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupReward
  * @notice Concrete implementation for testing
  */
-contract MockGroupReward is
-    GroupTokenJoinSnapshotManualScoreDistrustReward,
-    ExtensionAccounts
-{
+contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -58,18 +54,6 @@ contract MockGroupReward is
         )
         GroupTokenJoin(tokenAddress_)
     {}
-
-    function _addAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._addAccount(account);
-    }
-
-    function _removeAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._removeAccount(account);
-    }
 
     function isJoinedValueCalculated() external pure returns (bool) {
         return false;

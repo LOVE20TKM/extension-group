@@ -6,7 +6,6 @@ import {
 } from "./base/GroupTokenJoinSnapshotManualScoreDistrustReward.sol";
 import {GroupTokenJoin} from "./base/GroupTokenJoin.sol";
 import {GroupCore} from "./base/GroupCore.sol";
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
 import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 
@@ -15,7 +14,6 @@ import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 /// @dev Uses tokenAddress as both joinToken and stakeToken
 contract LOVE20ExtensionGroupAction is
     GroupTokenJoinSnapshotManualScoreDistrustReward,
-    ExtensionAccounts,
     ILOVE20Extension,
     IGroupManualScore
 {
@@ -47,26 +45,6 @@ contract LOVE20ExtensionGroupAction is
         )
         GroupTokenJoin(tokenAddress_) // joinTokenAddress = tokenAddress
     {}
-
-    // ============ Override: Account Management ============
-
-    function _addAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._addAccount(account);
-    }
-
-    function _removeAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._removeAccount(account);
-    }
-
-    // ============ Override: Exit ============
-
-    function exit() public override(GroupTokenJoin) {
-        GroupTokenJoin.exit();
-    }
 
     // ============ IExtensionJoinedValue Implementation ============
 

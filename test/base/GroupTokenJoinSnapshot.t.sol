@@ -9,16 +9,12 @@ import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {IGroupSnapshot} from "../../src/interface/base/IGroupSnapshot.sol";
 import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupTokenJoinSnapshot
  * @notice Concrete implementation for testing
  */
-contract MockGroupTokenJoinSnapshot is
-    GroupTokenJoinSnapshot,
-    ExtensionAccounts
-{
+contract MockGroupTokenJoinSnapshot is GroupTokenJoinSnapshot {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -43,18 +39,6 @@ contract MockGroupTokenJoinSnapshot is
         )
         GroupTokenJoin(tokenAddress_)
     {}
-
-    function _addAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._addAccount(account);
-    }
-
-    function _removeAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._removeAccount(account);
-    }
 
     function isJoinedValueCalculated() external pure returns (bool) {
         return false;

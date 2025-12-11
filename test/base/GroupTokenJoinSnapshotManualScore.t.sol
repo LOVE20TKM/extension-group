@@ -15,16 +15,12 @@ import {
     MAX_ORIGIN_SCORE
 } from "../../src/interface/base/IGroupScore.sol";
 import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupManualScore
  * @notice Concrete implementation for testing
  */
-contract MockGroupManualScore is
-    GroupTokenJoinSnapshotManualScore,
-    ExtensionAccounts
-{
+contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -49,18 +45,6 @@ contract MockGroupManualScore is
         )
         GroupTokenJoin(tokenAddress_)
     {}
-
-    function _addAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._addAccount(account);
-    }
-
-    function _removeAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._removeAccount(account);
-    }
 
     function isJoinedValueCalculated() external pure returns (bool) {
         return false;

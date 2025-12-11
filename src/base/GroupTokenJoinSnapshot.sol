@@ -4,6 +4,9 @@ pragma solidity =0.8.17;
 import {GroupTokenJoin} from "./GroupTokenJoin.sol";
 import {IGroupSnapshot} from "../interface/base/IGroupSnapshot.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
+import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
+
+using RoundHistoryUint256 for RoundHistoryUint256.History;
 
 /// @title GroupTokenJoinSnapshot
 /// @notice Handles snapshot creation for token-join group participation data
@@ -130,26 +133,28 @@ abstract contract GroupTokenJoinSnapshot is GroupTokenJoin, IGroupSnapshot {
         }
 
         // Snapshot group amount
-        uint256 groupAmount = _totalJoinedAmountByGroupId[groupId];
+        uint256 groupAmount = _totalJoinedAmountHistoryByGroupId[groupId]
+            .latestValue();
         _snapshotAmountByGroupId[round][groupId] = groupAmount;
         _snapshotAmount[round] += groupAmount;
 
         emit SnapshotCreate(tokenAddress, round, actionId, groupId);
     }
 
-    // ============ Override Hooks ============
+    // ============ Override Functions ============
 
-    function _beforeJoin(
+    function join(
         uint256 groupId,
-        address /* account */
-    ) internal virtual override {
+        uint256 amount,
+        string[] memory verificationInfos
+    ) public virtual override {
         _snapshotIfNeeded(groupId);
+        super.join(groupId, amount, verificationInfos);
     }
 
-    function _beforeExit(
-        uint256 groupId,
-        address /* account */
-    ) internal virtual override {
+    function exit() public virtual override {
+        uint256 groupId = _joinInfo[msg.sender].groupId;
         _snapshotIfNeeded(groupId);
+        super.exit();
     }
 }

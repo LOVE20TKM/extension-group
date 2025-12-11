@@ -24,10 +24,7 @@ abstract contract GroupTokenJoin is
     // ============ Immutables ============
 
     address public immutable JOIN_TOKEN_ADDRESS;
-
-    // ============ State ============
-
-    IERC20 internal _joinToken;
+    IERC20 internal immutable _joinToken;
 
     // Account state
     mapping(address => JoinInfo) internal _joinInfo;
@@ -38,11 +35,9 @@ abstract contract GroupTokenJoin is
     mapping(uint256 => address[]) internal _accountsByGroupId;
     mapping(uint256 => mapping(address => uint256))
         internal _accountIndexInGroup;
-    mapping(uint256 => uint256) internal _totalJoinedAmountByGroupId;
     mapping(uint256 => RoundHistoryUint256.History)
         internal _totalJoinedAmountHistoryByGroupId;
     RoundHistoryUint256.History internal _totalJoinedAmountHistory;
-    uint256 internal _totalJoinedAmount;
 
     // ============ Constructor ============
 
@@ -62,8 +57,6 @@ abstract contract GroupTokenJoin is
         _autoInitialize();
 
         if (amount == 0) revert JoinAmountZero();
-
-        _beforeJoin(groupId, msg.sender);
 
         JoinInfo storage info = _joinInfo[msg.sender];
         bool isFirstJoin = info.groupId == 0;
@@ -88,7 +81,9 @@ abstract contract GroupTokenJoin is
             if (!isActive) revert CannotJoinDeactivatedGroup();
 
             if (isFirstJoin) {
-                uint256 minAmount = _max(groupMinJoinAmount, MIN_JOIN_AMOUNT);
+                uint256 minAmount = groupMinJoinAmount > MIN_JOIN_AMOUNT
+                    ? groupMinJoinAmount
+                    : MIN_JOIN_AMOUNT;
                 if (amount < minAmount) revert AmountBelowMinimum();
             }
 
@@ -100,8 +95,11 @@ abstract contract GroupTokenJoin is
                 _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
             ) revert AmountExceedsAccountCap();
 
-            if (_totalJoinedAmountByGroupId[groupId] + amount > capacity)
-                revert GroupCapacityFull();
+            if (
+                _totalJoinedAmountHistoryByGroupId[groupId].latestValue() +
+                    amount >
+                capacity
+            ) revert GroupCapacityFull();
         }
 
         // Transfer tokens and update state
@@ -111,21 +109,21 @@ abstract contract GroupTokenJoin is
         info.groupId = groupId;
         info.amount = newTotal;
 
-        // Update local totalJoinedAmount
-        uint256 newGroupTotal = _totalJoinedAmountByGroupId[groupId] + amount;
-        _totalJoinedAmountByGroupId[groupId] = newGroupTotal;
+        // Update totalJoinedAmount history
         _totalJoinedAmountHistoryByGroupId[groupId].record(
             currentRound,
-            newGroupTotal
+            _totalJoinedAmountHistoryByGroupId[groupId].latestValue() + amount
         );
-        _totalJoinedAmount += amount;
-        _totalJoinedAmountHistory.record(currentRound, _totalJoinedAmount);
+        _totalJoinedAmountHistory.record(
+            currentRound,
+            _totalJoinedAmountHistory.latestValue() + amount
+        );
 
         if (isFirstJoin) {
             info.joinedRound = currentRound;
             _groupIdHistoryByAccount[msg.sender].record(currentRound, groupId);
             _addAccountToGroup(groupId, msg.sender);
-            _addAccount(msg.sender);
+            _center.addAccount(tokenAddress, actionId, msg.sender);
         }
 
         updateVerificationInfo(verificationInfos);
@@ -147,26 +145,24 @@ abstract contract GroupTokenJoin is
         uint256 groupId = info.groupId;
         uint256 amount = info.amount;
 
-        _beforeExit(groupId, msg.sender);
-
         uint256 currentRound = _join.currentRound();
 
         // Update state
         _groupIdHistoryByAccount[msg.sender].record(currentRound, 0);
 
-        // Update local totalJoinedAmount
-        uint256 newGroupTotal = _totalJoinedAmountByGroupId[groupId] - amount;
-        _totalJoinedAmountByGroupId[groupId] = newGroupTotal;
+        // Update totalJoinedAmount history
         _totalJoinedAmountHistoryByGroupId[groupId].record(
             currentRound,
-            newGroupTotal
+            _totalJoinedAmountHistoryByGroupId[groupId].latestValue() - amount
         );
-        _totalJoinedAmount -= amount;
-        _totalJoinedAmountHistory.record(currentRound, _totalJoinedAmount);
+        _totalJoinedAmountHistory.record(
+            currentRound,
+            _totalJoinedAmountHistory.latestValue() - amount
+        );
 
         _removeAccountFromGroup(groupId, msg.sender);
         delete _joinInfo[msg.sender];
-        _removeAccount(msg.sender);
+        _center.removeAccount(tokenAddress, actionId, msg.sender);
 
         // Transfer tokens back
         _joinToken.transfer(msg.sender, amount);
@@ -186,7 +182,7 @@ abstract contract GroupTokenJoin is
     function totalJoinedAmountByGroupId(
         uint256 groupId
     ) external view returns (uint256) {
-        return _totalJoinedAmountByGroupId[groupId];
+        return _totalJoinedAmountHistoryByGroupId[groupId].latestValue();
     }
 
     function joinInfo(
@@ -232,7 +228,7 @@ abstract contract GroupTokenJoin is
     }
 
     function totalJoinedAmount() public view returns (uint256) {
-        return _totalJoinedAmount;
+        return _totalJoinedAmountHistory.latestValue();
     }
 
     function totalJoinedAmountByRound(
@@ -266,20 +262,4 @@ abstract contract GroupTokenJoin is
         accounts.pop();
         delete _accountIndexInGroup[groupId][account];
     }
-
-    function _max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a > b ? a : b;
-    }
-
-    // ============ Hooks ============
-
-    function _beforeJoin(uint256 groupId, address account) internal virtual {}
-
-    function _beforeExit(uint256 groupId, address account) internal virtual {}
-
-    // ============ Abstract Functions ============
-
-    function _addAccount(address account) internal virtual;
-
-    function _removeAccount(address account) internal virtual;
 }

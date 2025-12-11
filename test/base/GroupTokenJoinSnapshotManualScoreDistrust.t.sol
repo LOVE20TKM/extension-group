@@ -19,15 +19,13 @@ import {
     ILOVE20GroupDistrust
 } from "../../src/interface/ILOVE20GroupDistrust.sol";
 import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupDistrustContract
  * @notice Concrete implementation for testing
  */
 contract MockGroupDistrustContract is
-    GroupTokenJoinSnapshotManualScoreDistrust,
-    ExtensionAccounts
+    GroupTokenJoinSnapshotManualScoreDistrust
 {
     constructor(
         address factory_,
@@ -55,18 +53,6 @@ contract MockGroupDistrustContract is
         )
         GroupTokenJoin(tokenAddress_)
     {}
-
-    function _addAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._addAccount(account);
-    }
-
-    function _removeAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._removeAccount(account);
-    }
 
     function isJoinedValueCalculated() external pure returns (bool) {
         return false;

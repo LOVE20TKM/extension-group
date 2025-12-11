@@ -174,7 +174,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupService.join(new string[](0));
 
         // Verify joined
-        assertTrue(groupService.accountsCount() > 0);
+        assertTrue(center.accountsCount(address(token), SERVICE_ACTION_ID) > 0);
     }
 
     function test_Join_RevertNoActiveGroups() public {

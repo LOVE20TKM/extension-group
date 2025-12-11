@@ -254,7 +254,7 @@ contract LOVE20ExtensionGroupService is
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
-        if (!_accounts.contains(account)) return 0;
+        if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
         ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
             GROUP_ACTION_ADDRESS
         );
@@ -273,7 +273,7 @@ contract LOVE20ExtensionGroupService is
         uint256 round,
         address account
     ) internal view override returns (uint256) {
-        if (!_accounts.contains(account)) return 0;
+        if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
 
         uint256 totalReward = _reward[round];
         if (totalReward == 0) return 0;

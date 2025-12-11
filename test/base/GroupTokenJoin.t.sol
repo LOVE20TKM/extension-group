@@ -7,13 +7,12 @@ import {GroupCore} from "../../src/base/GroupCore.sol";
 import {IGroupTokenJoin} from "../../src/interface/base/IGroupTokenJoin.sol";
 import {IGroupCore} from "../../src/interface/base/IGroupCore.sol";
 import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
-import {ExtensionAccounts} from "@extension/src/base/ExtensionAccounts.sol";
 
 /**
  * @title MockGroupTokenJoin
  * @notice Concrete implementation of GroupTokenJoin for testing
  */
-contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
+contract MockGroupTokenJoin is GroupTokenJoin {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -39,18 +38,6 @@ contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
         GroupTokenJoin(tokenAddress_)
     {}
 
-    function _addAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._addAccount(account);
-    }
-
-    function _removeAccount(
-        address account
-    ) internal override(ExtensionAccounts, GroupTokenJoin) {
-        ExtensionAccounts._removeAccount(account);
-    }
-
     function isJoinedValueCalculated() external pure returns (bool) {
         return false;
     }
@@ -74,7 +61,7 @@ contract MockGroupTokenJoin is GroupTokenJoin, ExtensionAccounts {
 
     // Expose for testing
     function getAccounts() external view returns (address[] memory) {
-        return this.accounts();
+        return _center.accounts(tokenAddress, actionId);
     }
 }
 
