@@ -42,6 +42,5 @@ contract MockExtensionCenter is LOVE20ExtensionCenter {
             tokenAddress: tokenAddress,
             actionId: actionId
         });
-        _extensions[tokenAddress].push(extensionAddress);
     }
 }
