@@ -71,8 +71,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             MAX_RECIPIENTS
         );
 
-        // Register factory and extensions
-        registerFactory(address(token), address(mockFactory));
+        // Register extensions
         token.mint(address(this), 2e18);
         token.approve(address(mockFactory), type(uint256).max);
         mockFactory.registerExtension(address(groupAction), address(token));

@@ -4,7 +4,7 @@ pragma solidity =0.8.17;
 import {LOVE20ExtensionCenter} from "@extension/src/LOVE20ExtensionCenter.sol";
 
 /// @title MockExtensionCenter
-/// @notice Test-only ExtensionCenter with ability to directly set extension mappings
+/// @notice Test-only ExtensionCenter
 contract MockExtensionCenter is LOVE20ExtensionCenter {
     constructor(
         address uniswapV2FactoryAddress_,
@@ -29,18 +29,4 @@ contract MockExtensionCenter is LOVE20ExtensionCenter {
             randomAddress_
         )
     {}
-
-    /// @notice Directly set extension for testing (idempotent, won't fail if already set)
-    function setExtension(
-        address tokenAddress,
-        uint256 actionId,
-        address extensionAddress
-    ) external {
-        if (_extension[tokenAddress][actionId] == extensionAddress) return;
-        _extension[tokenAddress][actionId] = extensionAddress;
-        _extensionInfos[extensionAddress] = ExtensionInfo({
-            tokenAddress: tokenAddress,
-            actionId: actionId
-        });
-    }
 }

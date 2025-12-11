@@ -179,15 +179,7 @@ abstract contract BaseGroupTest is Test {
     }
 
     /**
-     * @notice Register factory to center
-     */
-    function registerFactory(address tokenAddr, address factory) internal {
-        submit.setCanSubmit(tokenAddr, address(this), true);
-        center.addFactory(tokenAddr, factory);
-    }
-
-    /**
-     * @notice Prepare extension initialization and register to center
+     * @notice Prepare extension initialization
      */
     function prepareExtensionInit(
         address extensionAddress,
@@ -197,14 +189,6 @@ abstract contract BaseGroupTest is Test {
         submit.setActionInfo(tokenAddr, actionId, extensionAddress);
         vote.setVotedActionIds(tokenAddr, join.currentRound(), actionId);
         token.mint(extensionAddress, 1e18);
-        // Register extension to center for GroupManager lookup
-        center.setExtension(tokenAddr, actionId, extensionAddress);
-        // Mock center.registerExtension() to always succeed (called by _autoInitialize)
-        vm.mockCall(
-            address(center),
-            abi.encodeWithSignature("registerExtension()"),
-            abi.encode()
-        );
     }
 
     /**

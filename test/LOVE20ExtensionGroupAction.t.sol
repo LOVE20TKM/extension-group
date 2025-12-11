@@ -54,8 +54,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             MIN_JOIN_AMOUNT
         );
 
-        // Register factory and extension
-        registerFactory(address(token), address(mockFactory));
+        // Register extension
         token.mint(address(this), 1e18);
         token.approve(address(mockFactory), type(uint256).max);
         mockFactory.registerExtension(address(groupAction), address(token));

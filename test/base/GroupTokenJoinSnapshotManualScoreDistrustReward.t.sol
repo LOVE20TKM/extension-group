@@ -146,7 +146,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
             MIN_JOIN_AMOUNT
         );
 
-        registerFactory(address(token), address(mockFactory));
         token.mint(address(this), 1e18);
         token.approve(address(mockFactory), type(uint256).max);
         mockFactory.registerExtension(address(rewardContract), address(token));
