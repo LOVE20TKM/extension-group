@@ -30,6 +30,50 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     uint256 public groupId1;
     uint256 public groupId2;
 
+    function _groupInfoUintAt(
+        uint256 groupId,
+        uint256 idx
+    ) internal view returns (uint256 v) {
+        (bool ok, bytes memory data) = address(groupManager).staticcall(
+            abi.encodeWithSelector(
+                ILOVE20GroupManager.groupInfo.selector,
+                address(token),
+                ACTION_ID,
+                groupId
+            )
+        );
+        require(ok, "groupInfo call failed");
+        // ABI-encoded returns: [0]=groupId, [1]=description offset, [2]=stakedAmount, [3]=capacity,
+        // [4]=minJoin, [5]=maxJoin, [6]=maxAccounts, [7]=isActive, [8]=activatedRound, [9]=deactivatedRound
+        assembly {
+            v := mload(add(add(data, 0x20), mul(idx, 0x20)))
+        }
+    }
+
+    function _groupInfoDescription(
+        uint256 groupId
+    ) internal view returns (string memory s) {
+        (bool ok, bytes memory data) = address(groupManager).staticcall(
+            abi.encodeWithSelector(
+                ILOVE20GroupManager.groupInfo.selector,
+                address(token),
+                ACTION_ID,
+                groupId
+            )
+        );
+        require(ok, "groupInfo call failed");
+
+        uint256 offset;
+        assembly {
+            // slot 1 holds the offset to the string data (relative to start of return data)
+            offset := mload(add(data, 0x40))
+        }
+        // ABI string at (data + 0x20 + offset): [len][bytes...]
+        assembly {
+            s := add(add(data, 0x20), offset)
+        }
+    }
+
     function setUp() public {
         setUpBase();
 
@@ -172,11 +216,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 additionalStake = 50e18;
         setupUser(groupOwner1, additionalStake, address(groupManager));
 
-        (uint256 stakedBefore, ) = groupManager.groupStakeAndCapacity(
-            address(token),
-            ACTION_ID,
-            groupId1
-        );
+        uint256 stakedBefore = _groupInfoUintAt(groupId1, 2);
+        uint256 capacityBefore = _groupInfoUintAt(groupId1, 3);
 
         vm.prank(groupOwner1, groupOwner1);
         (uint256 newStaked, uint256 newCapacity) = groupManager.expandGroup(
@@ -186,11 +227,12 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             additionalStake
         );
 
-        (uint256 stakedAfter, uint256 capacityAfter) = groupManager
-            .groupStakeAndCapacity(address(token), ACTION_ID, groupId1);
+        uint256 stakedAfter = _groupInfoUintAt(groupId1, 2);
+        uint256 capacityAfter = _groupInfoUintAt(groupId1, 3);
 
         assertEq(newStaked, stakedBefore + additionalStake);
         assertEq(stakedAfter, newStaked);
+        assertTrue(capacityAfter >= capacityBefore);
         assertTrue(newCapacity >= capacityAfter);
     }
 
@@ -413,16 +455,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             0
         );
 
-        string memory desc = groupManager.groupDescription(
-            address(token),
-            ACTION_ID,
-            groupId1
-        );
-        (uint256 minJoin, uint256 maxJoin, ) = groupManager.groupJoinRules(
-            address(token),
-            ACTION_ID,
-            groupId1
-        );
+        // decode only needed fields from groupInfo without decoding the description string
+        string memory desc = _groupInfoDescription(groupId1);
+        uint256 minJoin = _groupInfoUintAt(groupId1, 4);
+        uint256 maxJoin = _groupInfoUintAt(groupId1, 5);
         assertEq(desc, newDesc);
         assertEq(minJoin, newMin);
         assertEq(maxJoin, newMax);

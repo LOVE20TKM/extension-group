@@ -186,31 +186,6 @@ interface ILOVE20GroupManager {
             uint256 deactivatedRound
         );
 
-    function groupStakeAndCapacity(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    ) external view returns (uint256 stakedAmount, uint256 capacity);
-
-    function groupJoinRules(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    )
-        external
-        view
-        returns (
-            uint256 groupMinJoinAmount,
-            uint256 groupMaxJoinAmount,
-            uint256 groupMaxAccounts
-        );
-
-    function groupDescription(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    ) external view returns (string memory);
-
     function activeGroupIdsByOwner(
         address tokenAddress,
         uint256 actionId,

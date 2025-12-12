@@ -400,48 +400,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         );
     }
 
-    function groupStakeAndCapacity(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    ) external view override returns (uint256 stakedAmount, uint256 capacity) {
-        address extension = _center.extension(tokenAddress, actionId);
-        GroupInfo storage info = _groupInfo[extension][groupId];
-        return (info.stakedAmount, info.capacity);
-    }
-
-    function groupJoinRules(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    )
-        external
-        view
-        override
-        returns (
-            uint256 groupMinJoinAmount,
-            uint256 groupMaxJoinAmount,
-            uint256 groupMaxAccounts
-        )
-    {
-        address extension = _center.extension(tokenAddress, actionId);
-        GroupInfo storage info = _groupInfo[extension][groupId];
-        return (
-            info.groupMinJoinAmount,
-            info.groupMaxJoinAmount,
-            info.groupMaxAccounts
-        );
-    }
-
-    function groupDescription(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    ) external view override returns (string memory) {
-        address extension = _center.extension(tokenAddress, actionId);
-        return _groupInfo[extension][groupId].description;
-    }
-
     function activeGroupIdsByOwner(
         address tokenAddress,
         uint256 actionId,
