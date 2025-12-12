@@ -31,6 +31,9 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     /// @dev groupId => delegated verifier address
     mapping(uint256 => address) internal _delegatedVerifierByGroupId;
 
+    /// @dev groupId => group owner at the time of delegation (0 if none)
+    mapping(uint256 => address) internal _delegatedVerifierOwnerByGroupId;
+
     /// @dev round => account => origin score [0-100]
     mapping(uint256 => mapping(address => uint256))
         internal _originScoreByAccount;
@@ -67,8 +70,12 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     function setGroupDelegatedVerifier(
         uint256 groupId,
         address delegatedVerifier
-    ) public virtual onlyGroupOwner(groupId) groupActive(groupId) {
+    ) public virtual onlyGroupOwner(groupId) {
         _delegatedVerifierByGroupId[groupId] = delegatedVerifier;
+        _delegatedVerifierOwnerByGroupId[groupId] = delegatedVerifier ==
+            address(0)
+            ? address(0)
+            : msg.sender;
         emit GroupDelegatedVerifierSet(
             tokenAddress,
             _join.currentRound(),
@@ -91,10 +98,10 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
 
         // Check caller is the group owner or delegated verifier
-        if (
-            msg.sender != groupOwner &&
-            msg.sender != _delegatedVerifierByGroupId[groupId]
-        ) {
+        bool isValidDelegatedVerifier = msg.sender ==
+            _delegatedVerifierByGroupId[groupId] &&
+            _delegatedVerifierOwnerByGroupId[groupId] == groupOwner;
+        if (msg.sender != groupOwner && !isValidDelegatedVerifier) {
             revert NotVerifier();
         }
 
@@ -183,6 +190,9 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     function delegatedVerifierByGroupId(
         uint256 groupId
     ) external view returns (address) {
+        address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
+        if (_delegatedVerifierOwnerByGroupId[groupId] != groupOwner)
+            return address(0);
         return _delegatedVerifierByGroupId[groupId];
     }
 
@@ -192,9 +202,10 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         uint256 groupId
     ) public view returns (bool) {
         address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
-        return
-            account == groupOwner ||
-            account == _delegatedVerifierByGroupId[groupId];
+        bool isValidDelegatedVerifier = account ==
+            _delegatedVerifierByGroupId[groupId] &&
+            _delegatedVerifierOwnerByGroupId[groupId] == groupOwner;
+        return account == groupOwner || isValidDelegatedVerifier;
     }
 
     /// @inheritdoc IGroupScore

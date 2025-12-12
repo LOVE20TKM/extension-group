@@ -17,6 +17,10 @@ import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
     RoundHistoryAddressArray
 } from "@extension/src/lib/RoundHistoryAddressArray.sol";
@@ -34,6 +38,7 @@ contract LOVE20ExtensionGroupService is
     using EnumerableSet for EnumerableSet.AddressSet;
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
+    using SafeERC20 for IERC20;
 
     // ============ Constants ============
 
@@ -302,7 +307,7 @@ contract LOVE20ExtensionGroupService is
         _claimedReward[round][msg.sender] = amount;
 
         if (amount > 0) {
-            ILOVE20Token token = ILOVE20Token(tokenAddress);
+            IERC20 token = IERC20(tokenAddress);
             address[] memory addrs = _recipientsHistory[msg.sender].values(
                 round
             );
@@ -314,7 +319,7 @@ contract LOVE20ExtensionGroupService is
                 uint256 recipientAmount = (amount * basisPoints[i]) /
                     BASIS_POINTS_BASE;
                 if (recipientAmount > 0) {
-                    token.transfer(addrs[i], recipientAmount);
+                    token.safeTransfer(addrs[i], recipientAmount);
                     distributed += recipientAmount;
                 }
             }
@@ -322,7 +327,7 @@ contract LOVE20ExtensionGroupService is
             // Remaining to the original account
             uint256 remaining = amount - distributed;
             if (remaining > 0) {
-                token.transfer(msg.sender, remaining);
+                token.safeTransfer(msg.sender, remaining);
             }
         }
 

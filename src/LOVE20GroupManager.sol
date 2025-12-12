@@ -4,6 +4,9 @@ pragma solidity =0.8.17;
 import {ILOVE20GroupManager} from "./interface/ILOVE20GroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
@@ -19,6 +22,7 @@ import {
 /// @dev Users call directly, uses msg.sender for owner verification and transfers
 contract LOVE20GroupManager is ILOVE20GroupManager {
     using EnumerableSet for EnumerableSet.UintSet;
+    using SafeERC20 for IERC20;
 
     // ============ Immutables ============
 
@@ -157,7 +161,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         string memory description,
         uint256 stakedAmount,
         uint256 groupMinJoinAmount,
-        uint256 groupMaxJoinAmount
+        uint256 groupMaxJoinAmount,
+        uint256 groupMaxAccounts_
     ) external override returns (bool) {
         address extension = _getExtension(tokenAddress, actionId);
         GroupConfig storage cfg = _getConfig(extension);
@@ -182,7 +187,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             stakedAmount
         );
 
-        IERC20(cfg.stakeTokenAddress).transferFrom(
+        IERC20(cfg.stakeTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
             stakedAmount
@@ -206,6 +211,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         group.stakedAmount = stakedAmount;
         group.groupMinJoinAmount = groupMinJoinAmount;
         group.groupMaxJoinAmount = groupMaxJoinAmount;
+        group.groupMaxAccounts = groupMaxAccounts_;
         group.activatedRound = currentRound;
 
         group.isActive = true;
@@ -220,7 +226,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             groupId,
             owner,
             group.stakedAmount,
-            group.capacity
+            group.capacity,
+            groupMaxAccounts_
         );
         return true;
     }
@@ -250,7 +257,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             groupId,
             newStakedAmount
         );
-        IERC20(cfg.stakeTokenAddress).transferFrom(
+        IERC20(cfg.stakeTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
             additionalStake
@@ -306,7 +313,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         uint256 stakedAmount = group.stakedAmount;
         _totalStaked[extension] -= stakedAmount;
-        IERC20(cfg.stakeTokenAddress).transfer(msg.sender, stakedAmount);
+        IERC20(cfg.stakeTokenAddress).safeTransfer(msg.sender, stakedAmount);
 
         emit GroupDeactivate(
             tokenAddress,
@@ -323,7 +330,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 groupId,
         string memory newDescription,
         uint256 newMinJoinAmount,
-        uint256 newMaxJoinAmount
+        uint256 newMaxJoinAmount,
+        uint256 newMaxAccounts
     ) external override {
         address extension = _getExtension(tokenAddress, actionId);
         _getConfig(extension); // Validate config exists
@@ -339,6 +347,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         group.description = newDescription;
         group.groupMinJoinAmount = newMinJoinAmount;
         group.groupMaxJoinAmount = newMaxJoinAmount;
+        group.groupMaxAccounts = newMaxAccounts;
 
         emit GroupInfoUpdate(
             tokenAddress,
@@ -347,7 +356,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             groupId,
             newDescription,
             newMinJoinAmount,
-            newMaxJoinAmount
+            newMaxJoinAmount,
+            newMaxAccounts
         );
     }
 
@@ -368,6 +378,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             uint256 capacity,
             uint256 groupMinJoinAmount,
             uint256 groupMaxJoinAmount,
+            uint256 groupMaxAccounts,
             bool isActive,
             uint256 activatedRound,
             uint256 deactivatedRound
@@ -382,10 +393,53 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             info.capacity,
             info.groupMinJoinAmount,
             info.groupMaxJoinAmount,
+            info.groupMaxAccounts,
             info.isActive,
             info.activatedRound,
             info.deactivatedRound
         );
+    }
+
+    function groupStakeAndCapacity(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    ) external view override returns (uint256 stakedAmount, uint256 capacity) {
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupInfo storage info = _groupInfo[extension][groupId];
+        return (info.stakedAmount, info.capacity);
+    }
+
+    function groupJoinRules(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    )
+        external
+        view
+        override
+        returns (
+            uint256 groupMinJoinAmount,
+            uint256 groupMaxJoinAmount,
+            uint256 groupMaxAccounts
+        )
+    {
+        address extension = _center.extension(tokenAddress, actionId);
+        GroupInfo storage info = _groupInfo[extension][groupId];
+        return (
+            info.groupMinJoinAmount,
+            info.groupMaxJoinAmount,
+            info.groupMaxAccounts
+        );
+    }
+
+    function groupDescription(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    ) external view override returns (string memory) {
+        address extension = _center.extension(tokenAddress, actionId);
+        return _groupInfo[extension][groupId].description;
     }
 
     function activeGroupIdsByOwner(

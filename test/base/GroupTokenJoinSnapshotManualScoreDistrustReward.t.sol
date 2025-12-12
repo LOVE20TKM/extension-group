@@ -155,6 +155,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
             "Group1",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
@@ -166,6 +167,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
             "Group2",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
     }
@@ -327,6 +329,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
             "Group3",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 

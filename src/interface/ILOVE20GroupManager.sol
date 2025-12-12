@@ -13,6 +13,7 @@ interface ILOVE20GroupManager {
     error GroupNotActive();
     error ZeroStakeAmount();
     error InvalidMinMaxJoinAmount();
+    error InvalidMaxAccounts();
     error InsufficientGovVotes();
     error ExceedsMaxStake();
     error MinStakeNotMet();
@@ -30,7 +31,8 @@ interface ILOVE20GroupManager {
         uint256 groupId,
         address owner,
         uint256 stakedAmount,
-        uint256 capacity
+        uint256 capacity,
+        uint256 groupMaxAccounts
     );
     event GroupExpand(
         address indexed tokenAddress,
@@ -54,7 +56,8 @@ interface ILOVE20GroupManager {
         uint256 groupId,
         string newDescription,
         uint256 newMinJoinAmount,
-        uint256 newMaxJoinAmount
+        uint256 newMaxJoinAmount,
+        uint256 newMaxAccounts
     );
 
     // ============ Structs ============
@@ -75,6 +78,7 @@ interface ILOVE20GroupManager {
         uint256 capacity;
         uint256 groupMinJoinAmount;
         uint256 groupMaxJoinAmount; // 0 = no limit
+        uint256 groupMaxAccounts; // 0 = no limit
         bool isActive;
         uint256 activatedRound; // 0 = never activated
         uint256 deactivatedRound; // 0 = never deactivated
@@ -133,7 +137,8 @@ interface ILOVE20GroupManager {
         string memory description,
         uint256 stakedAmount,
         uint256 groupMinJoinAmount,
-        uint256 groupMaxJoinAmount
+        uint256 groupMaxJoinAmount,
+        uint256 groupMaxAccounts_
     ) external returns (bool);
 
     function expandGroup(
@@ -155,7 +160,8 @@ interface ILOVE20GroupManager {
         uint256 groupId,
         string memory newDescription,
         uint256 newMinJoinAmount,
-        uint256 newMaxJoinAmount
+        uint256 newMaxJoinAmount,
+        uint256 newMaxAccounts
     ) external;
 
     // ============ View Functions ============
@@ -174,10 +180,36 @@ interface ILOVE20GroupManager {
             uint256 capacity,
             uint256 groupMinJoinAmount,
             uint256 groupMaxJoinAmount,
+            uint256 groupMaxAccounts,
             bool isActive,
             uint256 activatedRound,
             uint256 deactivatedRound
         );
+
+    function groupStakeAndCapacity(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    ) external view returns (uint256 stakedAmount, uint256 capacity);
+
+    function groupJoinRules(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    )
+        external
+        view
+        returns (
+            uint256 groupMinJoinAmount,
+            uint256 groupMaxJoinAmount,
+            uint256 groupMaxAccounts
+        );
+
+    function groupDescription(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    ) external view returns (string memory);
 
     function activeGroupIdsByOwner(
         address tokenAddress,

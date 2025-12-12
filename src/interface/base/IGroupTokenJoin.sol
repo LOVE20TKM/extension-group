@@ -13,6 +13,7 @@ interface IGroupTokenJoin {
     error AmountBelowMinimum();
     error AmountExceedsAccountCap();
     error GroupCapacityFull();
+    error GroupAccountsFull();
     error CannotJoinDeactivatedGroup();
 
     // ============ Events ============

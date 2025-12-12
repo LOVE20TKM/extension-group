@@ -120,6 +120,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             "Group1",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
@@ -131,6 +132,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             "Group2",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
     }
@@ -228,7 +230,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
     function test_Join_RevertGroupCapacityFull() public {
         // Get current capacity
-        (, , , uint256 capacity, , , , , ) = groupManager.groupInfo(
+        (, uint256 capacity) = groupManager.groupStakeAndCapacity(
             address(token),
             ACTION_ID,
             groupId1
@@ -276,7 +278,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
             groupId1,
             "Group1",
             MIN_JOIN_AMOUNT,
-            5e18
+            5e18,
+            0
         ); // maxJoinAmount = 5e18
 
         uint256 exceedingAmount = 6e18;
@@ -285,6 +288,35 @@ contract GroupTokenJoinTest is BaseGroupTest {
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.AmountExceedsAccountCap.selector);
         groupTokenJoin.join(groupId1, exceedingAmount, new string[](0));
+    }
+
+    function test_Join_RevertGroupAccountsFull() public {
+        // Limit group to 2 accounts
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.updateGroupInfo(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            MIN_JOIN_AMOUNT,
+            0,
+            2
+        );
+
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupTokenJoin));
+        setupUser(user2, joinAmount, address(groupTokenJoin));
+        setupUser(user3, joinAmount, address(groupTokenJoin));
+
+        vm.prank(user1);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
+
+        vm.prank(user2);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
+
+        vm.prank(user3);
+        vm.expectRevert(IGroupTokenJoin.GroupAccountsFull.selector);
+        groupTokenJoin.join(groupId1, joinAmount, new string[](0));
     }
 
     // ============ exit Tests ============

@@ -104,6 +104,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             "Group1",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
@@ -115,6 +116,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             "Group2",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
     }

@@ -5,6 +5,9 @@ import {IGroupTokenJoin} from "../interface/base/IGroupTokenJoin.sol";
 import {GroupCore} from "./GroupCore.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
@@ -12,6 +15,7 @@ import {VerificationInfo} from "@extension/src/base/VerificationInfo.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
+using SafeERC20 for IERC20;
 
 /// @title GroupTokenJoin
 /// @notice Handles token-based group joining and exiting
@@ -59,55 +63,19 @@ abstract contract GroupTokenJoin is
         if (amount == 0) revert JoinAmountZero();
 
         JoinInfo storage info = _joinInfo[msg.sender];
-        bool isFirstJoin = info.groupId == 0;
-        uint256 newTotal = info.amount + amount;
+        uint256 joinedGroupId = info.groupId;
+        bool isFirstJoin = joinedGroupId == 0;
+        uint256 prevAmount = info.amount;
+        uint256 newTotal = prevAmount + amount;
 
-        // Validate group and membership in scoped block to reduce stack depth
-        {
-            (
-                ,
-                ,
-                ,
-                uint256 capacity,
-                uint256 groupMinJoinAmount,
-                uint256 groupMaxJoinAmount,
-                bool isActive,
-                ,
-
-            ) = _groupManager.groupInfo(tokenAddress, actionId, groupId);
-
-            if (!isFirstJoin && info.groupId != groupId)
-                revert AlreadyInOtherGroup();
-            if (!isActive) revert CannotJoinDeactivatedGroup();
-
-            if (isFirstJoin) {
-                uint256 minAmount = groupMinJoinAmount > MIN_JOIN_AMOUNT
-                    ? groupMinJoinAmount
-                    : MIN_JOIN_AMOUNT;
-                if (amount < minAmount) revert AmountBelowMinimum();
-            }
-
-            if (groupMaxJoinAmount > 0 && newTotal > groupMaxJoinAmount) {
-                revert AmountExceedsAccountCap();
-            }
-            if (
-                newTotal >
-                _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
-            ) revert AmountExceedsAccountCap();
-
-            if (
-                _totalJoinedAmountHistoryByGroupId[groupId].latestValue() +
-                    amount >
-                capacity
-            ) revert GroupCapacityFull();
-        }
+        _validateJoin(groupId, amount, isFirstJoin, joinedGroupId, newTotal);
 
         // Transfer tokens and update state
-        _joinToken.transferFrom(msg.sender, address(this), amount);
+        _joinToken.safeTransferFrom(msg.sender, address(this), amount);
 
         uint256 currentRound = _join.currentRound();
         info.groupId = groupId;
-        info.amount = newTotal;
+        info.amount = prevAmount + amount;
 
         // Update totalJoinedAmount history
         _totalJoinedAmountHistoryByGroupId[groupId].record(
@@ -138,6 +106,56 @@ abstract contract GroupTokenJoin is
         );
     }
 
+    function _validateJoin(
+        uint256 groupId,
+        uint256 amount,
+        bool isFirstJoin,
+        uint256 joinedGroupId,
+        uint256 newTotal
+    ) internal view {
+        (
+            ,
+            ,
+            ,
+            uint256 capacity,
+            uint256 groupMinJoinAmount,
+            uint256 groupMaxJoinAmount,
+            uint256 groupMaxAccounts,
+            bool isActive,
+            ,
+
+        ) = _groupManager.groupInfo(tokenAddress, actionId, groupId);
+
+        if (!isFirstJoin && joinedGroupId != groupId)
+            revert AlreadyInOtherGroup();
+        if (!isActive) revert CannotJoinDeactivatedGroup();
+
+        if (isFirstJoin) {
+            if (
+                groupMaxAccounts > 0 &&
+                _accountsByGroupId[groupId].length >= groupMaxAccounts
+            ) revert GroupAccountsFull();
+
+            uint256 minAmount = groupMinJoinAmount > MIN_JOIN_AMOUNT
+                ? groupMinJoinAmount
+                : MIN_JOIN_AMOUNT;
+            if (amount < minAmount) revert AmountBelowMinimum();
+        }
+
+        if (groupMaxJoinAmount > 0 && newTotal > groupMaxJoinAmount) {
+            revert AmountExceedsAccountCap();
+        }
+        if (
+            newTotal >
+            _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
+        ) revert AmountExceedsAccountCap();
+
+        if (
+            _totalJoinedAmountHistoryByGroupId[groupId].latestValue() + amount >
+            capacity
+        ) revert GroupCapacityFull();
+    }
+
     function exit() public virtual nonReentrant {
         JoinInfo storage info = _joinInfo[msg.sender];
         if (info.groupId == 0) revert NotInGroup();
@@ -165,7 +183,7 @@ abstract contract GroupTokenJoin is
         _center.removeAccount(tokenAddress, actionId, msg.sender);
 
         // Transfer tokens back
-        _joinToken.transfer(msg.sender, amount);
+        _joinToken.safeTransfer(msg.sender, amount);
 
         emit Exit(
             tokenAddress,

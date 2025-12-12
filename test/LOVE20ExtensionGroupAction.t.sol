@@ -79,6 +79,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             "Group1",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
@@ -90,6 +91,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             "Group2",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
     }
@@ -170,7 +172,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 additionalStake = 50e18;
         setupUser(groupOwner1, additionalStake, address(groupManager));
 
-        (, , uint256 stakedBefore, , , , , , ) = groupManager.groupInfo(
+        (uint256 stakedBefore, ) = groupManager.groupStakeAndCapacity(
             address(token),
             ACTION_ID,
             groupId1
@@ -184,17 +186,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             additionalStake
         );
 
-        (
-            ,
-            ,
-            uint256 stakedAfter,
-            uint256 capacityAfter,
-            ,
-            ,
-            ,
-            ,
-
-        ) = groupManager.groupInfo(address(token), ACTION_ID, groupId1);
+        (uint256 stakedAfter, uint256 capacityAfter) = groupManager
+            .groupStakeAndCapacity(address(token), ACTION_ID, groupId1);
 
         assertEq(newStaked, stakedBefore + additionalStake);
         assertEq(stakedAfter, newStaked);
@@ -416,20 +409,20 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             groupId1,
             newDesc,
             newMin,
-            newMax
+            newMax,
+            0
         );
 
-        (
-            ,
-            string memory desc,
-            ,
-            ,
-            uint256 minJoin,
-            uint256 maxJoin,
-            ,
-            ,
-
-        ) = groupManager.groupInfo(address(token), ACTION_ID, groupId1);
+        string memory desc = groupManager.groupDescription(
+            address(token),
+            ACTION_ID,
+            groupId1
+        );
+        (uint256 minJoin, uint256 maxJoin, ) = groupManager.groupJoinRules(
+            address(token),
+            ACTION_ID,
+            groupId1
+        );
         assertEq(desc, newDesc);
         assertEq(minJoin, newMin);
         assertEq(maxJoin, newMax);

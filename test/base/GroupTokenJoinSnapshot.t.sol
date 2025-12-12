@@ -120,6 +120,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
             "Group1",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
@@ -131,6 +132,7 @@ contract GroupTokenJoinSnapshotTest is BaseGroupTest {
             "Group2",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
     }

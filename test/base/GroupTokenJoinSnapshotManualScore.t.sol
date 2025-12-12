@@ -135,6 +135,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
             "Group1",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
@@ -146,6 +147,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
             "Group2",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
     }
@@ -170,15 +172,20 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         scoreContract.setGroupDelegatedVerifier(groupId1, address(0x123));
     }
 
-    function test_SetGroupDelegatedVerifier_RevertNotActive() public {
+    function test_SetGroupDelegatedVerifier_SuccessWhenNotActive() public {
         advanceRound();
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
+        address delegatedVerifier = address(0x123);
         vm.prank(groupOwner1);
-        vm.expectRevert();
-        scoreContract.setGroupDelegatedVerifier(groupId1, address(0x123));
+        scoreContract.setGroupDelegatedVerifier(groupId1, delegatedVerifier);
+
+        assertEq(
+            scoreContract.delegatedVerifierByGroupId(groupId1),
+            delegatedVerifier
+        );
     }
 
     // ============ submitOriginScore Tests ============
@@ -437,6 +444,47 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         assertFalse(scoreContract.canVerify(user1, groupId1));
     }
 
+    function test_DelegatedVerifier_InvalidAfterNFTTransfer() public {
+        address delegatedVerifier = address(0x123);
+
+        vm.prank(groupOwner1);
+        scoreContract.setGroupDelegatedVerifier(groupId1, delegatedVerifier);
+
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+
+        // Advance round and trigger fresh snapshot
+        advanceRound();
+        uint256 round = verify.currentRound();
+        scoreContract.triggerSnapshot(groupId1);
+
+        // Transfer group NFT to a new owner with governance votes
+        group.transferFrom(groupOwner1, groupOwner2, groupId1);
+
+        // Delegation should be invalid after owner change
+        assertFalse(scoreContract.canVerify(delegatedVerifier, groupId1));
+        assertEq(
+            scoreContract.delegatedVerifierByGroupId(groupId1),
+            address(0)
+        );
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 90;
+
+        vm.prank(delegatedVerifier);
+        vm.expectRevert(IGroupScore.NotVerifier.selector);
+        scoreContract.submitOriginScore(groupId1, scores);
+
+        // New owner can submit
+        vm.prank(groupOwner2);
+        scoreContract.submitOriginScore(groupId1, scores);
+
+        assertEq(scoreContract.originScoreByAccount(round, user1), 90);
+    }
+
     // ============ Verifier Tracking Tests ============
 
     function test_Verifiers() public {
@@ -509,6 +557,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
             "Group3",
             stakeAmount,
             MIN_JOIN_AMOUNT,
+            0,
             0
         );
 
