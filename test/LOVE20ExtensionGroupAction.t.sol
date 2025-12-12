@@ -30,10 +30,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     uint256 public groupId1;
     uint256 public groupId2;
 
-    function _groupInfoUintAt(
-        uint256 groupId,
-        uint256 idx
-    ) internal view returns (uint256 v) {
+    function _groupStakedAmount(uint256 groupId) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -43,14 +40,69 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             )
         );
         require(ok, "groupInfo call failed");
-        // ABI-encoded returns: [0]=groupId, [1]=description offset, [2]=stakedAmount, [3]=capacity,
-        // [4]=minJoin, [5]=maxJoin, [6]=maxAccounts, [7]=isActive, [8]=activatedRound, [9]=deactivatedRound
+        uint256 v;
+        // stakedAmount is word 2 in the ABI head
         assembly {
-            v := mload(add(add(data, 0x20), mul(idx, 0x20)))
+            v := mload(add(data, 0x60))
         }
+        return v;
     }
 
-    function _groupInfoDescription(
+    function _groupCapacity(uint256 groupId) internal view returns (uint256) {
+        (bool ok, bytes memory data) = address(groupManager).staticcall(
+            abi.encodeWithSelector(
+                ILOVE20GroupManager.groupInfo.selector,
+                address(token),
+                ACTION_ID,
+                groupId
+            )
+        );
+        require(ok, "groupInfo call failed");
+        uint256 v;
+        // capacity is word 3 in the ABI head
+        assembly {
+            v := mload(add(data, 0x80))
+        }
+        return v;
+    }
+
+    function _groupMinJoinAmount(uint256 groupId) internal view returns (uint256) {
+        (bool ok, bytes memory data) = address(groupManager).staticcall(
+            abi.encodeWithSelector(
+                ILOVE20GroupManager.groupInfo.selector,
+                address(token),
+                ACTION_ID,
+                groupId
+            )
+        );
+        require(ok, "groupInfo call failed");
+        uint256 v;
+        // groupMinJoinAmount is word 4 in the ABI head
+        assembly {
+            v := mload(add(data, 0xa0))
+        }
+        return v;
+    }
+
+    function _groupMaxJoinAmount(uint256 groupId) internal view returns (uint256) {
+        (bool ok, bytes memory data) = address(groupManager).staticcall(
+            abi.encodeWithSelector(
+                ILOVE20GroupManager.groupInfo.selector,
+                address(token),
+                ACTION_ID,
+                groupId
+            )
+        );
+        require(ok, "groupInfo call failed");
+        uint256 v;
+        // groupMaxJoinAmount is word 5 in the ABI head
+        assembly {
+            v := mload(add(data, 0xc0))
+        }
+        return v;
+    }
+
+    function _groupDescription(
         uint256 groupId
     ) internal view returns (string memory s) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
@@ -216,8 +268,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 additionalStake = 50e18;
         setupUser(groupOwner1, additionalStake, address(groupManager));
 
-        uint256 stakedBefore = _groupInfoUintAt(groupId1, 2);
-        uint256 capacityBefore = _groupInfoUintAt(groupId1, 3);
+        uint256 stakedBefore = _groupStakedAmount(groupId1);
+        uint256 capacityBefore = _groupCapacity(groupId1);
 
         vm.prank(groupOwner1, groupOwner1);
         (uint256 newStaked, uint256 newCapacity) = groupManager.expandGroup(
@@ -227,8 +279,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             additionalStake
         );
 
-        uint256 stakedAfter = _groupInfoUintAt(groupId1, 2);
-        uint256 capacityAfter = _groupInfoUintAt(groupId1, 3);
+        uint256 stakedAfter = _groupStakedAmount(groupId1);
+        uint256 capacityAfter = _groupCapacity(groupId1);
 
         assertEq(newStaked, stakedBefore + additionalStake);
         assertEq(stakedAfter, newStaked);
@@ -455,10 +507,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             0
         );
 
-        // decode only needed fields from groupInfo without decoding the description string
-        string memory desc = _groupInfoDescription(groupId1);
-        uint256 minJoin = _groupInfoUintAt(groupId1, 4);
-        uint256 maxJoin = _groupInfoUintAt(groupId1, 5);
+        string memory desc = _groupDescription(groupId1);
+        uint256 minJoin = _groupMinJoinAmount(groupId1);
+        uint256 maxJoin = _groupMaxJoinAmount(groupId1);
         assertEq(desc, newDesc);
         assertEq(minJoin, newMin);
         assertEq(maxJoin, newMax);

@@ -75,10 +75,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
     uint256 public groupId1;
     uint256 public groupId2;
 
-    function _groupInfoUintAt(
-        uint256 groupId,
-        uint256 idx
-    ) internal view returns (uint256 v) {
+    function _groupCapacity(uint256 groupId) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -88,9 +85,12 @@ contract GroupTokenJoinTest is BaseGroupTest {
             )
         );
         require(ok, "groupInfo call failed");
+        uint256 v;
+        // capacity is word 3 in the ABI head
         assembly {
-            v := mload(add(add(data, 0x20), mul(idx, 0x20)))
+            v := mload(add(data, 0x80))
         }
+        return v;
     }
 
     function setUp() public {
@@ -248,7 +248,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
     function test_Join_RevertGroupCapacityFull() public {
         // Get current capacity
-        uint256 capacity = _groupInfoUintAt(groupId1, 3);
+        uint256 capacity = _groupCapacity(groupId1);
         uint256 maxPerAccount = groupManager.calculateJoinMaxAmount(
             address(token),
             ACTION_ID
