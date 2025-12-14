@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    GroupTokenJoinSnapshotManualScore
-} from "./GroupTokenJoinSnapshotManualScore.sol";
+import {GroupTokenJoinManualScore} from "./GroupTokenJoinManualScore.sol";
 import {IGroupDistrust} from "../interface/base/IGroupDistrust.sol";
 import {ILOVE20GroupDistrust} from "../interface/ILOVE20GroupDistrust.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
-/// @title GroupTokenJoinSnapshotManualScoreDistrust
+/// @title GroupTokenJoinManualScoreDistrust
 /// @notice Handles distrust voting mechanism against group owners
 /// @dev Delegates distrust logic and storage to LOVE20GroupDistrust singleton
-abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
-    GroupTokenJoinSnapshotManualScore,
+abstract contract GroupTokenJoinManualScoreDistrust is
+    GroupTokenJoinManualScore,
     IGroupDistrust
 {
     // ============ Immutables ============

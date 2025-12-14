@@ -3,11 +3,11 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
 import {
-    GroupTokenJoinSnapshotManualScoreDistrust
-} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrust.sol";
+    GroupTokenJoinManualScoreDistrust
+} from "../../src/base/GroupTokenJoinManualScoreDistrust.sol";
 import {
-    GroupTokenJoinSnapshotManualScore
-} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
+    GroupTokenJoinManualScore
+} from "../../src/base/GroupTokenJoinManualScore.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {LOVE20GroupDistrust} from "../../src/LOVE20GroupDistrust.sol";
@@ -21,9 +21,7 @@ import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
  * @title MockGroupDistrustContract
  * @notice Concrete implementation for testing
  */
-contract MockGroupDistrustContract is
-    GroupTokenJoinSnapshotManualScoreDistrust
-{
+contract MockGroupDistrustContract is GroupTokenJoinManualScoreDistrust {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -36,7 +34,7 @@ contract MockGroupDistrustContract is
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
     )
-        GroupTokenJoinSnapshotManualScoreDistrust(groupDistrustAddress_)
+        GroupTokenJoinManualScoreDistrust(groupDistrustAddress_)
         GroupCore(
             factory_,
             tokenAddress_,
@@ -75,10 +73,10 @@ contract MockGroupDistrustContract is
 }
 
 /**
- * @title GroupTokenJoinSnapshotManualScoreDistrustTest
- * @notice Test suite for GroupTokenJoinSnapshotManualScoreDistrust
+ * @title GroupTokenJoinManualScoreDistrustTest
+ * @notice Test suite for GroupTokenJoinManualScoreDistrust
  */
-contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
+contract GroupTokenJoinManualScoreDistrustTest is BaseGroupTest {
     MockGroupDistrustContract public distrustContract;
     LOVE20GroupDistrust public groupDistrust;
 

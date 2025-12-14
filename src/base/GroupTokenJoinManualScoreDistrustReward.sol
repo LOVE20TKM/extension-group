@@ -2,22 +2,22 @@
 pragma solidity =0.8.17;
 
 import {
-    GroupTokenJoinSnapshotManualScoreDistrust
-} from "./GroupTokenJoinSnapshotManualScoreDistrust.sol";
+    GroupTokenJoinManualScoreDistrust
+} from "./GroupTokenJoinManualScoreDistrust.sol";
 import {IGroupReward} from "../interface/base/IGroupReward.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 
-/// @title GroupTokenJoinSnapshotManualScoreDistrustReward
+/// @title GroupTokenJoinManualScoreDistrustReward
 /// @notice Handles reward distribution for group-based actions
-abstract contract GroupTokenJoinSnapshotManualScoreDistrustReward is
-    GroupTokenJoinSnapshotManualScoreDistrust,
+abstract contract GroupTokenJoinManualScoreDistrustReward is
+    GroupTokenJoinManualScoreDistrust,
     IGroupReward
 {
     // ============ Constructor ============
 
     constructor(
         address groupDistrustAddress_
-    ) GroupTokenJoinSnapshotManualScoreDistrust(groupDistrustAddress_) {}
+    ) GroupTokenJoinManualScoreDistrust(groupDistrustAddress_) {}
     // ============ State ============
 
     /// @dev round => burned amount

@@ -3,8 +3,8 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
 import {
-    GroupTokenJoinSnapshotManualScore
-} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
+    GroupTokenJoinManualScore
+} from "../../src/base/GroupTokenJoinManualScore.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {
@@ -17,7 +17,7 @@ import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
  * @title MockGroupManualScore
  * @notice Concrete implementation for testing
  */
-contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore {
+contract MockGroupManualScore is GroupTokenJoinManualScore {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -67,10 +67,10 @@ contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore {
 }
 
 /**
- * @title GroupTokenJoinSnapshotManualScoreTest
- * @notice Test suite for GroupTokenJoinSnapshotManualScore
+ * @title GroupTokenJoinManualScoreTest
+ * @notice Test suite for GroupTokenJoinManualScore
  */
-contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
+contract GroupTokenJoinManualScoreTest is BaseGroupTest {
     MockGroupManualScore public scoreContract;
 
     uint256 public groupId1;

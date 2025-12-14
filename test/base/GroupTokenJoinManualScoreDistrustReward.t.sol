@@ -3,14 +3,14 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
 import {
-    GroupTokenJoinSnapshotManualScoreDistrustReward
-} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrustReward.sol";
+    GroupTokenJoinManualScoreDistrustReward
+} from "../../src/base/GroupTokenJoinManualScoreDistrustReward.sol";
 import {
-    GroupTokenJoinSnapshotManualScoreDistrust
-} from "../../src/base/GroupTokenJoinSnapshotManualScoreDistrust.sol";
+    GroupTokenJoinManualScoreDistrust
+} from "../../src/base/GroupTokenJoinManualScoreDistrust.sol";
 import {
-    GroupTokenJoinSnapshotManualScore
-} from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
+    GroupTokenJoinManualScore
+} from "../../src/base/GroupTokenJoinManualScore.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {LOVE20GroupDistrust} from "../../src/LOVE20GroupDistrust.sol";
@@ -24,7 +24,7 @@ import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
  * @title MockGroupReward
  * @notice Concrete implementation for testing
  */
-contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward {
+contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
     constructor(
         address factory_,
         address tokenAddress_,
@@ -37,7 +37,7 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward {
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
     )
-        GroupTokenJoinSnapshotManualScoreDistrustReward(groupDistrustAddress_)
+        GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
             factory_,
             tokenAddress_,
@@ -82,10 +82,10 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward {
 }
 
 /**
- * @title GroupTokenJoinSnapshotManualScoreDistrustRewardTest
- * @notice Test suite for GroupTokenJoinSnapshotManualScoreDistrustReward
+ * @title GroupTokenJoinManualScoreDistrustRewardTest
+ * @notice Test suite for GroupTokenJoinManualScoreDistrustReward
  */
-contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
+contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
     MockGroupReward public rewardContract;
     LOVE20GroupDistrust public groupDistrust;
 

@@ -2,8 +2,8 @@
 pragma solidity =0.8.17;
 
 import {
-    GroupTokenJoinSnapshotManualScoreDistrustReward
-} from "./base/GroupTokenJoinSnapshotManualScoreDistrustReward.sol";
+    GroupTokenJoinManualScoreDistrustReward
+} from "./base/GroupTokenJoinManualScoreDistrustReward.sol";
 import {GroupTokenJoin} from "./base/GroupTokenJoin.sol";
 import {GroupCore} from "./base/GroupCore.sol";
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
@@ -13,7 +13,7 @@ import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 /// @notice Extension contract for manual scoring verification in group-based actions
 /// @dev Uses tokenAddress as both joinToken and stakeToken
 contract LOVE20ExtensionGroupAction is
-    GroupTokenJoinSnapshotManualScoreDistrustReward,
+    GroupTokenJoinManualScoreDistrustReward,
     ILOVE20Extension,
     IGroupManualScore
 {
@@ -31,7 +31,7 @@ contract LOVE20ExtensionGroupAction is
         uint256 maxJoinAmountMultiplier_,
         uint256 minJoinAmount_
     )
-        GroupTokenJoinSnapshotManualScoreDistrustReward(groupDistrustAddress_)
+        GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
             factory_,
             tokenAddress_,

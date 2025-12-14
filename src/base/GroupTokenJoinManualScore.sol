@@ -6,12 +6,9 @@ import {MAX_ORIGIN_SCORE, IGroupScore} from "../interface/base/IGroupScore.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
-/// @title GroupTokenJoinSnapshotManualScore
+/// @title GroupTokenJoinManualScore
 /// @notice Handles manual verification scoring logic for token-join groups
-abstract contract GroupTokenJoinSnapshotManualScore is
-    GroupTokenJoin,
-    IGroupScore
-{
+abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     // ============ Modifiers ============
 
     modifier onlyGroupOwner(uint256 groupId) {
