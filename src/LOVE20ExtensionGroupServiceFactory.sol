@@ -13,7 +13,8 @@ contract LOVE20ExtensionGroupServiceFactory is LOVE20ExtensionFactoryBase {
 
     struct ExtensionParams {
         address tokenAddress;
-        address groupActionAddress;
+        address groupActionTokenAddress;
+        address groupActionFactoryAddress;
         uint256 maxRecipients;
     }
 
@@ -28,27 +29,31 @@ contract LOVE20ExtensionGroupServiceFactory is LOVE20ExtensionFactoryBase {
     // ============ Factory Functions ============
 
     /// @notice Create a new LOVE20ExtensionGroupService extension
-    /// @param tokenAddress_ The token address
-    /// @param groupActionAddress_ The GroupAction extension address
+    /// @param tokenAddress_ The service token address
+    /// @param groupActionTokenAddress_ The group action token address
+    /// @param groupActionFactoryAddress_ The GroupAction factory address
     /// @param maxRecipients_ Maximum number of reward recipients
     /// @return extension The address of the created extension
     function createExtension(
         address tokenAddress_,
-        address groupActionAddress_,
+        address groupActionTokenAddress_,
+        address groupActionFactoryAddress_,
         uint256 maxRecipients_
     ) external returns (address extension) {
         extension = address(
             new LOVE20ExtensionGroupService(
                 address(this),
                 tokenAddress_,
-                groupActionAddress_,
+                groupActionTokenAddress_,
+                groupActionFactoryAddress_,
                 maxRecipients_
             )
         );
 
         _extensionParams[extension] = ExtensionParams({
             tokenAddress: tokenAddress_,
-            groupActionAddress: groupActionAddress_,
+            groupActionTokenAddress: groupActionTokenAddress_,
+            groupActionFactoryAddress: groupActionFactoryAddress_,
             maxRecipients: maxRecipients_
         });
 
@@ -65,16 +70,17 @@ contract LOVE20ExtensionGroupServiceFactory is LOVE20ExtensionFactoryBase {
         view
         returns (
             address tokenAddress,
-            address groupActionAddress,
+            address groupActionTokenAddress,
+            address groupActionFactoryAddress,
             uint256 maxRecipients
         )
     {
         ExtensionParams memory params = _extensionParams[extension_];
         return (
             params.tokenAddress,
-            params.groupActionAddress,
+            params.groupActionTokenAddress,
+            params.groupActionFactoryAddress,
             params.maxRecipients
         );
     }
 }
-

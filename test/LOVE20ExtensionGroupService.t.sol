@@ -14,6 +14,9 @@ import {
 } from "../src/interface/ILOVE20ExtensionGroupService.sol";
 import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 import {IJoin} from "@extension/src/interface/base/IJoin.sol";
+import {
+    MockExtensionFactory
+} from "@extension/test/mocks/MockExtensionFactory.sol";
 
 /**
  * @title LOVE20ExtensionGroupServiceTest
@@ -32,6 +35,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     LOVE20ExtensionGroupService public groupService;
     LOVE20ExtensionGroupAction public groupAction;
     LOVE20GroupDistrust public groupDistrust;
+    MockExtensionFactory public actionFactory;
+    MockExtensionFactory public serviceFactory;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -42,6 +47,10 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
+        // Deploy separate factories for actions and services
+        actionFactory = new MockExtensionFactory(address(center));
+        serviceFactory = new MockExtensionFactory(address(center));
+
         // Deploy GroupDistrust singleton
         groupDistrust = new LOVE20GroupDistrust(
             address(center),
@@ -51,7 +60,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         // Deploy GroupAction first (as dependency)
         groupAction = new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(actionFactory),
             address(token),
             address(groupManager),
             address(groupDistrust),
@@ -63,19 +72,21 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             MIN_JOIN_AMOUNT
         );
 
-        // Deploy GroupService
+        // Deploy GroupService (use actionFactory as GROUP_ACTION_FACTORY_ADDRESS)
         groupService = new LOVE20ExtensionGroupService(
-            address(mockFactory),
+            address(serviceFactory),
             address(token),
-            address(groupAction),
+            address(token), // groupActionTokenAddress
+            address(actionFactory),
             MAX_RECIPIENTS
         );
 
-        // Register extensions
+        // Register extensions to their respective factories
         token.mint(address(this), 2e18);
-        token.approve(address(mockFactory), type(uint256).max);
-        mockFactory.registerExtension(address(groupAction), address(token));
-        mockFactory.registerExtension(address(groupService), address(token));
+        token.approve(address(actionFactory), type(uint256).max);
+        token.approve(address(serviceFactory), type(uint256).max);
+        actionFactory.registerExtension(address(groupAction), address(token));
+        serviceFactory.registerExtension(address(groupService), address(token));
 
         // Setup group owners
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
@@ -156,7 +167,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     // ============ Constructor Tests ============
 
     function test_Constructor_SetsImmutables() public view {
-        assertEq(groupService.GROUP_ACTION_ADDRESS(), address(groupAction));
+        assertEq(groupService.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
+        assertEq(
+            groupService.GROUP_ACTION_FACTORY_ADDRESS(),
+            address(actionFactory)
+        );
         assertEq(groupService.MAX_RECIPIENTS(), MAX_RECIPIENTS);
     }
 

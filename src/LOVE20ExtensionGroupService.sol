@@ -27,6 +27,17 @@ import {
 import {
     RoundHistoryUint256Array
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
+import {
+    ILOVE20ExtensionFactory
+} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
+import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
+import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
+import {
+    IUniswapV2Factory
+} from "@core/uniswap-v2-core/interfaces/IUniswapV2Factory.sol";
+import {
+    IUniswapV2Pair
+} from "@core/uniswap-v2-core/interfaces/IUniswapV2Pair.sol";
 
 /// @title LOVE20ExtensionGroupService
 /// @notice Extension contract for rewarding group service providers
@@ -46,7 +57,8 @@ contract LOVE20ExtensionGroupService is
 
     // ============ Immutables ============
 
-    address public immutable GROUP_ACTION_ADDRESS;
+    address public immutable GROUP_ACTION_TOKEN_ADDRESS;
+    address public immutable GROUP_ACTION_FACTORY_ADDRESS;
     uint256 public immutable MAX_RECIPIENTS;
 
     // ============ Storage ============
@@ -64,10 +76,26 @@ contract LOVE20ExtensionGroupService is
     constructor(
         address factory_,
         address tokenAddress_,
-        address groupActionAddress_,
+        address groupActionTokenAddress_,
+        address groupActionFactoryAddress_,
         uint256 maxRecipients_
     ) LOVE20ExtensionBaseJoin(factory_, tokenAddress_) {
-        GROUP_ACTION_ADDRESS = groupActionAddress_;
+        // Validate groupActionTokenAddress: must be tokenAddress or its child token
+        if (groupActionTokenAddress_ != tokenAddress_) {
+            ILOVE20Launch launch = ILOVE20Launch(_center.launchAddress());
+            if (!launch.isLOVE20Token(groupActionTokenAddress_)) {
+                revert InvalidGroupActionTokenAddress();
+            }
+            if (
+                ILOVE20Token(groupActionTokenAddress_).parentTokenAddress() !=
+                tokenAddress_
+            ) {
+                revert InvalidGroupActionTokenAddress();
+            }
+        }
+
+        GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
+        GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
         MAX_RECIPIENTS = maxRecipients_;
     }
 
@@ -77,19 +105,45 @@ contract LOVE20ExtensionGroupService is
     function join(
         string[] memory verificationInfos
     ) public override(IJoin, JoinBase) {
-        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
-            GROUP_ACTION_ADDRESS
-        );
-        uint256 stakedAmount = ILOVE20GroupManager(
-            groupAction.GROUP_MANAGER_ADDRESS()
-        ).totalStakedByOwner(
-                groupAction.tokenAddress(),
-                groupAction.actionId(),
-                msg.sender
-            );
-        if (stakedAmount == 0) revert NoActiveGroups();
+        if (!_hasActiveGroups(msg.sender)) revert NoActiveGroups();
 
         super.join(verificationInfos);
+    }
+
+    /// @dev Check if account has staked in any valid group action
+    function _hasActiveGroups(address account) internal view returns (bool) {
+        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
+        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
+            GROUP_ACTION_FACTORY_ADDRESS
+        );
+        uint256 currentRound = _join.currentRound();
+
+        uint256 actionCount = vote.votedActionIdsCount(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            currentRound
+        );
+        for (uint256 i = 0; i < actionCount; i++) {
+            uint256 actionId = vote.votedActionIdsAtIndex(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                currentRound,
+                i
+            );
+            address extensionAddr = _center.extension(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionId
+            );
+            if (extensionAddr == address(0) || !factory.exists(extensionAddr))
+                continue;
+
+            ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+                    extensionAddr
+                );
+            uint256 stakedAmount = ILOVE20GroupManager(
+                groupAction.GROUP_MANAGER_ADDRESS()
+            ).totalStakedByOwner(GROUP_ACTION_TOKEN_ADDRESS, actionId, account);
+            if (stakedAmount > 0) return true;
+        }
+        return false;
     }
 
     /// @notice Set reward recipients for the caller
@@ -245,31 +299,133 @@ contract LOVE20ExtensionGroupService is
     }
 
     function joinedValue() external view returns (uint256) {
-        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
-            GROUP_ACTION_ADDRESS
-        );
-        return
-            ILOVE20GroupManager(groupAction.GROUP_MANAGER_ADDRESS())
-                .totalStaked(
-                    groupAction.tokenAddress(),
-                    groupAction.actionId()
-                );
+        uint256 staked = _getTotalStakedFromAllActions();
+        return _convertToParentTokenValue(staked);
     }
 
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
         if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
-        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
-            GROUP_ACTION_ADDRESS
+        uint256 staked = _getTotalStakedByOwnerFromAllActions(account);
+        return _convertToParentTokenValue(staked);
+    }
+
+    /// @dev Convert child token amount to parent token value using Uniswap V2 price
+    function _convertToParentTokenValue(
+        uint256 amount
+    ) internal view returns (uint256) {
+        if (amount == 0 || GROUP_ACTION_TOKEN_ADDRESS == tokenAddress) {
+            return amount;
+        }
+
+        // Get Uniswap V2 pair
+        IUniswapV2Factory uniswapFactory = IUniswapV2Factory(
+            _center.uniswapV2FactoryAddress()
         );
-        return
-            ILOVE20GroupManager(groupAction.GROUP_MANAGER_ADDRESS())
-                .totalStakedByOwner(
-                    groupAction.tokenAddress(),
-                    groupAction.actionId(),
+        address pairAddress = uniswapFactory.getPair(
+            tokenAddress,
+            GROUP_ACTION_TOKEN_ADDRESS
+        );
+        if (pairAddress == address(0)) return 0;
+
+        // Get reserves and calculate price
+        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
+        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
+        if (reserve0 == 0 || reserve1 == 0) return 0;
+
+        // Determine which reserve is which token
+        address token0 = pair.token0();
+        uint256 parentReserve;
+        uint256 childReserve;
+        if (token0 == tokenAddress) {
+            parentReserve = reserve0;
+            childReserve = reserve1;
+        } else {
+            parentReserve = reserve1;
+            childReserve = reserve0;
+        }
+
+        // Convert: parentValue = childAmount * parentReserve / childReserve
+        return (amount * parentReserve) / childReserve;
+    }
+
+    /// @dev Get total staked from all valid group actions
+    function _getTotalStakedFromAllActions()
+        internal
+        view
+        returns (uint256 totalStaked)
+    {
+        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
+        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
+            GROUP_ACTION_FACTORY_ADDRESS
+        );
+        uint256 currentRound = _verify.currentRound();
+
+        uint256 actionCount = vote.votedActionIdsCount(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            currentRound
+        );
+        for (uint256 i = 0; i < actionCount; i++) {
+            uint256 actionId_ = vote.votedActionIdsAtIndex(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                currentRound,
+                i
+            );
+            address extensionAddr = _center.extension(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionId_
+            );
+            if (extensionAddr == address(0) || !factory.exists(extensionAddr))
+                continue;
+
+            ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+                    extensionAddr
+                );
+            totalStaked += ILOVE20GroupManager(
+                groupAction.GROUP_MANAGER_ADDRESS()
+            ).totalStaked(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
+        }
+    }
+
+    /// @dev Get total staked by owner from all valid group actions
+    function _getTotalStakedByOwnerFromAllActions(
+        address account
+    ) internal view returns (uint256 totalStaked) {
+        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
+        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
+            GROUP_ACTION_FACTORY_ADDRESS
+        );
+        uint256 currentRound = _verify.currentRound();
+
+        uint256 actionCount = vote.votedActionIdsCount(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            currentRound
+        );
+        for (uint256 i = 0; i < actionCount; i++) {
+            uint256 actionId_ = vote.votedActionIdsAtIndex(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                currentRound,
+                i
+            );
+            address extensionAddr = _center.extension(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionId_
+            );
+            if (extensionAddr == address(0) || !factory.exists(extensionAddr))
+                continue;
+
+            ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+                    extensionAddr
+                );
+            totalStaked += ILOVE20GroupManager(
+                groupAction.GROUP_MANAGER_ADDRESS()
+            ).totalStakedByOwner(
+                    GROUP_ACTION_TOKEN_ADDRESS,
+                    actionId_,
                     account
                 );
+        }
     }
 
     // ============ Internal Functions ============
@@ -280,20 +436,61 @@ contract LOVE20ExtensionGroupService is
     ) internal view override returns (uint256) {
         if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
 
+        // Get total reward (from storage or expected from mint)
         uint256 totalReward = _reward[round];
+        if (totalReward == 0) {
+            (totalReward, ) = _mint.actionRewardByActionIdByAccount(
+                tokenAddress,
+                round,
+                actionId,
+                address(this)
+            );
+        }
         if (totalReward == 0) return 0;
 
-        uint256 groupActionReward = ILOVE20ExtensionGroupAction(
-            GROUP_ACTION_ADDRESS
-        ).rewardByVerifier(round, account);
-        if (groupActionReward == 0) return 0;
+        (
+            uint256 accountTotalReward,
+            uint256 allActionsTotalReward
+        ) = _getRewardsFromAllActions(round, account);
 
-        uint256 groupActionTotalReward = ILOVE20ExtensionGroupAction(
-            GROUP_ACTION_ADDRESS
-        ).reward(round);
-        if (groupActionTotalReward == 0) return 0;
+        if (accountTotalReward == 0 || allActionsTotalReward == 0) return 0;
 
-        return (totalReward * groupActionReward) / groupActionTotalReward;
+        return (totalReward * accountTotalReward) / allActionsTotalReward;
+    }
+
+    /// @dev Get account reward and total reward from all valid group actions
+    function _getRewardsFromAllActions(
+        uint256 round,
+        address account
+    ) internal view returns (uint256 accountReward, uint256 totalReward) {
+        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
+        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
+            GROUP_ACTION_FACTORY_ADDRESS
+        );
+
+        uint256 actionCount = vote.votedActionIdsCount(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            round
+        );
+        for (uint256 i = 0; i < actionCount; i++) {
+            uint256 actionId_ = vote.votedActionIdsAtIndex(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                round,
+                i
+            );
+            address extensionAddr = _center.extension(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionId_
+            );
+            if (extensionAddr == address(0) || !factory.exists(extensionAddr))
+                continue;
+
+            ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
+                    extensionAddr
+                );
+            accountReward += groupAction.rewardByVerifier(round, account);
+            totalReward += groupAction.reward(round);
+        }
     }
 
     /// @dev Override to distribute reward to recipients

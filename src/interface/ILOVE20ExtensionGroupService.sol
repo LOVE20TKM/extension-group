@@ -17,6 +17,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     error ZeroBasisPoints();
     error ArrayLengthMismatch();
     error DuplicateAddress();
+    error InvalidGroupActionTokenAddress();
 
     // ============ Events ============
 
@@ -35,7 +36,8 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
 
     // ============ Immutables ============
 
-    function GROUP_ACTION_ADDRESS() external view returns (address);
+    function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
+    function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
     function MAX_RECIPIENTS() external view returns (uint256);
 
     function recipients(
