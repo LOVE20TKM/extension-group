@@ -20,12 +20,6 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         _;
     }
 
-    modifier groupActive(uint256 groupId) {
-        if (!_groupManager.isGroupActive(tokenAddress, actionId, groupId))
-            revert ILOVE20GroupManager.GroupNotActive();
-        _;
-    }
-
     // ============ State ============
 
     /// @dev groupId => delegated verifier address
@@ -64,6 +58,12 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     /// @dev round => list of verifiers
     mapping(uint256 => address[]) internal _verifiers;
 
+    /// @dev round => groupId => submitted account count (for batch submission)
+    mapping(uint256 => mapping(uint256 => uint256)) internal _submittedCount;
+
+    /// @dev round => groupId => accumulated total score (for batch submission)
+    mapping(uint256 => mapping(uint256 => uint256)) internal _batchTotalScore;
+
     // ============ IGroupScore Implementation ============
 
     /// @inheritdoc IGroupScore
@@ -88,73 +88,57 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     /// @inheritdoc IGroupScore
     function submitOriginScore(
         uint256 groupId,
+        uint256 startIndex,
         uint256[] calldata originScores
     ) external virtual {
         _snapshotIfNeeded(groupId);
-
         uint256 currentRound = _verify.currentRound();
+        address groupOwner = _checkVerifierAndSnapshot(currentRound, groupId);
 
-        // Get current NFT owner as the verifier
-        address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
-
-        // Check caller is the group owner or delegated verifier
-        bool isValidDelegatedVerifier = msg.sender ==
-            _delegatedVerifierByGroupId[groupId] &&
-            _delegatedVerifierOwnerByGroupId[groupId] == groupOwner;
-        if (msg.sender != groupOwner && !isValidDelegatedVerifier) {
-            revert NotVerifier();
+        // Validate start index matches submitted count (sequential submission)
+        if (startIndex != _submittedCount[currentRound][groupId]) {
+            revert InvalidStartIndex();
         }
 
-        if (_scoreSubmitted[currentRound][groupId]) {
-            revert VerificationAlreadySubmitted();
+        // Validate doesn't exceed account count
+        uint256 accountCount = _snapshotAccountsByGroupId[currentRound][groupId]
+            .length;
+        if (startIndex + originScores.length > accountCount) {
+            revert ScoresExceedAccountCount();
         }
 
-        if (!_hasSnapshot[currentRound][groupId]) {
-            revert NoSnapshotForRound();
+        // Process scores
+        uint256 batchScore = _processScores(
+            currentRound,
+            groupId,
+            startIndex,
+            originScores
+        );
+
+        _submittedCount[currentRound][groupId] += originScores.length;
+        _batchTotalScore[currentRound][groupId] += batchScore;
+
+        bool isComplete = _submittedCount[currentRound][groupId] ==
+            accountCount;
+
+        emit ScoreSubmit(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupId,
+            startIndex,
+            originScores.length,
+            isComplete
+        );
+
+        if (isComplete) {
+            _finalizeVerification(
+                currentRound,
+                groupId,
+                groupOwner,
+                _batchTotalScore[currentRound][groupId]
+            );
         }
-
-        // Validate scores array length matches snapshot
-        address[] storage accounts = _snapshotAccountsByGroupId[currentRound][
-            groupId
-        ];
-        if (originScores.length != accounts.length) {
-            revert ScoresCountMismatch();
-        }
-
-        // Check verifier capacity limit (using recorded verified groups)
-        _checkVerifierCapacity(currentRound, groupOwner, groupId);
-
-        // Record verifier (NFT owner, not delegated verifier)
-        _verifierByGroupId[currentRound][groupId] = groupOwner;
-
-        // Add verifier to list if first verified group for this verifier
-        if (_groupIdsByVerifier[currentRound][groupOwner].length == 0) {
-            _verifiers[currentRound].push(groupOwner);
-        }
-        _groupIdsByVerifier[currentRound][groupOwner].push(groupId);
-
-        // Process scores and calculate total score
-        uint256 totalScore = 0;
-        for (uint256 i = 0; i < originScores.length; i++) {
-            if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
-            address account = accounts[i];
-            _originScoreByAccount[currentRound][account] = originScores[i];
-            totalScore +=
-                originScores[i] *
-                _snapshotAmountByAccount[currentRound][account];
-        }
-
-        _totalScoreByGroupId[currentRound][groupId] = totalScore;
-
-        // Calculate group score (distrust applied by subclass)
-        uint256 groupScore = _calculateGroupScore(currentRound, groupId);
-        _scoreByGroupId[currentRound][groupId] = groupScore;
-        _score[currentRound] += groupScore;
-
-        _scoreSubmitted[currentRound][groupId] = true;
-        _verifiedGroupIds[currentRound].push(groupId);
-
-        emit ScoreSubmit(tokenAddress, currentRound, actionId, groupId);
     }
 
     /// @inheritdoc IGroupScore
@@ -209,6 +193,14 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     }
 
     /// @inheritdoc IGroupScore
+    function submittedCount(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _submittedCount[round][groupId];
+    }
+
+    /// @inheritdoc IGroupScore
     function verifiers(uint256 round) external view returns (address[] memory) {
         return _verifiers[round];
     }
@@ -260,6 +252,79 @@ abstract contract GroupTokenJoinSnapshotManualScore is
     }
 
     // ============ Internal Functions ============
+
+    /// @dev Check caller is valid verifier and snapshot exists
+    function _checkVerifierAndSnapshot(
+        uint256 currentRound,
+        uint256 groupId
+    ) internal view returns (address groupOwner) {
+        groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
+
+        bool isValidDelegatedVerifier = msg.sender ==
+            _delegatedVerifierByGroupId[groupId] &&
+            _delegatedVerifierOwnerByGroupId[groupId] == groupOwner;
+        if (msg.sender != groupOwner && !isValidDelegatedVerifier) {
+            revert NotVerifier();
+        }
+
+        if (_scoreSubmitted[currentRound][groupId]) {
+            revert VerificationAlreadySubmitted();
+        }
+
+        if (!_hasSnapshot[currentRound][groupId]) {
+            revert NoSnapshotForRound();
+        }
+    }
+
+    /// @dev Process scores for given range and return total score
+    function _processScores(
+        uint256 currentRound,
+        uint256 groupId,
+        uint256 startIndex,
+        uint256[] calldata originScores
+    ) internal returns (uint256 totalScore) {
+        address[] storage accounts = _snapshotAccountsByGroupId[currentRound][
+            groupId
+        ];
+
+        for (uint256 i = 0; i < originScores.length; i++) {
+            if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
+            address account = accounts[startIndex + i];
+            _originScoreByAccount[currentRound][account] = originScores[i];
+            totalScore +=
+                originScores[i] *
+                _snapshotAmountByAccount[currentRound][account];
+        }
+    }
+
+    /// @dev Finalize verification: check capacity, record verifier, update scores
+    function _finalizeVerification(
+        uint256 currentRound,
+        uint256 groupId,
+        address groupOwner,
+        uint256 totalScore
+    ) internal {
+        _checkVerifierCapacity(currentRound, groupOwner, groupId);
+
+        // Record verifier (NFT owner, not delegated verifier)
+        _verifierByGroupId[currentRound][groupId] = groupOwner;
+
+        // Add verifier to list if first verified group for this verifier
+        if (_groupIdsByVerifier[currentRound][groupOwner].length == 0) {
+            _verifiers[currentRound].push(groupOwner);
+        }
+        _groupIdsByVerifier[currentRound][groupOwner].push(groupId);
+
+        _totalScoreByGroupId[currentRound][groupId] = totalScore;
+
+        // Calculate group score (distrust applied by subclass)
+        uint256 groupScore = _calculateGroupScore(currentRound, groupId);
+        _scoreByGroupId[currentRound][groupId] = groupScore;
+        _score[currentRound] += groupScore;
+
+        _scoreSubmitted[currentRound][groupId] = true;
+        _verifiedGroupIds[currentRound].push(groupId);
+    }
 
     function _calculateScoreByAccount(
         uint256 round,

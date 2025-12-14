@@ -30,7 +30,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     uint256 public groupId1;
     uint256 public groupId2;
 
-    function _groupStakedAmount(uint256 groupId) internal view returns (uint256) {
+    function _groupStakedAmount(
+        uint256 groupId
+    ) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -66,7 +68,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         return v;
     }
 
-    function _groupMinJoinAmount(uint256 groupId) internal view returns (uint256) {
+    function _groupMinJoinAmount(
+        uint256 groupId
+    ) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -84,7 +88,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         return v;
     }
 
-    function _groupMaxJoinAmount(uint256 groupId) internal view returns (uint256) {
+    function _groupMaxJoinAmount(
+        uint256 groupId
+    ) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -220,7 +226,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[1] = 90;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         // 3. Verify scores
         uint256 round = verify.currentRound();
@@ -310,7 +316,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 85;
 
         vm.prank(delegatedVerifier);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         uint256 round = verify.currentRound();
         assertEq(groupAction.originScoreByAccount(round, user1), 85);
@@ -332,7 +338,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         // Setup governor
         address governor = address(0x50);
@@ -370,10 +376,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         vm.prank(groupOwner2);
-        groupAction.submitOriginScore(groupId2, scores);
+        groupAction.submitOriginScore(groupId2, 0, scores);
 
         uint256 round = verify.currentRound();
         assertEq(groupAction.verifiersCount(round), 2);
@@ -461,7 +467,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 0;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         uint256 round = verify.currentRound();
         assertEq(groupAction.scoreByAccount(round, user1), 0);
@@ -482,7 +488,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = MAX_ORIGIN_SCORE;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         uint256 round = verify.currentRound();
         assertEq(
@@ -559,7 +565,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         // This should succeed since we're within capacity
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         uint256 round = verify.currentRound();
         assertEq(groupAction.verifiersCount(round), 1);
@@ -584,7 +590,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores);
+        groupAction.submitOriginScore(groupId1, 0, scores);
 
         // Advance round
         advanceRound();
@@ -601,7 +607,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores2[0] = 90;
 
         vm.prank(groupOwner1);
-        groupAction.submitOriginScore(groupId1, scores2);
+        groupAction.submitOriginScore(groupId1, 0, scores2);
 
         assertEq(groupAction.originScoreByAccount(round2, user1), 90);
     }

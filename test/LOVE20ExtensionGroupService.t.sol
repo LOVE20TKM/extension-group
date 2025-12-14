@@ -146,7 +146,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         scores[0] = score;
 
         vm.prank(owner);
-        groupAction.submitOriginScore(groupId, scores);
+        groupAction.submitOriginScore(groupId, 0, scores);
     }
 
     /**
