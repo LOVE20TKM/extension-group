@@ -12,7 +12,6 @@ import {
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
 import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
-import {VerificationInfo} from "@extension/src/base/VerificationInfo.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
@@ -24,7 +23,6 @@ using SafeERC20 for IERC20;
 abstract contract GroupTokenJoin is
     GroupCore,
     ReentrancyGuard,
-    VerificationInfo,
     IGroupTokenJoin
 {
     // ============ Immutables ============
@@ -104,10 +102,20 @@ abstract contract GroupTokenJoin is
             _joinedRoundByAccount[msg.sender] = currentRound;
             _groupIdHistoryByAccount[msg.sender].record(currentRound, groupId);
             _addAccountToGroup(currentRound, groupId, msg.sender);
-            _center.addAccount(tokenAddress, actionId, msg.sender);
+            _center.addAccount(
+                tokenAddress,
+                actionId,
+                msg.sender,
+                verificationInfos
+            );
+        } else if (verificationInfos.length > 0) {
+            _center.updateVerificationInfo(
+                tokenAddress,
+                actionId,
+                msg.sender,
+                verificationInfos
+            );
         }
-
-        updateVerificationInfo(verificationInfos);
 
         emit Join(
             tokenAddress,
