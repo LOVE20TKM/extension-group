@@ -14,9 +14,9 @@ contract DeployGroupDistrust is BaseScript {
 
     function run() external {
         // Read addresses from params files
-        address extensionCenterAddress = readAddressParamsFile(
+        address centerAddress = readAddressParamsFile(
             "address.extension.center.params",
-            "extensionCenterAddress"
+            "centerAddress"
         );
         address verifyAddress = readAddressParamsFile(
             "address.params",
@@ -29,8 +29,8 @@ contract DeployGroupDistrust is BaseScript {
 
         // Validate addresses are not zero
         require(
-            extensionCenterAddress != address(0),
-            "extensionCenterAddress not found in params"
+            centerAddress != address(0),
+            "centerAddress not found in params"
         );
         require(
             verifyAddress != address(0),
@@ -40,7 +40,7 @@ contract DeployGroupDistrust is BaseScript {
 
         // Validate contracts are deployed (have code)
         require(
-            extensionCenterAddress.code.length > 0,
+            centerAddress.code.length > 0,
             "extensionCenter contract not deployed"
         );
         require(verifyAddress.code.length > 0, "verify contract not deployed");
@@ -48,11 +48,7 @@ contract DeployGroupDistrust is BaseScript {
 
         vm.startBroadcast();
         groupDistrustAddress = address(
-            new LOVE20GroupDistrust(
-                extensionCenterAddress,
-                verifyAddress,
-                groupAddress
-            )
+            new LOVE20GroupDistrust(centerAddress, verifyAddress, groupAddress)
         );
         vm.stopBroadcast();
 
@@ -62,7 +58,7 @@ contract DeployGroupDistrust is BaseScript {
                 groupDistrustAddress
             );
             console.log("Constructor parameters:");
-            console.log("  extensionCenterAddress:", extensionCenterAddress);
+            console.log("  centerAddress:", centerAddress);
             console.log("  verifyAddress:", verifyAddress);
             console.log("  groupAddress:", groupAddress);
         }

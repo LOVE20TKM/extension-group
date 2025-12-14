@@ -16,7 +16,7 @@ contract DeployGroupManager is BaseScript {
         // Read addresses from params files
         address centerAddress = readAddressParamsFile(
             "address.extension.center.params",
-            "extensionCenterAddress"
+            "centerAddress"
         );
         address groupAddress = readAddressParamsFile(
             "address.group.params",

@@ -16,26 +16,26 @@ contract DeployGroupServiceFactory is BaseScript {
 
     function run() external {
         // Read address from params file
-        address extensionCenterAddress = readAddressParamsFile(
+        address centerAddress = readAddressParamsFile(
             "address.extension.center.params",
-            "extensionCenterAddress"
+            "centerAddress"
         );
 
         // Validate address is not zero
         require(
-            extensionCenterAddress != address(0),
-            "extensionCenterAddress not found in params"
+            centerAddress != address(0),
+            "centerAddress not found in params"
         );
 
         // Validate contract is deployed (has code)
         require(
-            extensionCenterAddress.code.length > 0,
+            centerAddress.code.length > 0,
             "extensionCenter contract not deployed"
         );
 
         vm.startBroadcast();
         groupServiceFactoryAddress = address(
-            new LOVE20ExtensionGroupServiceFactory(extensionCenterAddress)
+            new LOVE20ExtensionGroupServiceFactory(centerAddress)
         );
         vm.stopBroadcast();
 
@@ -45,7 +45,7 @@ contract DeployGroupServiceFactory is BaseScript {
                 groupServiceFactoryAddress
             );
             console.log("Constructor parameters:");
-            console.log("  extensionCenterAddress:", extensionCenterAddress);
+            console.log("  centerAddress:", centerAddress);
         }
 
         updateParamsFile(

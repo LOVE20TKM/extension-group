@@ -31,7 +31,7 @@ check_equal(){
 }
 
 echo "-------------------- expected addresses --------------------"
-echo "  extensionCenterAddress: $extensionCenterAddress"
+echo "  centerAddress: $centerAddress"
 echo "  groupAddress: $groupAddress"
 echo "  stakeAddress: $stakeAddress"
 echo "  joinAddress: $joinAddress"
@@ -55,7 +55,7 @@ fi
 echo "-------------------- GroupManager check --------------------"
 if [ -n "$groupManagerAddress" ]; then
     echo "  groupManagerAddress: $groupManagerAddress"
-    check_equal "GroupManager: CENTER_ADDRESS" $extensionCenterAddress $(cast_call $groupManagerAddress "CENTER_ADDRESS()(address)")
+    check_equal "GroupManager: CENTER_ADDRESS" $centerAddress $(cast_call $groupManagerAddress "CENTER_ADDRESS()(address)")
     check_equal "GroupManager: GROUP_ADDRESS" $groupAddress $(cast_call $groupManagerAddress "GROUP_ADDRESS()(address)")
     check_equal "GroupManager: STAKE_ADDRESS" $stakeAddress $(cast_call $groupManagerAddress "STAKE_ADDRESS()(address)")
     check_equal "GroupManager: JOIN_ADDRESS" $joinAddress $(cast_call $groupManagerAddress "JOIN_ADDRESS()(address)")
@@ -66,7 +66,7 @@ fi
 echo "-------------------- GroupActionFactory check --------------------"
 if [ -n "$groupActionFactoryAddress" ]; then
     echo "  groupActionFactoryAddress: $groupActionFactoryAddress"
-    check_equal "GroupActionFactory: center" $extensionCenterAddress $(cast_call $groupActionFactoryAddress "center()(address)")
+    check_equal "GroupActionFactory: center" $centerAddress $(cast_call $groupActionFactoryAddress "center()(address)")
 else
     echo "(warning) GroupActionFactory not deployed"
 fi
@@ -74,7 +74,7 @@ fi
 echo "-------------------- GroupServiceFactory check --------------------"
 if [ -n "$groupServiceFactoryAddress" ]; then
     echo "  groupServiceFactoryAddress: $groupServiceFactoryAddress"
-    check_equal "GroupServiceFactory: center" $extensionCenterAddress $(cast_call $groupServiceFactoryAddress "center()(address)")
+    check_equal "GroupServiceFactory: center" $centerAddress $(cast_call $groupServiceFactoryAddress "center()(address)")
 else
     echo "(warning) GroupServiceFactory not deployed"
 fi
