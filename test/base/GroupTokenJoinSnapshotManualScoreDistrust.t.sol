@@ -8,9 +8,6 @@ import {
 import {
     GroupTokenJoinSnapshotManualScore
 } from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
-import {
-    GroupTokenJoinSnapshot
-} from "../../src/base/GroupTokenJoinSnapshot.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {LOVE20GroupDistrust} from "../../src/LOVE20GroupDistrust.sol";
@@ -65,7 +62,8 @@ contract MockGroupDistrustContract is
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
-        return _joinInfo[account].amount;
+        (, uint256 amount, ) = this.joinInfo(account);
+        return amount;
     }
 
     function _calculateReward(
@@ -73,11 +71,6 @@ contract MockGroupDistrustContract is
         address
     ) internal pure override returns (uint256) {
         return 0;
-    }
-
-    // Expose for testing
-    function triggerSnapshot(uint256 groupId) external {
-        _snapshotIfNeeded(groupId);
     }
 }
 
@@ -188,23 +181,12 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
 
     /**
      * @notice Helper to submit scores for a group
-     * @dev Advances round and triggers fresh snapshot to capture current members
      */
     function submitScores(
         uint256 groupId,
         address owner,
         uint256 numAccounts
     ) internal {
-        // Advance round to get fresh snapshot that captures current members
-        advanceRound();
-        // Setup actionIds for new round
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
-        distrustContract.triggerSnapshot(groupId);
-
         uint256[] memory scores = new uint256[](numAccounts);
         for (uint256 i = 0; i < numAccounts; i++) {
             scores[i] = 80;
@@ -223,7 +205,7 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         vm.prank(user1);
         distrustContract.join(groupId1, joinAmount, new string[](0));
 
-        // Submit scores first
+        // Submit scores
         submitScores(groupId1, groupOwner1, 1);
 
         // Setup governor
@@ -452,7 +434,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustTest is BaseGroupTest {
         // Submit scores for both groups
         submitScores(groupId1, groupOwner1, 1);
 
-        distrustContract.triggerSnapshot(groupId3);
         uint256[] memory scores3 = new uint256[](1);
         scores3[0] = 80;
         vm.prank(groupOwner1);

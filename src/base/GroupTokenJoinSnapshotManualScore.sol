@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {GroupTokenJoinSnapshot} from "./GroupTokenJoinSnapshot.sol";
+import {GroupTokenJoin} from "./GroupTokenJoin.sol";
 import {MAX_ORIGIN_SCORE, IGroupScore} from "../interface/base/IGroupScore.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
@@ -9,7 +9,7 @@ import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
 /// @title GroupTokenJoinSnapshotManualScore
 /// @notice Handles manual verification scoring logic for token-join groups
 abstract contract GroupTokenJoinSnapshotManualScore is
-    GroupTokenJoinSnapshot,
+    GroupTokenJoin,
     IGroupScore
 {
     // ============ Modifiers ============
@@ -91,18 +91,19 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         uint256 startIndex,
         uint256[] calldata originScores
     ) external virtual {
-        _snapshotIfNeeded(groupId);
         uint256 currentRound = _verify.currentRound();
-        address groupOwner = _checkVerifierAndSnapshot(currentRound, groupId);
+        address groupOwner = _checkVerifierAndData(currentRound, groupId);
 
         // Validate start index matches submitted count (sequential submission)
         if (startIndex != _submittedCount[currentRound][groupId]) {
             revert InvalidStartIndex();
         }
 
-        // Validate doesn't exceed account count
-        uint256 accountCount = _snapshotAccountsByGroupId[currentRound][groupId]
-            .length;
+        // Get account count from RoundHistory
+        uint256 accountCount = accountCountByGroupIdByRound(
+            groupId,
+            currentRound
+        );
         if (startIndex + originScores.length > accountCount) {
             revert ScoresExceedAccountCount();
         }
@@ -253,8 +254,8 @@ abstract contract GroupTokenJoinSnapshotManualScore is
 
     // ============ Internal Functions ============
 
-    /// @dev Check caller is valid verifier and snapshot exists
-    function _checkVerifierAndSnapshot(
+    /// @dev Check caller is valid verifier and has data to verify
+    function _checkVerifierAndData(
         uint256 currentRound,
         uint256 groupId
     ) internal view returns (address groupOwner) {
@@ -271,8 +272,9 @@ abstract contract GroupTokenJoinSnapshotManualScore is
             revert VerificationAlreadySubmitted();
         }
 
-        if (!_hasSnapshot[currentRound][groupId]) {
-            revert NoSnapshotForRound();
+        // Check if group has members at this round
+        if (accountCountByGroupIdByRound(groupId, currentRound) == 0) {
+            revert NoDataForRound();
         }
     }
 
@@ -283,17 +285,17 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         uint256 startIndex,
         uint256[] calldata originScores
     ) internal returns (uint256 totalScore) {
-        address[] storage accounts = _snapshotAccountsByGroupId[currentRound][
-            groupId
-        ];
-
         for (uint256 i = 0; i < originScores.length; i++) {
             if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
-            address account = accounts[startIndex + i];
+            address account = accountByGroupIdAndIndexByRound(
+                groupId,
+                startIndex + i,
+                currentRound
+            );
             _originScoreByAccount[currentRound][account] = originScores[i];
             totalScore +=
                 originScores[i] *
-                _snapshotAmountByAccount[currentRound][account];
+                amountByAccountByRound(account, currentRound);
         }
     }
 
@@ -333,7 +335,7 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         uint256 originScoreVal = _originScoreByAccount[round][account];
         if (originScoreVal == 0) return 0;
 
-        uint256 amount = _snapshotAmountByAccount[round][account];
+        uint256 amount = amountByAccountByRound(account, round);
         return originScoreVal * amount;
     }
 
@@ -348,13 +350,17 @@ abstract contract GroupTokenJoinSnapshotManualScore is
             groupOwner
         ];
         for (uint256 i = 0; i < verifiedGroupIds.length; i++) {
-            verifiedCapacity += _snapshotAmountByGroupId[round][
-                verifiedGroupIds[i]
-            ];
+            verifiedCapacity += totalJoinedAmountByGroupIdByRound(
+                verifiedGroupIds[i],
+                round
+            );
         }
 
         // Add current group's capacity
-        verifiedCapacity += _snapshotAmountByGroupId[round][currentGroupId];
+        verifiedCapacity += totalJoinedAmountByGroupIdByRound(
+            currentGroupId,
+            round
+        );
 
         uint256 maxCapacity = _groupManager.maxCapacityByOwner(
             tokenAddress,
@@ -371,6 +377,6 @@ abstract contract GroupTokenJoinSnapshotManualScore is
         uint256 round,
         uint256 groupId
     ) internal view virtual returns (uint256) {
-        return _snapshotAmountByGroupId[round][groupId];
+        return totalJoinedAmountByGroupIdByRound(groupId, round);
     }
 }

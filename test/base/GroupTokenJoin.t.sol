@@ -49,7 +49,8 @@ contract MockGroupTokenJoin is GroupTokenJoin {
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
-        return _joinInfo[account].amount;
+        (, uint256 amount, ) = this.joinInfo(account);
+        return amount;
     }
 
     function _calculateReward(
@@ -387,8 +388,6 @@ contract GroupTokenJoinTest is BaseGroupTest {
         vm.prank(user2);
         groupTokenJoin.join(groupId1, joinAmount, new string[](0));
 
-        address[] memory accounts = groupTokenJoin.accountsByGroupId(groupId1);
-        assertEq(accounts.length, 2);
         assertEq(groupTokenJoin.accountsByGroupIdCount(groupId1), 2);
         assertEq(groupTokenJoin.accountsByGroupIdAtIndex(groupId1, 0), user1);
         assertEq(groupTokenJoin.accountsByGroupIdAtIndex(groupId1, 1), user2);
@@ -535,8 +534,9 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
         assertEq(groupTokenJoin.accountsByGroupIdCount(groupId1), 2);
         // user3 should now be at index 1 (swapped with exiting user2)
-        address[] memory accounts = groupTokenJoin.accountsByGroupId(groupId1);
-        assertTrue(accounts[0] == user1 || accounts[1] == user1);
-        assertTrue(accounts[0] == user3 || accounts[1] == user3);
+        address account0 = groupTokenJoin.accountsByGroupIdAtIndex(groupId1, 0);
+        address account1 = groupTokenJoin.accountsByGroupIdAtIndex(groupId1, 1);
+        assertTrue(account0 == user1 || account1 == user1);
+        assertTrue(account0 == user3 || account1 == user3);
     }
 }

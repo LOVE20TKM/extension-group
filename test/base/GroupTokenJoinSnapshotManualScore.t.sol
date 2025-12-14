@@ -5,9 +5,6 @@ import {BaseGroupTest} from "../utils/BaseGroupTest.sol";
 import {
     GroupTokenJoinSnapshotManualScore
 } from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
-import {
-    GroupTokenJoinSnapshot
-} from "../../src/base/GroupTokenJoinSnapshot.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {
@@ -57,7 +54,8 @@ contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore {
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
-        return _joinInfo[account].amount;
+        (, uint256 amount, ) = this.joinInfo(account);
+        return amount;
     }
 
     function _calculateReward(
@@ -65,11 +63,6 @@ contract MockGroupManualScore is GroupTokenJoinSnapshotManualScore {
         address
     ) internal pure override returns (uint256) {
         return 0;
-    }
-
-    // Expose for testing
-    function triggerSnapshot(uint256 groupId) external {
-        _snapshotIfNeeded(groupId);
     }
 }
 
@@ -200,10 +193,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot that captures user1
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80; // 80%
@@ -226,10 +216,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 90;
@@ -247,10 +234,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
-
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
 
@@ -266,10 +249,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
-
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
 
@@ -281,21 +260,12 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.stopPrank();
     }
 
-    function test_SubmitOriginScore_RevertNoSnapshot() public {
-        // Advance round to allow deactivation
-        advanceRound();
-
-        // Deactivate group so _snapshotIfNeeded won't create snapshot
-        vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
-
-        // Advance again so we're in a fresh round where group was never active
-        advanceRound();
-
+    function test_SubmitOriginScore_RevertNoData() public {
+        // No one joined this group, so there's no data
         uint256[] memory scores = new uint256[](0);
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IGroupScore.NoSnapshotForRound.selector);
+        vm.expectRevert(IGroupScore.NoDataForRound.selector);
         scoreContract.submitOriginScore(groupId1, 0, scores);
     }
 
@@ -305,11 +275,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
 
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
-
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-
-        scoreContract.triggerSnapshot(groupId1);
 
         // 2 scores for 1 account
         uint256[] memory scores = new uint256[](2);
@@ -328,10 +293,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
-
         uint256[] memory scores = new uint256[](1);
         scores[0] = MAX_ORIGIN_SCORE + 1; // Exceeds max
 
@@ -349,10 +310,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -377,10 +335,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user2);
         scoreContract.join(groupId1, joinAmount2, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](2);
         scores[0] = 80;
@@ -389,7 +344,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(groupOwner1);
         scoreContract.submitOriginScore(groupId1, 0, scores);
 
-        // Group score = snapshot amount (without distrust applied)
+        // Group score = total amount (without distrust applied)
         assertEq(
             scoreContract.scoreByGroupId(round, groupId1),
             joinAmount1 + joinAmount2
@@ -408,11 +363,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user2);
         scoreContract.join(groupId2, joinAmount2, new string[](0));
 
-        // Advance round and trigger fresh snapshots
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
-        scoreContract.triggerSnapshot(groupId2);
 
         uint256[] memory scores1 = new uint256[](1);
         scores1[0] = 80;
@@ -459,10 +410,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         // Transfer group NFT to a new owner with governance votes
         group.transferFrom(groupOwner1, groupOwner2, groupId1);
@@ -501,11 +449,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user2);
         scoreContract.join(groupId2, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshots
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
-        scoreContract.triggerSnapshot(groupId2);
-
         uint256 round = verify.currentRound();
 
         uint256[] memory scores = new uint256[](1);
@@ -528,10 +471,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
 
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
-
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256 round = verify.currentRound();
 
@@ -574,11 +513,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user2);
         scoreContract.join(groupId3, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshots
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
-        scoreContract.triggerSnapshot(groupId3);
-
         uint256 round = verify.currentRound();
 
         uint256[] memory scores = new uint256[](1);
@@ -606,15 +540,9 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and setup actionIds for new round
-        advanceRound();
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
+        // Setup actionIds for this round
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
+        vote.setVotedActionIds(address(token), round, ACTION_ID);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -673,9 +601,7 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user3);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        advanceRound();
         uint256 round = verify.currentRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         // Submit in 3 batches using the same function
         uint256[] memory scores1 = new uint256[](1);
@@ -723,9 +649,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user2);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
-
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
 
@@ -740,9 +663,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
 
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
-
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](2);
         scores[0] = 80;
@@ -759,9 +679,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
 
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
-
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -784,9 +701,6 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         scoreContract.join(groupId1, joinAmount, new string[](0));
         vm.prank(user2);
         scoreContract.join(groupId1, joinAmount, new string[](0));
-
-        advanceRound();
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores1 = new uint256[](1);
         scores1[0] = 80;
@@ -812,10 +726,8 @@ contract GroupTokenJoinSnapshotManualScoreTest is BaseGroupTest {
         vm.prank(user1);
         scoreContract.join(groupId1, joinAmount, new string[](0));
 
-        advanceRound();
         uint256 round = verify.currentRound();
         vote.setVotedActionIds(address(token), round, ACTION_ID);
-        scoreContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;

@@ -137,11 +137,6 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         groupAction.join(groupId, amount, new string[](0));
 
         // Advance round and setup actionIds for new round
-        advanceRound();
-        _setupActionIdsForCurrentRound();
-
-        groupAction.snapshotIfNeeded(groupId);
-
         uint256[] memory scores = new uint256[](1);
         scores[0] = score;
 

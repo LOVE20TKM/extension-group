@@ -35,14 +35,6 @@ interface IGroupTokenJoin {
         uint256 amount
     );
 
-    // ============ Structs ============
-
-    struct JoinInfo {
-        uint256 joinedRound;
-        uint256 amount;
-        uint256 groupId;
-    }
-
     // ============ Write Functions ============
 
     /// @notice Join a group with tokens (can add more tokens by calling again)
@@ -61,9 +53,6 @@ interface IGroupTokenJoin {
         view
         returns (uint256 joinedRound, uint256 amount, uint256 groupId);
 
-    function accountsByGroupId(
-        uint256 groupId
-    ) external view returns (address[] memory);
     function accountsByGroupIdCount(
         uint256 groupId
     ) external view returns (uint256);
@@ -84,6 +73,27 @@ interface IGroupTokenJoin {
 
     function totalJoinedAmount() external view returns (uint256);
     function totalJoinedAmountByRound(
+        uint256 round
+    ) external view returns (uint256);
+
+    // ============ Round-based Query Functions ============
+
+    /// @notice Get the number of accounts in a group at a specific round
+    function accountCountByGroupIdByRound(
+        uint256 groupId,
+        uint256 round
+    ) external view returns (uint256);
+
+    /// @notice Get the account at a specific index in a group for a given round
+    function accountByGroupIdAndIndexByRound(
+        uint256 groupId,
+        uint256 index,
+        uint256 round
+    ) external view returns (address);
+
+    /// @notice Get the amount of tokens an account has at a specific round
+    function amountByAccountByRound(
+        address account,
         uint256 round
     ) external view returns (uint256);
 }

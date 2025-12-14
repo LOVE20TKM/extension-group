@@ -11,9 +11,6 @@ import {
 import {
     GroupTokenJoinSnapshotManualScore
 } from "../../src/base/GroupTokenJoinSnapshotManualScore.sol";
-import {
-    GroupTokenJoinSnapshot
-} from "../../src/base/GroupTokenJoinSnapshot.sol";
 import {GroupTokenJoin} from "../../src/base/GroupTokenJoin.sol";
 import {GroupCore} from "../../src/base/GroupCore.sol";
 import {LOVE20GroupDistrust} from "../../src/LOVE20GroupDistrust.sol";
@@ -66,12 +63,8 @@ contract MockGroupReward is GroupTokenJoinSnapshotManualScoreDistrustReward {
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
-        return _joinInfo[account].amount;
-    }
-
-    // Expose for testing
-    function triggerSnapshot(uint256 groupId) external {
-        _snapshotIfNeeded(groupId);
+        (, uint256 amount, ) = this.joinInfo(account);
+        return amount;
     }
 
     // Set reward for testing
@@ -174,7 +167,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
     /**
      * @notice Helper to setup group with members and scores
-     * @dev Advances round and triggers fresh snapshot to capture members
      */
     function setupGroupWithScores(
         uint256 groupId,
@@ -188,16 +180,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
             vm.prank(members[i]);
             rewardContract.join(groupId, amounts[i], new string[](0));
         }
-
-        // Advance round to get fresh snapshot that captures members
-        advanceRound();
-        // Setup actionIds for new round
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
-        rewardContract.triggerSnapshot(groupId);
 
         vm.prank(owner);
         rewardContract.submitOriginScore(groupId, 0, scores);
@@ -236,17 +218,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
         vm.prank(user2);
         rewardContract.join(groupId2, amount2, new string[](0));
-
-        // Advance round once and submit scores for both groups in same round
-        advanceRound();
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
-
-        rewardContract.triggerSnapshot(groupId1);
-        rewardContract.triggerSnapshot(groupId2);
 
         uint256[] memory scores1 = new uint256[](1);
         scores1[0] = 80;
@@ -390,10 +361,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
         vm.prank(user2);
         rewardContract.join(groupId1, 30e18, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        rewardContract.triggerSnapshot(groupId1);
-
         uint256[] memory scores = new uint256[](2);
         scores[0] = 100; // user1: score = 100 * 10e18 = 1000e18
         scores[1] = 50; // user2: score = 50 * 30e18 = 1500e18
@@ -426,10 +393,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
         vm.prank(user1);
         rewardContract.join(groupId1, 10e18, new string[](0));
-
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        rewardContract.triggerSnapshot(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 0; // Zero score
@@ -560,16 +523,6 @@ contract GroupTokenJoinSnapshotManualScoreDistrustRewardTest is BaseGroupTest {
 
         vm.prank(user2);
         rewardContract.join(groupId2, joinAmount, new string[](0));
-
-        // Advance round and submit scores for both groups
-        advanceRound();
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
-        rewardContract.triggerSnapshot(groupId1);
-        rewardContract.triggerSnapshot(groupId2);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;

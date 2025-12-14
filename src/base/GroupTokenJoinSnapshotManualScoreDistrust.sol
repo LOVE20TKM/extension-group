@@ -75,7 +75,10 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
         for (uint256 i = 0; i < groupIds.length; i++) {
             uint256 groupId = groupIds[i];
             uint256 oldScore = _scoreByGroupId[round][groupId];
-            uint256 groupAmount = _snapshotAmountByGroupId[round][groupId];
+            uint256 groupAmount = totalJoinedAmountByGroupIdByRound(
+                groupId,
+                round
+            );
 
             uint256 newScore = total == 0
                 ? groupAmount
@@ -104,7 +107,7 @@ abstract contract GroupTokenJoinSnapshotManualScoreDistrust is
         uint256 groupId
     ) internal view virtual override returns (uint256) {
         address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
-        uint256 groupAmount = _snapshotAmountByGroupId[round][groupId];
+        uint256 groupAmount = totalJoinedAmountByGroupIdByRound(groupId, round);
         uint256 distrustVotes = _getDistrustVotes(round, groupOwner);
         uint256 total = _totalVerifyVotes(round);
 

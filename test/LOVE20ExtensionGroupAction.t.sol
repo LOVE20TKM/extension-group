@@ -10,7 +10,6 @@ import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
 import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 import {IGroupCore} from "../src/interface/base/IGroupCore.sol";
 import {IGroupTokenJoin} from "../src/interface/base/IGroupTokenJoin.sol";
-import {IGroupSnapshot} from "../src/interface/base/IGroupSnapshot.sol";
 import {
     IGroupScore,
     MAX_ORIGIN_SCORE
@@ -217,10 +216,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         assertEq(groupAction.totalJoinedAmount(), joinAmount1 + joinAmount2);
         assertEq(groupAction.accountsByGroupIdCount(groupId1), 2);
 
-        // 2. Submit scores - advance round to get fresh snapshot
-        advanceRound();
-        groupAction.snapshotIfNeeded(groupId1);
-
+        // 2. Submit scores
         uint256[] memory scores = new uint256[](2);
         scores[0] = 80;
         scores[1] = 90;
@@ -307,10 +303,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         groupAction.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        groupAction.snapshotIfNeeded(groupId1);
-
         // Delegated verifier can submit scores
         uint256[] memory scores = new uint256[](1);
         scores[0] = 85;
@@ -329,10 +321,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupAction.join(groupId1, joinAmount, new string[](0));
-
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        groupAction.snapshotIfNeeded(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -366,11 +354,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user2);
         groupAction.join(groupId2, joinAmount, new string[](0));
-
-        // Advance round and trigger fresh snapshots
-        advanceRound();
-        groupAction.snapshotIfNeeded(groupId1);
-        groupAction.snapshotIfNeeded(groupId2);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -459,10 +442,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         groupAction.join(groupId1, joinAmount, new string[](0));
 
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        groupAction.snapshotIfNeeded(groupId1);
-
         uint256[] memory scores = new uint256[](1);
         scores[0] = 0;
 
@@ -479,10 +458,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupAction.join(groupId1, joinAmount, new string[](0));
-
-        // Advance round and trigger fresh snapshot
-        advanceRound();
-        groupAction.snapshotIfNeeded(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = MAX_ORIGIN_SCORE;
@@ -558,7 +533,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             verify.currentRound(),
             ACTION_ID
         );
-        groupAction.snapshotIfNeeded(groupId1);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -585,7 +559,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 round1 = verify.currentRound();
 
         // Submit scores in round 1
-        groupAction.snapshotIfNeeded(groupId1);
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
 
@@ -600,9 +573,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         assertEq(groupAction.originScoreByAccount(round1, user1), 80);
         assertEq(groupAction.originScoreByAccount(round2, user1), 0);
 
-        // New snapshot in round 2
-        groupAction.snapshotIfNeeded(groupId1);
-
+        // Submit scores in round 2
         uint256[] memory scores2 = new uint256[](1);
         scores2[0] = 90;
 

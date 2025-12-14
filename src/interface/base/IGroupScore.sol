@@ -14,7 +14,7 @@ interface IGroupScore {
     error ScoreExceedsMax();
     error VerifierCapacityExceeded();
     error VerificationAlreadySubmitted();
-    error NoSnapshotForRound();
+    error NoDataForRound();
     error InvalidStartIndex();
     error ScoresExceedAccountCount();
 

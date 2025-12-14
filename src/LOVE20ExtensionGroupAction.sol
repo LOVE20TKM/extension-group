@@ -59,6 +59,7 @@ contract LOVE20ExtensionGroupAction is
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
-        return _joinInfo[account].amount;
+        (, uint256 amount, ) = this.joinInfo(account);
+        return amount;
     }
 }
