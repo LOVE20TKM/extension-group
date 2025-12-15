@@ -185,7 +185,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.submitOriginScore(groupId, 0, scores);
     }
 
-    // ============ rewardByGroupId Tests ============
+    // ============ generatedRewardByGroupId Tests ============
 
     function test_RewardByGroupId_SingleGroup() public {
         address[] memory members = new address[](1);
@@ -202,7 +202,10 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.setReward(round, totalReward);
 
         // Only one group, so it gets all reward
-        uint256 groupReward = rewardContract.rewardByGroupId(round, groupId1);
+        uint256 groupReward = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId1
+        );
         assertEq(groupReward, totalReward);
     }
 
@@ -234,9 +237,15 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.setReward(round, totalReward);
 
         // Group1 gets 10/30 = 1/3 of reward
-        uint256 group1Reward = rewardContract.rewardByGroupId(round, groupId1);
+        uint256 group1Reward = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId1
+        );
         // Group2 gets 20/30 = 2/3 of reward
-        uint256 group2Reward = rewardContract.rewardByGroupId(round, groupId2);
+        uint256 group2Reward = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId2
+        );
 
         // Allow for rounding errors (within 1 wei)
         assertApproxEqAbs(group1Reward + group2Reward, totalReward, 1);
@@ -256,10 +265,10 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         uint256 round = verify.currentRound();
         // No reward set
 
-        assertEq(rewardContract.rewardByGroupId(round, groupId1), 0);
+        assertEq(rewardContract.generatedRewardByGroupId(round, groupId1), 0);
     }
 
-    // ============ rewardByVerifier Tests ============
+    // ============ generatedRewardByVerifier Tests ============
 
     function test_RewardByVerifier_SingleGroup() public {
         address[] memory members = new address[](1);
@@ -275,7 +284,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         uint256 totalReward = 1000e18;
         rewardContract.setReward(round, totalReward);
 
-        uint256 verifierReward = rewardContract.rewardByVerifier(
+        uint256 verifierReward = rewardContract.generatedRewardByVerifier(
             round,
             groupOwner1
         );
@@ -341,7 +350,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.setReward(round, totalReward);
 
         // Owner1 verified both groups
-        uint256 verifierReward = rewardContract.rewardByVerifier(
+        uint256 verifierReward = rewardContract.generatedRewardByVerifier(
             round,
             groupOwner1
         );
@@ -537,8 +546,14 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.setReward(round, totalReward);
 
         // Both groups should get equal reward before distrust (same amounts)
-        uint256 reward1Before = rewardContract.rewardByGroupId(round, groupId1);
-        uint256 reward2Before = rewardContract.rewardByGroupId(round, groupId2);
+        uint256 reward1Before = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId1
+        );
+        uint256 reward2Before = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId2
+        );
         assertEq(reward1Before, totalReward / 2);
         assertEq(reward2Before, totalReward / 2);
 
@@ -549,8 +564,14 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.distrustVote(groupOwner1, 50e18, "Bad");
 
         // After distrust, group1 should get less, group2 should get more
-        uint256 reward1After = rewardContract.rewardByGroupId(round, groupId1);
-        uint256 reward2After = rewardContract.rewardByGroupId(round, groupId2);
+        uint256 reward1After = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId1
+        );
+        uint256 reward2After = rewardContract.generatedRewardByGroupId(
+            round,
+            groupId2
+        );
 
         assertTrue(
             reward1After < reward1Before,
@@ -614,9 +635,12 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         rewardContract.distrustVote(groupOwner1, 100e18, "Bad");
 
         // Group1 should get 0
-        assertEq(rewardContract.rewardByGroupId(round, groupId1), 0);
+        assertEq(rewardContract.generatedRewardByGroupId(round, groupId1), 0);
 
         // Group2 should get all
-        assertEq(rewardContract.rewardByGroupId(round, groupId2), totalReward);
+        assertEq(
+            rewardContract.generatedRewardByGroupId(round, groupId2),
+            totalReward
+        );
     }
 }

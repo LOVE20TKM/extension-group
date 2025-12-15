@@ -488,7 +488,10 @@ contract LOVE20ExtensionGroupService is
             ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
                     extensionAddr
                 );
-            accountReward += groupAction.rewardByVerifier(round, account);
+            accountReward += groupAction.generatedRewardByVerifier(
+                round,
+                account
+            );
             totalReward += groupAction.reward(round);
         }
     }

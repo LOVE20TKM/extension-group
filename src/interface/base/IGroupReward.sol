@@ -26,12 +26,12 @@ interface IGroupReward is IExtensionReward {
     /// @notice Burn unclaimed reward when no group submitted verification in a round
     function burnUnclaimedReward(uint256 round) external;
 
-    function rewardByGroupId(
+    function generatedRewardByGroupId(
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
 
-    function rewardByVerifier(
+    function generatedRewardByVerifier(
         uint256 round,
         address verifier
     ) external view returns (uint256);

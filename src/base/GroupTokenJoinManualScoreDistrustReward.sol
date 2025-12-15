@@ -49,7 +49,7 @@ abstract contract GroupTokenJoinManualScoreDistrustReward is
     }
 
     /// @inheritdoc IGroupReward
-    function rewardByGroupId(
+    function generatedRewardByGroupId(
         uint256 round,
         uint256 groupId
     ) external view returns (uint256) {
@@ -57,7 +57,7 @@ abstract contract GroupTokenJoinManualScoreDistrustReward is
     }
 
     /// @inheritdoc IGroupReward
-    function rewardByVerifier(
+    function generatedRewardByVerifier(
         uint256 round,
         address verifier
     ) external view returns (uint256 amount) {
