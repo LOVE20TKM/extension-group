@@ -2,9 +2,11 @@
 src = "src"
 out = "out"
 libs = ["lib"]
-solc = "0.8.17"
+auto_detect_solc = true
 optimizer = true
 optimizer_runs = 200
 fs_permissions = [{ access = "read-write", path = "./script/network" }]
+bytecode_hash = "none"
+cbor_metadata = false
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

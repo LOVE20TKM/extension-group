@@ -3,63 +3,76 @@ pragma solidity =0.8.17;
 
 import {Test, console} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ActionBody} from "@core/interfaces/ILOVE20Submit.sol";
 
-// Extension mocks
-import {MockERC20} from "@extension/test/mocks/MockERC20.sol";
-import {MockStake} from "@extension/test/mocks/MockStake.sol";
-import {MockJoin} from "@extension/test/mocks/MockJoin.sol";
-import {MockVerify} from "@extension/test/mocks/MockVerify.sol";
-import {MockMint} from "@extension/test/mocks/MockMint.sol";
-import {MockSubmit} from "@extension/test/mocks/MockSubmit.sol";
-import {MockLaunch} from "@extension/test/mocks/MockLaunch.sol";
-import {MockVote} from "@extension/test/mocks/MockVote.sol";
-import {MockRandom} from "@extension/test/mocks/MockRandom.sol";
-import {MockUniswapV2Factory} from "@extension/test/mocks/MockUniswapV2Factory.sol";
+// Core contracts and interfaces
+import {
+    IUniswapV2Factory
+} from "@core/uniswap-v2-core/interfaces/IUniswapV2Factory.sol";
+import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
+import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
+import {
+    ILOVE20Submit,
+    ActionBody,
+    ActionInfo
+} from "@core/interfaces/ILOVE20Submit.sol";
+import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
+import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
+import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
+import {ILOVE20Mint} from "@core/interfaces/ILOVE20Mint.sol";
+import {ILOVE20SLToken} from "@core/interfaces/ILOVE20SLToken.sol";
+import {ILOVE20STToken} from "@core/interfaces/ILOVE20STToken.sol";
+import {IETH20} from "@core/WETH/IETH20.sol";
+
+// Core implementations
+import {LOVE20TokenFactory} from "@core/LOVE20TokenFactory.sol";
+import {LOVE20Launch} from "@core/LOVE20Launch.sol";
+import {LOVE20Stake} from "@core/LOVE20Stake.sol";
+import {LOVE20Submit} from "@core/LOVE20Submit.sol";
+import {LOVE20Vote} from "@core/LOVE20Vote.sol";
+import {LOVE20Join} from "@core/LOVE20Join.sol";
+import {LOVE20Random} from "@core/LOVE20Random.sol";
+import {LOVE20Verify} from "@core/LOVE20Verify.sol";
+import {LOVE20Mint} from "@core/LOVE20Mint.sol";
 
 // Extension center
 import {LOVE20ExtensionCenter} from "@extension/src/LOVE20ExtensionCenter.sol";
-import {ILOVE20ExtensionCenter} from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
 
 // Group contracts
 import {LOVE20Group} from "@group/LOVE20Group.sol";
 import {LOVE20GroupManager} from "../../../src/LOVE20GroupManager.sol";
 import {LOVE20GroupDistrust} from "../../../src/LOVE20GroupDistrust.sol";
-import {LOVE20ExtensionGroupActionFactory} from "../../../src/LOVE20ExtensionGroupActionFactory.sol";
-import {LOVE20ExtensionGroupServiceFactory} from "../../../src/LOVE20ExtensionGroupServiceFactory.sol";
-import {LOVE20ExtensionGroupAction} from "../../../src/LOVE20ExtensionGroupAction.sol";
-import {LOVE20ExtensionGroupService} from "../../../src/LOVE20ExtensionGroupService.sol";
-import {ILOVE20GroupManager} from "../../../src/interface/ILOVE20GroupManager.sol";
+import {
+    LOVE20ExtensionGroupActionFactory
+} from "../../../src/LOVE20ExtensionGroupActionFactory.sol";
+import {
+    LOVE20ExtensionGroupServiceFactory
+} from "../../../src/LOVE20ExtensionGroupServiceFactory.sol";
+import {
+    LOVE20ExtensionGroupAction
+} from "../../../src/LOVE20ExtensionGroupAction.sol";
+import {
+    LOVE20ExtensionGroupService
+} from "../../../src/LOVE20ExtensionGroupService.sol";
 
-// Local mocks
-import {MockGroupToken} from "../../mocks/MockGroupToken.sol";
-import {MockGroup} from "../../mocks/MockGroup.sol";
-import {MockVerifyExtended} from "../../mocks/MockVerifyExtended.sol";
+// Precompiled bytecode
+import {PrecompiledBytecodes} from "../../artifacts/PrecompiledBytecodes.sol";
 
-// Constants
-uint256 constant PHASE_BLOCKS = 10;
-
-// User params structure
-struct FlowUserParams {
-    string userName;
-    address userAddress;
-    address tokenAddress;
-    uint256 actionId;
-    uint256 promisedWaitingPhases;
-    SubmitParams submit;
-    string[] verificationInfos;
-    uint256 scorePercent;
-}
-
-struct SubmitParams {
-    uint256 minStake;
-    uint256 maxRandomAccounts;
-    address whiteListAddress;
-    string title;
-    string verificationRule;
-    string[] verificationKeys;
-    string[] verificationInfoGuides;
-}
+// Core test helper for params structs
+import {
+    FlowUserParams,
+    LaunchParams,
+    StakeParams,
+    SubmitParams,
+    VoteParams,
+    JoinParams,
+    VerifyParams
+} from "@core-test/helper/TestBaseCore.sol";
+import {
+    FIRST_PARENT_TOKEN_FUNDRAISING_GOAL,
+    PHASE_BLOCKS,
+    SECOND_HALF_MIN_BLOCKS
+} from "@core-test/Constant.sol";
 
 // Group-specific user params
 struct GroupUserParams {
@@ -79,22 +92,26 @@ struct GroupUserParams {
     uint256[] basisPoints;
 }
 
-/// @title TestGroupFlowHelper
-/// @notice Helper for group extension integration tests using mock contracts
-contract TestGroupFlowHelper is Test {
-    // ============ Mock Contracts ============
+interface IMintable {
+    function mint(address to, uint256 amount) external;
+}
 
-    MockGroupToken public token;
-    MockGroup public group;
-    MockStake public stake;
-    MockJoin public join;
-    MockVerifyExtended public verify;
-    MockMint public mint;
-    MockSubmit public submit;
-    MockLaunch public launch;
-    MockVote public mockVote;
-    MockRandom public random;
-    MockUniswapV2Factory public uniswapFactory;
+/// @title TestGroupFlowHelper
+/// @notice Helper for group extension integration tests using REAL contracts
+contract TestGroupFlowHelper is Test {
+    // ============ Core Contracts ============
+
+    IUniswapV2Factory public uniswapV2Factory;
+    address public rootParentTokenAddress;
+    address public firstTokenAddress;
+    ILOVE20Launch public launchContract;
+    ILOVE20Stake public stakeContract;
+    ILOVE20Submit public submitContract;
+    ILOVE20Vote public voteContract;
+    ILOVE20Join public joinContract;
+    address public randomAddress;
+    ILOVE20Verify public verifyContract;
+    ILOVE20Mint public mintContract;
 
     // ============ Extension Center ============
 
@@ -102,81 +119,269 @@ contract TestGroupFlowHelper is Test {
 
     // ============ Group Contracts ============
 
+    LOVE20Group public group;
     LOVE20GroupManager public groupManager;
     LOVE20GroupDistrust public groupDistrust;
     LOVE20ExtensionGroupActionFactory public groupActionFactory;
     LOVE20ExtensionGroupServiceFactory public groupServiceFactory;
 
-    // ============ State ============
-
-    address public firstTokenAddress;
-
     // ============ Constants ============
 
-    uint256 constant DEFAULT_MIN_GOV_VOTE_RATIO_BPS = 100;
+    uint256 constant DEFAULT_MIN_GOV_VOTE_RATIO_BPS = 1; // 0.0001%
     uint256 constant DEFAULT_CAPACITY_MULTIPLIER = 10;
     uint256 constant DEFAULT_STAKING_MULTIPLIER = 100;
     uint256 constant DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER = 100;
     uint256 constant DEFAULT_MIN_JOIN_AMOUNT = 1e18;
-    uint256 constant DEFAULT_STAKE_AMOUNT = 10000e18;
+    uint256 constant DEFAULT_STAKE_AMOUNT = 100_000_000e18; // 100M tokens
     uint256 constant DEFAULT_MAX_RECIPIENTS = 10;
+    uint256 constant DEFAULT_JOIN_AMOUNT = 1e18;
+
+    // Core constants
+    uint256 constant TOKEN_SYMBOL_LENGTH = 4;
+    string constant FIRST_TOKEN_SYMBOL = "LOVE";
+    uint256 constant PARENT_TOKEN_FUNDRAISING_GOAL = 10000 ether;
+    uint256 constant MAX_SUPPLY = 21_000_000_000 ether;
+    uint256 constant LAUNCH_AMOUNT = 6_300_000_000 ether;
+    uint256 constant WITHDRAW_WAITING_BLOCKS = 100;
+    uint256 constant MIN_GOV_REWARD_MINTS_TO_LAUNCH = 10;
+    uint256 constant MAX_WITHDRAWABLE_TO_FEE_RATIO = 16;
+    uint256 constant JOIN_END_PHASE_BLOCKS = 1;
+    uint256 constant PROMISED_WAITING_PHASES_MIN = 2;
+    uint256 constant PROMISED_WAITING_PHASES_MAX = 24;
+    uint256 constant SUBMIT_MIN_PER_THOUSAND = 20;
+    uint256 constant MAX_VERIFICATION_KEY_LENGTH = 6;
+    uint256 constant RANDOM_SEED_UPDATE_MIN_PER_TEN_THOUSAND = 5;
+    uint256 constant ACTION_REWARD_MIN_VOTE_PER_THOUSAND = 100;
+    uint256 constant ROUND_REWARD_GOV_PER_THOUSAND = 200;
+    uint256 constant ROUND_REWARD_ACTION_PER_THOUSAND = 800;
+    uint256 constant MAX_GOV_BOOST_REWARD_MULTIPLIER = 100;
+
+    // Group NFT parameters
+    uint256 constant GROUP_BASE_DIVISOR = 1e8;
+    uint256 constant GROUP_BYTES_THRESHOLD = 8;
+    uint256 constant GROUP_MULTIPLIER = 10;
+    uint256 constant GROUP_MAX_NAME_LENGTH = 64;
+
+    // Storage for test values
+    mapping(string => uint256) internal _beforeValues;
 
     // ============ Constructor ============
 
     constructor() {
-        _deployMockContracts();
+        _deployAllContracts();
+    }
+
+    function _deployAllContracts() internal {
+        // 1. Deploy WETH using precompiled bytecode
+        rootParentTokenAddress = _deployETH20("Wrapped ETH", "WETH");
+
+        // 2. Deploy UniswapV2Factory using precompiled bytecode
+        address uniswapFactoryAddr = _deployUniswapV2Factory(address(0));
+        uniswapV2Factory = IUniswapV2Factory(uniswapFactoryAddr);
+
+        // 3. Deploy LOVE20 core contracts
+        _deployLOVE20Contracts();
+
+        // 4. Deploy extension center
+        _deployExtensionCenter();
+
+        // 5. Deploy group contracts
         _deployGroupContracts();
     }
 
-    function _deployMockContracts() internal {
-        // Deploy mocks
-        token = new MockGroupToken();
-        group = new MockGroup();
-        stake = new MockStake();
-        join = new MockJoin();
-        verify = new MockVerifyExtended();
-        mint = new MockMint();
-        submit = new MockSubmit();
-        launch = new MockLaunch();
-        mockVote = new MockVote();
-        random = new MockRandom();
-        uniswapFactory = new MockUniswapV2Factory();
+    function _deployETH20(
+        string memory name,
+        string memory symbol
+    ) internal returns (address weth) {
+        bytes memory bytecode = PrecompiledBytecodes.getETH20Bytecode();
+        bytes memory initCode = abi.encodePacked(
+            bytecode,
+            abi.encode(name, symbol)
+        );
+        assembly {
+            weth := create(0, add(initCode, 0x20), mload(initCode))
+        }
+        require(weth != address(0), "ETH20 deployment failed");
+    }
 
-        firstTokenAddress = address(token);
+    function _deployUniswapV2Factory(
+        address feeToSetter
+    ) internal returns (address factory) {
+        bytes memory bytecode = PrecompiledBytecodes
+            .getUniswapV2FactoryBytecode();
+        bytes memory initCode = abi.encodePacked(
+            bytecode,
+            abi.encode(feeToSetter)
+        );
+        assembly {
+            factory := create(0, add(initCode, 0x20), mload(initCode))
+        }
+        require(factory != address(0), "UniswapV2Factory deployment failed");
+    }
 
-        // Setup initial state
-        token.mint(address(this), 1_000_000e18);
-        stake.setGovVotesNum(address(token), 100_000e18);
-        verify.setCurrentRound(1);
-        join.setCurrentRound(1);
+    function _deployLOVE20Contracts() internal {
+        uint256 currentBlock = block.number;
+
+        // Deploy token factory
+        LOVE20TokenFactory tokenFactory = new LOVE20TokenFactory();
+
+        // Deploy launch
+        LOVE20Launch launch = new LOVE20Launch();
+        launchContract = ILOVE20Launch(address(launch));
+
+        // Deploy stake
+        LOVE20Stake stake = new LOVE20Stake(currentBlock, PHASE_BLOCKS);
+        stakeContract = ILOVE20Stake(address(stake));
+
+        // Deploy submit
+        LOVE20Submit submit = new LOVE20Submit(currentBlock, PHASE_BLOCKS);
+        submitContract = ILOVE20Submit(address(submit));
+
+        // Deploy vote
+        LOVE20Vote vote_ = new LOVE20Vote(currentBlock, PHASE_BLOCKS);
+        voteContract = ILOVE20Vote(address(vote_));
+
+        // Deploy join (starts at phase 1)
+        LOVE20Join join_ = new LOVE20Join(
+            currentBlock + PHASE_BLOCKS,
+            PHASE_BLOCKS
+        );
+        joinContract = ILOVE20Join(address(join_));
+
+        // Deploy random (starts at phase 1)
+        LOVE20Random random_ = new LOVE20Random(
+            currentBlock + PHASE_BLOCKS,
+            PHASE_BLOCKS
+        );
+        randomAddress = address(random_);
+
+        // Deploy verify (starts at phase 2)
+        LOVE20Verify verify_ = new LOVE20Verify(
+            currentBlock + 2 * PHASE_BLOCKS,
+            PHASE_BLOCKS
+        );
+        verifyContract = ILOVE20Verify(address(verify_));
+
+        // Deploy mint
+        LOVE20Mint mint_ = new LOVE20Mint();
+        mintContract = ILOVE20Mint(address(mint_));
+
+        // Initialize token factory
+        tokenFactory.initialize(
+            address(uniswapV2Factory),
+            address(launchContract),
+            address(stakeContract),
+            address(mintContract),
+            LAUNCH_AMOUNT,
+            MAX_SUPPLY,
+            MAX_WITHDRAWABLE_TO_FEE_RATIO
+        );
+
+        // Initialize launch
+        launch.initialize(
+            address(tokenFactory),
+            address(submitContract),
+            address(mintContract),
+            TOKEN_SYMBOL_LENGTH,
+            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL,
+            PARENT_TOKEN_FUNDRAISING_GOAL,
+            SECOND_HALF_MIN_BLOCKS,
+            WITHDRAW_WAITING_BLOCKS,
+            MIN_GOV_REWARD_MINTS_TO_LAUNCH
+        );
+
+        // Launch first token
+        firstTokenAddress = launch.launchToken(
+            FIRST_TOKEN_SYMBOL,
+            rootParentTokenAddress
+        );
+
+        // Initialize stake
+        stake.initialize(
+            PROMISED_WAITING_PHASES_MIN,
+            PROMISED_WAITING_PHASES_MAX
+        );
+
+        // Initialize submit
+        submit.initialize(
+            address(stakeContract),
+            SUBMIT_MIN_PER_THOUSAND,
+            MAX_VERIFICATION_KEY_LENGTH
+        );
+
+        // Initialize vote
+        vote_.initialize(address(stakeContract), address(submitContract));
+
+        // Initialize join
+        join_.initialize(
+            address(submitContract),
+            address(voteContract),
+            randomAddress,
+            JOIN_END_PHASE_BLOCKS
+        );
+
+        // Initialize random
+        random_.initialize(address(verifyContract));
+
+        // Initialize verify
+        verify_.initialize(
+            randomAddress,
+            firstTokenAddress,
+            address(stakeContract),
+            address(voteContract),
+            address(joinContract),
+            address(mintContract),
+            RANDOM_SEED_UPDATE_MIN_PER_TEN_THOUSAND
+        );
+
+        // Initialize mint
+        mint_.initialize(
+            address(voteContract),
+            address(verifyContract),
+            address(stakeContract),
+            ACTION_REWARD_MIN_VOTE_PER_THOUSAND,
+            ROUND_REWARD_GOV_PER_THOUSAND,
+            ROUND_REWARD_ACTION_PER_THOUSAND,
+            MAX_GOV_BOOST_REWARD_MULTIPLIER
+        );
+    }
+
+    function _deployExtensionCenter() internal {
+        extensionCenter = new LOVE20ExtensionCenter(
+            address(uniswapV2Factory),
+            address(launchContract),
+            address(stakeContract),
+            address(submitContract),
+            address(voteContract),
+            address(joinContract),
+            address(verifyContract),
+            address(mintContract),
+            randomAddress
+        );
     }
 
     function _deployGroupContracts() internal {
-        // Deploy extension center
-        extensionCenter = new LOVE20ExtensionCenter(
-            address(uniswapFactory),
-            address(launch),
-            address(stake),
-            address(submit),
-            address(mockVote),
-            address(join),
-            address(verify),
-            address(mint),
-            address(random)
+        // Deploy LOVE20Group NFT
+        group = new LOVE20Group(
+            firstTokenAddress,
+            GROUP_BASE_DIVISOR,
+            GROUP_BYTES_THRESHOLD,
+            GROUP_MULTIPLIER,
+            GROUP_MAX_NAME_LENGTH
         );
 
         // Deploy group manager
         groupManager = new LOVE20GroupManager(
             address(extensionCenter),
             address(group),
-            address(stake),
-            address(join)
+            address(stakeContract),
+            address(joinContract)
         );
 
         // Deploy group distrust
         groupDistrust = new LOVE20GroupDistrust(
             address(extensionCenter),
-            address(verify),
+            address(verifyContract),
             address(group)
         );
 
@@ -184,7 +389,6 @@ contract TestGroupFlowHelper is Test {
         groupActionFactory = new LOVE20ExtensionGroupActionFactory(
             address(extensionCenter)
         );
-
         groupServiceFactory = new LOVE20ExtensionGroupServiceFactory(
             address(extensionCenter)
         );
@@ -195,8 +399,10 @@ contract TestGroupFlowHelper is Test {
     function createUser(
         string memory userName,
         address tokenAddress,
-        uint256 mintAmount
+        uint256 mintAmountOfParentToken
     ) public returns (FlowUserParams memory) {
+        address parentTokenAddress = ILOVE20Token(tokenAddress)
+            .parentTokenAddress();
         address userAddress = makeAddr(userName);
 
         FlowUserParams memory user;
@@ -204,26 +410,54 @@ contract TestGroupFlowHelper is Test {
         user.userAddress = userAddress;
         user.tokenAddress = tokenAddress;
         user.actionId = 0;
-        user.promisedWaitingPhases = 4;
-        user.scorePercent = 50;
 
-        // Default submit params
+        // launch params
+        user.launch.contributeParentTokenAmountPercent = 50;
+        user.launch.contributeParentTokenAmount = 0;
+        user.launch.contributeToAddress = userAddress;
+
+        // stake params
+        user.stake.tokenAmountForLpPercent = 50;
+        user.stake.parentTokenAmountForLpPercent = 50;
+        user.stake.tokenAmountPercent = 50;
+        user.stake.promisedWaitingPhases = 4;
+
+        // submit params
         user.submit.minStake = 100;
         user.submit.maxRandomAccounts = 3;
         user.submit.whiteListAddress = address(0);
         user.submit.title = "default title";
         user.submit.verificationRule = "default verificationRule";
         user.submit.verificationKeys = new string[](1);
-        user.submit.verificationKeys[0] = "default";
+        user.submit.verificationKeys[0] = "key1"; // Max 6 chars
         user.submit.verificationInfoGuides = new string[](1);
-        user.submit.verificationInfoGuides[0] = "default verificationInfoGuide";
+        user.submit.verificationInfoGuides[0] = "guide1";
 
-        user.verificationInfos = new string[](1);
-        user.verificationInfos[0] = "default verificationInfo";
+        // vote params
+        user.vote.votePercent = 100;
 
-        // Mint tokens
-        if (mintAmount > 0) {
-            token.mint(userAddress, mintAmount);
+        // join params
+        user.join.tokenAmountPercent = 50;
+        user.join.additionalTokenAmountPercent = 50;
+        user.join.verificationInfos = new string[](1);
+        user.join.verificationInfos[0] = "default verificationInfo";
+        user.join.updateVerificationInfos = new string[](1);
+        user.join.updateVerificationInfos[0] = "updated verificationInfo";
+        user.join.rounds = 4;
+
+        // verify params
+        user.verify.scorePercent = 50;
+
+        // Mint parent tokens
+        if (parentTokenAddress == rootParentTokenAddress) {
+            vm.deal(userAddress, mintAmountOfParentToken);
+            vm.startPrank(userAddress);
+            IETH20(rootParentTokenAddress).deposit{
+                value: mintAmountOfParentToken
+            }();
+            vm.stopPrank();
+        } else {
+            forceMint(parentTokenAddress, userAddress, mintAmountOfParentToken);
         }
 
         return user;
@@ -232,103 +466,211 @@ contract TestGroupFlowHelper is Test {
     function createGroupUser(
         string memory userName,
         address tokenAddress,
-        uint256 mintAmount,
+        uint256 mintAmountOfParentToken,
         string memory groupName
     ) public returns (GroupUserParams memory) {
-        FlowUserParams memory flowUser = createUser(userName, tokenAddress, mintAmount);
+        FlowUserParams memory flowUser = createUser(
+            userName,
+            tokenAddress,
+            mintAmountOfParentToken
+        );
 
         GroupUserParams memory user;
         user.flow = flowUser;
         user.stakeAmount = DEFAULT_STAKE_AMOUNT;
         user.minJoinAmount = DEFAULT_MIN_JOIN_AMOUNT;
         user.maxJoinAmount = 0;
-        user.groupDescription = string(abi.encodePacked(groupName, " Description"));
+        user.groupDescription = string(
+            abi.encodePacked(groupName, " Description")
+        );
         user.joinAmount = DEFAULT_MIN_JOIN_AMOUNT * 10;
         user.scorePercent = 80;
 
-        // Mint group NFT
-        user.groupId = group.mint(flowUser.userAddress, groupName);
+        // Mint group NFT (need tokens to pay mint cost)
+        uint256 mintCost = group.calculateMintCost(groupName);
 
-        // Setup governance votes
-        stake.setValidGovVotes(tokenAddress, flowUser.userAddress, 10000e18);
+        // Ensure user has enough tokens for mint cost
+        IERC20 token = IERC20(tokenAddress);
+        if (mintCost > token.balanceOf(flowUser.userAddress)) {
+            forceMint(tokenAddress, flowUser.userAddress, mintCost);
+        }
+
+        vm.startPrank(flowUser.userAddress);
+        if (mintCost > 0) {
+            token.approve(address(group), mintCost);
+        }
+        user.groupId = group.mint(groupName);
+        vm.stopPrank();
 
         return user;
     }
 
-    // ============ Phase Helpers ============
+    // ============ Utility Functions ============
 
-    function next_phase() public {
-        uint256 newRound = verify.currentRound() + 1;
-        verify.setCurrentRound(newRound);
-        join.setCurrentRound(newRound);
-    }
-
-    function next_phases(uint256 num) public {
-        for (uint256 i = 0; i < num; i++) {
-            next_phase();
+    function forceMint(
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) public {
+        if (tokenAddress != rootParentTokenAddress) {
+            vm.startPrank(ILOVE20Token(tokenAddress).minter());
+            IMintable(tokenAddress).mint(to, amount);
+            vm.stopPrank();
+        } else {
+            IMintable(tokenAddress).mint(to, amount);
         }
     }
 
-    // ============ Mock Setup Helpers ============
-
-    function setupActionForVoting(
-        address tokenAddress,
-        uint256 actionId,
-        address extensionAddress
-    ) public {
-        submit.setActionInfo(tokenAddress, actionId, extensionAddress);
-        mockVote.setVotedActionIds(tokenAddress, verify.currentRound(), actionId);
-        token.mint(extensionAddress, 1e18);
+    function next_phase() public {
+        vm.roll(block.number + PHASE_BLOCKS);
     }
 
-    function setupGovVotes(
-        address tokenAddress,
-        address user,
-        uint256 amount
-    ) public {
-        stake.setValidGovVotes(tokenAddress, user, amount);
+    function next_phases(uint256 num) public {
+        vm.roll(block.number + num * PHASE_BLOCKS);
     }
 
-    function setupVerifyVotes(
-        address voter,
-        uint256 actionId,
-        address extensionAddress,
-        uint256 amount
-    ) public {
-        uint256 round = verify.currentRound();
-        verify.setScoreByVerifierByActionIdByAccount(
-            address(token),
-            round,
-            voter,
-            actionId,
-            extensionAddress,
-            amount
+    function jump_second_half_min() public {
+        vm.roll(block.number + SECOND_HALF_MIN_BLOCKS);
+    }
+
+    // ============ Launch Helpers ============
+
+    function launch_contribute(FlowUserParams memory p) public {
+        ILOVE20Token token = ILOVE20Token(p.tokenAddress);
+        IERC20 parentToken = IERC20(token.parentTokenAddress());
+
+        uint256 contributeAmount = p.launch.contributeParentTokenAmount > 0
+            ? p.launch.contributeParentTokenAmount
+            : (p.launch.contributeParentTokenAmountPercent *
+                parentToken.balanceOf(p.userAddress)) / 100;
+
+        vm.startPrank(p.userAddress);
+        parentToken.approve(address(launchContract), contributeAmount);
+        launchContract.contribute(
+            p.tokenAddress,
+            contributeAmount,
+            p.launch.contributeToAddress
         );
-        uint256 currentTotal = verify.scoreByActionIdByAccount(
-            address(token),
-            round,
-            actionId,
-            extensionAddress
+        vm.stopPrank();
+    }
+
+    function launch_skip_claim_delay() public {
+        vm.roll(block.number + WITHDRAW_WAITING_BLOCKS + 1);
+    }
+
+    function launch_claim(FlowUserParams memory p) public {
+        vm.startPrank(p.userAddress);
+        launchContract.claim(p.tokenAddress);
+        vm.stopPrank();
+    }
+
+    // ============ Stake Helpers ============
+
+    function stake_liquidity(
+        FlowUserParams memory p
+    ) public returns (uint256 govVotes) {
+        ILOVE20Token token = ILOVE20Token(p.tokenAddress);
+        IERC20 parentToken = IERC20(token.parentTokenAddress());
+
+        uint256 parentTokenAmount = (p.stake.parentTokenAmountForLpPercent *
+            parentToken.balanceOf(p.userAddress)) / 100;
+        uint256 tokenAmount = (p.stake.tokenAmountForLpPercent *
+            token.balanceOf(p.userAddress)) / 100;
+
+        vm.startPrank(p.userAddress);
+        parentToken.approve(address(stakeContract), parentTokenAmount);
+        IERC20(p.tokenAddress).approve(address(stakeContract), tokenAmount);
+
+        uint256 slAmountAdded;
+        (govVotes, slAmountAdded) = stakeContract.stakeLiquidity(
+            p.tokenAddress,
+            tokenAmount,
+            parentTokenAmount,
+            p.stake.promisedWaitingPhases,
+            p.userAddress
         );
-        verify.setScoreByActionIdByAccount(
-            address(token),
-            round,
-            actionId,
-            extensionAddress,
-            currentTotal + amount
+        vm.stopPrank();
+
+        return govVotes;
+    }
+
+    function stake_token(
+        FlowUserParams memory p
+    ) public returns (uint256 govVotesAdded) {
+        ILOVE20Token token = ILOVE20Token(p.tokenAddress);
+        uint256 tokenAmount = (p.stake.tokenAmountPercent *
+            token.balanceOf(p.userAddress)) / 100;
+
+        vm.startPrank(p.userAddress);
+        IERC20(p.tokenAddress).approve(address(stakeContract), tokenAmount);
+        govVotesAdded = stakeContract.stakeToken(
+            p.tokenAddress,
+            tokenAmount,
+            p.stake.promisedWaitingPhases,
+            p.userAddress
         );
+        vm.stopPrank();
+
+        return govVotesAdded;
+    }
+
+    // ============ Submit Helpers ============
+
+    function submit_new_action(
+        FlowUserParams memory p
+    ) public returns (uint256 actionId) {
+        ActionBody memory actionBody;
+        actionBody.minStake = p.submit.minStake;
+        actionBody.maxRandomAccounts = p.submit.maxRandomAccounts;
+        actionBody.whiteListAddress = p.submit.whiteListAddress;
+        actionBody.title = p.submit.title;
+        actionBody.verificationRule = p.submit.verificationRule;
+        actionBody.verificationKeys = p.submit.verificationKeys;
+        actionBody.verificationInfoGuides = p.submit.verificationInfoGuides;
+
+        vm.startPrank(p.userAddress);
+        actionId = submitContract.submitNewAction(p.tokenAddress, actionBody);
+        vm.stopPrank();
+
+        return actionId;
+    }
+
+    // ============ Vote Helpers ============
+
+    function vote(FlowUserParams memory p) public {
+        uint256 maxVotesNum = voteContract.maxVotesNum(
+            p.tokenAddress,
+            p.userAddress
+        );
+        uint256 userVotedNum = p.vote.voteNum > 0
+            ? p.vote.voteNum
+            : (maxVotesNum * p.vote.votePercent) / 100;
+
+        uint256[] memory actionIds = new uint256[](1);
+        actionIds[0] = p.actionId;
+        uint256[] memory votes = new uint256[](1);
+        votes[0] = userVotedNum;
+
+        vm.startPrank(p.userAddress);
+        voteContract.vote(p.tokenAddress, actionIds, votes);
+        vm.stopPrank();
     }
 
     // ============ Group Action Helpers ============
 
-    uint256 constant DEFAULT_JOIN_AMOUNT = 1e18;
+    function group_action_create(
+        GroupUserParams memory user
+    ) public returns (address) {
+        IERC20 token = IERC20(user.flow.tokenAddress);
 
-    function group_action_create(GroupUserParams memory user) public returns (address) {
-        // Ensure user has tokens for factory registration
         if (token.balanceOf(user.flow.userAddress) < DEFAULT_JOIN_AMOUNT) {
-            token.mint(user.flow.userAddress, DEFAULT_JOIN_AMOUNT);
+            forceMint(
+                user.flow.tokenAddress,
+                user.flow.userAddress,
+                DEFAULT_JOIN_AMOUNT
+            );
         }
-        
+
         vm.startPrank(user.flow.userAddress);
         token.approve(address(groupActionFactory), DEFAULT_JOIN_AMOUNT);
         address extensionAddr = groupActionFactory.createExtension(
@@ -348,44 +690,26 @@ contract TestGroupFlowHelper is Test {
         return extensionAddr;
     }
 
-    uint256 private _nextActionId = 1;
-    
-    function submit_group_action(GroupUserParams memory user) public returns (uint256 actionId) {
-        // Use simple incrementing action ID
-        actionId = _nextActionId++;
-        
-        // Setup action in mocks with correct current round
-        uint256 currentRound = verify.currentRound();
-        submit.setActionInfo(user.flow.tokenAddress, actionId, user.groupActionAddress);
-        mockVote.setVotedActionIds(user.flow.tokenAddress, currentRound, actionId);
-        
-        // Mint tokens to extension for auto-initialization
-        token.mint(user.groupActionAddress, DEFAULT_JOIN_AMOUNT);
-
+    function submit_group_action(
+        GroupUserParams memory user
+    ) public returns (uint256 actionId) {
+        user.flow.submit.whiteListAddress = user.groupActionAddress;
+        actionId = submit_new_action(user.flow);
         user.groupActionId = actionId;
         user.flow.actionId = actionId;
-    }
-
-    function vote(FlowUserParams memory user) public {
-        // In mock environment, just ensure action is voted for
-        // (already done in setupActionForVoting)
+        return actionId;
     }
 
     function group_activate(GroupUserParams memory user) public {
         address tokenAddress = user.flow.tokenAddress;
-        
-        // Setup action in current round for auto-initialization
-        uint256 currentRound = verify.currentRound();
-        submit.setActionInfo(tokenAddress, user.groupActionId, user.groupActionAddress);
-        mockVote.setVotedActionIds(tokenAddress, currentRound, user.groupActionId);
+        IERC20 token = IERC20(tokenAddress);
 
-        // Ensure user has tokens for staking
-        if (IERC20(tokenAddress).balanceOf(user.flow.userAddress) < user.stakeAmount) {
-            token.mint(user.flow.userAddress, user.stakeAmount);
+        if (token.balanceOf(user.flow.userAddress) < user.stakeAmount) {
+            forceMint(tokenAddress, user.flow.userAddress, user.stakeAmount);
         }
 
         vm.startPrank(user.flow.userAddress, user.flow.userAddress);
-        IERC20(tokenAddress).approve(address(groupManager), user.stakeAmount);
+        token.approve(address(groupManager), user.stakeAmount);
         groupManager.activateGroup(
             tokenAddress,
             user.groupActionId,
@@ -399,17 +723,16 @@ contract TestGroupFlowHelper is Test {
         vm.stopPrank();
     }
 
-    /// @notice Activate group without re-initializing (for subsequent activations)
     function group_activate_without_init(GroupUserParams memory user) public {
         address tokenAddress = user.flow.tokenAddress;
+        IERC20 token = IERC20(tokenAddress);
 
-        // Ensure user has tokens for staking
-        if (IERC20(tokenAddress).balanceOf(user.flow.userAddress) < user.stakeAmount) {
-            token.mint(user.flow.userAddress, user.stakeAmount);
+        if (token.balanceOf(user.flow.userAddress) < user.stakeAmount) {
+            forceMint(tokenAddress, user.flow.userAddress, user.stakeAmount);
         }
 
         vm.startPrank(user.flow.userAddress, user.flow.userAddress);
-        IERC20(tokenAddress).approve(address(groupManager), user.stakeAmount);
+        token.approve(address(groupManager), user.stakeAmount);
         groupManager.activateGroup(
             tokenAddress,
             user.groupActionId,
@@ -423,18 +746,39 @@ contract TestGroupFlowHelper is Test {
         vm.stopPrank();
     }
 
-    function group_join(GroupUserParams memory member, GroupUserParams memory groupOwner) public {
+    function group_join(
+        GroupUserParams memory member,
+        GroupUserParams memory groupOwner
+    ) public {
         address tokenAddress = member.flow.tokenAddress;
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(groupOwner.groupActionAddress);
+        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+            groupOwner.groupActionAddress
+        );
+        IERC20 token = IERC20(tokenAddress);
 
-        // Ensure member has tokens
-        if (IERC20(tokenAddress).balanceOf(member.flow.userAddress) < member.joinAmount) {
-            token.mint(member.flow.userAddress, member.joinAmount);
+        // Ensure we are not in the last blocks of the phase (LastBlocksOfPhaseCannotJoin check)
+        uint256 currentRound = joinContract.currentRound();
+        uint256 joinEndPhaseBlocks = joinContract.JOIN_END_PHASE_BLOCKS();
+        if (
+            joinContract.roundByBlockNumber(
+                block.number + joinEndPhaseBlocks
+            ) != currentRound
+        ) {
+            // Roll forward to ensure we're in a safe part of the next phase
+            vm.roll(block.number + joinEndPhaseBlocks + 1);
+        }
+
+        if (token.balanceOf(member.flow.userAddress) < member.joinAmount) {
+            forceMint(tokenAddress, member.flow.userAddress, member.joinAmount);
         }
 
         vm.startPrank(member.flow.userAddress);
-        IERC20(tokenAddress).approve(address(groupAction), member.joinAmount);
-        groupAction.join(groupOwner.groupId, member.joinAmount, new string[](0));
+        token.approve(address(groupAction), member.joinAmount);
+        groupAction.join(
+            groupOwner.groupId,
+            member.joinAmount,
+            new string[](0)
+        );
         vm.stopPrank();
     }
 
@@ -443,22 +787,32 @@ contract TestGroupFlowHelper is Test {
         address[] memory,
         uint256[] memory scores
     ) public {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(groupOwner.groupActionAddress);
+        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+            groupOwner.groupActionAddress
+        );
 
         vm.prank(groupOwner.flow.userAddress);
         groupAction.submitOriginScore(groupOwner.groupId, 0, scores);
     }
 
-    function group_exit(GroupUserParams memory member, GroupUserParams memory groupOwner) public {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(groupOwner.groupActionAddress);
+    function group_exit(
+        GroupUserParams memory member,
+        GroupUserParams memory groupOwner
+    ) public {
+        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+            groupOwner.groupActionAddress
+        );
 
         vm.prank(member.flow.userAddress);
         groupAction.exit();
     }
 
-    function group_expand(GroupUserParams memory groupOwner, uint256 additionalStake) public {
+    function group_expand(
+        GroupUserParams memory groupOwner,
+        uint256 additionalStake
+    ) public {
         address tokenAddress = groupOwner.flow.tokenAddress;
-        token.mint(groupOwner.flow.userAddress, additionalStake);
+        forceMint(tokenAddress, groupOwner.flow.userAddress, additionalStake);
 
         vm.startPrank(groupOwner.flow.userAddress, groupOwner.flow.userAddress);
         IERC20(tokenAddress).approve(address(groupManager), additionalStake);
@@ -486,11 +840,16 @@ contract TestGroupFlowHelper is Test {
         GroupUserParams memory user,
         address groupActionTokenAddress
     ) public returns (address) {
-        // Ensure user has tokens for factory registration
+        IERC20 token = IERC20(user.flow.tokenAddress);
+
         if (token.balanceOf(user.flow.userAddress) < DEFAULT_JOIN_AMOUNT) {
-            token.mint(user.flow.userAddress, DEFAULT_JOIN_AMOUNT);
+            forceMint(
+                user.flow.tokenAddress,
+                user.flow.userAddress,
+                DEFAULT_JOIN_AMOUNT
+            );
         }
-        
+
         vm.startPrank(user.flow.userAddress);
         token.approve(address(groupServiceFactory), DEFAULT_JOIN_AMOUNT);
         address extensionAddr = groupServiceFactory.createExtension(
@@ -505,32 +864,36 @@ contract TestGroupFlowHelper is Test {
         return extensionAddr;
     }
 
-    function submit_group_service_action(GroupUserParams memory user) public returns (uint256 actionId) {
-        actionId = _nextActionId++;
-        
-        // Setup action in mocks with correct current round
-        uint256 currentRound = verify.currentRound();
-        submit.setActionInfo(user.flow.tokenAddress, actionId, user.groupServiceAddress);
-        mockVote.setVotedActionIds(user.flow.tokenAddress, currentRound, actionId);
-        
-        // Mint tokens to extension for auto-initialization
-        token.mint(user.groupServiceAddress, DEFAULT_JOIN_AMOUNT);
-
+    function submit_group_service_action(
+        GroupUserParams memory user
+    ) public returns (uint256 actionId) {
+        user.flow.submit.whiteListAddress = user.groupServiceAddress;
+        actionId = submit_new_action(user.flow);
         user.groupServiceActionId = actionId;
+        return actionId;
     }
 
     function group_service_join(GroupUserParams memory groupOwner) public {
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(groupOwner.groupServiceAddress);
+        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+            groupOwner.groupServiceAddress
+        );
 
         vm.prank(groupOwner.flow.userAddress);
         groupService.join(new string[](0));
     }
 
-    function group_service_set_recipients(GroupUserParams memory groupOwner) public {
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(groupOwner.groupServiceAddress);
+    function group_service_set_recipients(
+        GroupUserParams memory groupOwner
+    ) public {
+        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+            groupOwner.groupServiceAddress
+        );
 
         vm.prank(groupOwner.flow.userAddress);
-        groupService.setRecipients(groupOwner.recipients, groupOwner.basisPoints);
+        groupService.setRecipients(
+            groupOwner.recipients,
+            groupOwner.basisPoints
+        );
     }
 
     function group_distrust_vote(
@@ -539,16 +902,12 @@ contract TestGroupFlowHelper is Test {
         uint256 amount,
         string memory reason
     ) public {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(target.groupActionAddress);
+        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+            target.groupActionAddress
+        );
 
         vm.prank(voter.flow.userAddress, voter.flow.userAddress);
         groupAction.distrustVote(target.flow.userAddress, amount, reason);
-    }
-
-    // ============ Utility ============
-
-    function forceMint(address, address to, uint256 amount) public {
-        token.mint(to, amount);
     }
 
     // ============ View Helpers ============
@@ -561,7 +920,11 @@ contract TestGroupFlowHelper is Test {
         return groupDistrust;
     }
 
-    function verifyContract() public view returns (MockVerifyExtended) {
-        return verify;
+    function getExtensionCenter() public view returns (LOVE20ExtensionCenter) {
+        return extensionCenter;
+    }
+
+    function getGroup() public view returns (LOVE20Group) {
+        return group;
     }
 }
