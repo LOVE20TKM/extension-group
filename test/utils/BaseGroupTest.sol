@@ -134,15 +134,15 @@ abstract contract BaseGroupTest is Test {
     }
 
     /**
-     * @notice Create default GroupConfig for testing
+     * @notice Create default Config for testing
      */
-    function createDefaultGroupConfig()
+    function createDefaultConfig()
         internal
         view
-        returns (ILOVE20GroupManager.GroupConfig memory)
+        returns (ILOVE20GroupManager.Config memory)
     {
         return
-            ILOVE20GroupManager.GroupConfig({
+            ILOVE20GroupManager.Config({
                 stakeTokenAddress: address(token),
                 minGovVoteRatioBps: MIN_GOV_VOTE_RATIO_BPS,
                 capacityMultiplier: CAPACITY_MULTIPLIER,

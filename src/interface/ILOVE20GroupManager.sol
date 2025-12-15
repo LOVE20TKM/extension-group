@@ -62,7 +62,7 @@ interface ILOVE20GroupManager {
 
     // ============ Structs ============
 
-    struct GroupConfig {
+    struct Config {
         address stakeTokenAddress;
         uint256 minGovVoteRatioBps;
         uint256 capacityMultiplier;

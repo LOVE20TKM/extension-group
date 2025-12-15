@@ -39,7 +39,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     // ============ State ============
 
     /// @notice Config per extension address
-    mapping(address => GroupConfig) internal _configs;
+    mapping(address => Config) internal _configs;
 
     /// @notice Group info per (extension, groupId)
     mapping(address => mapping(uint256 => GroupInfo)) internal _groupInfo;
@@ -82,7 +82,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         if (_configs[extension].stakeTokenAddress != address(0))
             revert ConfigAlreadySet();
 
-        _configs[extension] = GroupConfig({
+        _configs[extension] = Config({
             stakeTokenAddress: stakeTokenAddress,
             minGovVoteRatioBps: minGovVoteRatioBps,
             capacityMultiplier: capacityMultiplier,
@@ -111,7 +111,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         )
     {
         address extension = _center.extension(tokenAddress, actionId);
-        GroupConfig storage cfg = _configs[extension];
+        Config storage cfg = _configs[extension];
         return (
             cfg.stakeTokenAddress,
             cfg.minGovVoteRatioBps,
@@ -142,8 +142,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     function _getConfig(
         address extension
-    ) internal view returns (GroupConfig storage) {
-        GroupConfig storage cfg = _configs[extension];
+    ) internal view returns (Config storage) {
+        Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) revert ConfigNotSet();
         return cfg;
     }
@@ -165,7 +165,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 groupMaxAccounts_
     ) external override returns (bool) {
         address extension = _getExtension(tokenAddress, actionId);
-        GroupConfig storage cfg = _getConfig(extension);
+        Config storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -239,7 +239,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 additionalStake
     ) external override returns (uint256 newStakedAmount, uint256 newCapacity) {
         address extension = _getExtension(tokenAddress, actionId);
-        GroupConfig storage cfg = _getConfig(extension);
+        Config storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -294,7 +294,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 groupId
     ) external override {
         address extension = _getExtension(tokenAddress, actionId);
-        GroupConfig storage cfg = _getConfig(extension);
+        Config storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -406,7 +406,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address owner
     ) external view override returns (uint256[] memory) {
         address extension = _center.extension(tokenAddress, actionId);
-        GroupConfig storage cfg = _configs[extension];
+        Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return new uint256[](0);
 
         uint256 nftBalance = _group.balanceOf(owner);
@@ -468,7 +468,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId
     ) public view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
-        GroupConfig storage cfg = _configs[extension];
+        Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
         return
             ILOVE20Token(tokenAddress).totalSupply() /
@@ -481,7 +481,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address owner
     ) public view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
-        GroupConfig storage cfg = _configs[extension];
+        Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
         return _calculateMaxCapacityByOwner(tokenAddress, cfg, owner);
     }
@@ -492,7 +492,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address owner
     ) public view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
-        GroupConfig storage cfg = _configs[extension];
+        Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
         return _totalStakedByOwner(extension, owner);
     }
@@ -522,7 +522,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         )
     {
         address extension = _center.extension(tokenAddress, actionId);
-        GroupConfig storage cfg = _configs[extension];
+        Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return (0, 0, 0, 0, 0);
 
         (currentCapacity, currentStake) = _totalCapacityAndStakeByOwner(
@@ -541,7 +541,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     function _checkCanActivateGroup(
         address tokenAddress,
         address extension,
-        GroupConfig storage cfg,
+        Config storage cfg,
         address owner,
         uint256 stakedAmount
     ) internal view {
@@ -576,7 +576,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     function _checkCanExpandGroup(
         address tokenAddress,
         address extension,
-        GroupConfig storage cfg,
+        Config storage cfg,
         address owner,
         uint256 groupId,
         uint256 newStakedAmount
@@ -595,7 +595,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     function _calculateMaxCapacityByOwner(
         address tokenAddress,
-        GroupConfig storage cfg,
+        Config storage cfg,
         address owner
     ) internal view returns (uint256) {
         uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
