@@ -123,11 +123,6 @@ interface ILOVE20GroupManager {
             uint256 minJoinAmount
         );
 
-    function isConfigSet(
-        address tokenAddress,
-        uint256 actionId
-    ) external view returns (bool);
-
     // ============ Write Functions ============
 
     function activateGroup(

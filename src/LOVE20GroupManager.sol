@@ -122,14 +122,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         );
     }
 
-    function isConfigSet(
-        address tokenAddress,
-        uint256 actionId
-    ) external view override returns (bool) {
-        address extension = _center.extension(tokenAddress, actionId);
-        return _configs[extension].stakeTokenAddress != address(0);
-    }
-
     // ============ Internal Helpers ============
 
     function _getExtension(
