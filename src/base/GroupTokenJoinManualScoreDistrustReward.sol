@@ -73,7 +73,7 @@ abstract contract GroupTokenJoinManualScoreDistrustReward is
         uint256 round,
         uint256 groupId
     ) internal view returns (uint256) {
-        uint256 totalReward = _reward[round];
+        uint256 totalReward = reward(round);
         if (totalReward == 0) return 0;
 
         uint256 totalScore = _score[round];

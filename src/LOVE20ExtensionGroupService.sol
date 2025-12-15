@@ -437,15 +437,7 @@ contract LOVE20ExtensionGroupService is
         if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
 
         // Get total reward (from storage or expected from mint)
-        uint256 totalReward = _reward[round];
-        if (totalReward == 0) {
-            (totalReward, ) = _mint.actionRewardByActionIdByAccount(
-                tokenAddress,
-                round,
-                actionId,
-                address(this)
-            );
-        }
+        uint256 totalReward = reward(round);
         if (totalReward == 0) return 0;
 
         (
