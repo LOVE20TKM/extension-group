@@ -294,8 +294,8 @@ contract LOVE20ExtensionGroupService is
 
     // ============ IExtensionJoinedValue Implementation ============
 
-    function isJoinedValueCalculated() external pure returns (bool) {
-        return false;
+    function isJoinedValueCalculated() external view returns (bool) {
+        return GROUP_ACTION_TOKEN_ADDRESS != tokenAddress;
     }
 
     function joinedValue() external view returns (uint256) {
