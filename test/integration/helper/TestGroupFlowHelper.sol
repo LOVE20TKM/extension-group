@@ -544,6 +544,17 @@ contract TestGroupFlowHelper is Test {
         }
     }
 
+    function transfer(
+        FlowUserParams memory from,
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) public {
+        vm.startPrank(from.userAddress);
+        IERC20(tokenAddress).transfer(to, amount);
+        vm.stopPrank();
+    }
+
     function next_phase() public {
         vm.roll(block.number + PHASE_BLOCKS);
     }
@@ -746,29 +757,6 @@ contract TestGroupFlowHelper is Test {
         vm.stopPrank();
     }
 
-    function group_activate_without_init(GroupUserParams memory user) public {
-        address tokenAddress = user.flow.tokenAddress;
-        IERC20 token = IERC20(tokenAddress);
-
-        if (token.balanceOf(user.flow.userAddress) < user.stakeAmount) {
-            forceMint(tokenAddress, user.flow.userAddress, user.stakeAmount);
-        }
-
-        vm.startPrank(user.flow.userAddress, user.flow.userAddress);
-        token.approve(address(groupManager), user.stakeAmount);
-        groupManager.activateGroup(
-            tokenAddress,
-            user.groupActionId,
-            user.groupId,
-            user.groupDescription,
-            user.stakeAmount,
-            user.minJoinAmount,
-            user.maxJoinAmount,
-            0
-        );
-        vm.stopPrank();
-    }
-
     function group_join(
         GroupUserParams memory member,
         GroupUserParams memory groupOwner
@@ -807,7 +795,6 @@ contract TestGroupFlowHelper is Test {
 
     function group_submit_score(
         GroupUserParams memory groupOwner,
-        address[] memory,
         uint256[] memory scores
     ) public {
         LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(

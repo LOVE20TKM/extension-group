@@ -21,11 +21,15 @@ import {
 abstract contract BaseGroupFlowTest is Test {
     TestGroupFlowHelper public h;
 
-    // Test users - Group owners (bob has 2 groups, alice and charlie have 1 each)
-    GroupUserParams public bob;
-    GroupUserParams public bob2; // bob's second group
-    GroupUserParams public alice;
-    GroupUserParams public charlie;
+    // Group configurations - bob owns 2 groups, alice and charlie own 1 each
+    GroupUserParams public bobGroup1;
+    GroupUserParams public bobGroup2; // same owner as bobGroup1
+    GroupUserParams public aliceGroup;
+    GroupUserParams public charlieGroup;
+
+    // Fair launch participants (token source for transfers)
+    FlowUserParams internal launcher1;
+    FlowUserParams internal launcher2;
 
     // Regular flow users (for members) - 9 members for 3 groups × 3 members each
     FlowUserParams public member1;
@@ -45,10 +49,10 @@ abstract contract BaseGroupFlowTest is Test {
         _finishLaunch();
 
         // Create group owners - they need to stake first to have gov votes
-        bob = _createAndPrepareGroupUser("bob", "BobsGroup1");
-        bob2 = _createAndPrepareGroupUser2("bob", "BobsGroup2", bob);
-        alice = _createAndPrepareGroupUser("alice", "AlicesGroup");
-        charlie = _createAndPrepareGroupUser("charlie", "CharliesGroup");
+        bobGroup1 = _createAndPrepareGroupUser("bob", "BobsGroup1");
+        bobGroup2 = _createAndPrepareGroupUser2("bob", "BobsGroup2", bobGroup1);
+        aliceGroup = _createAndPrepareGroupUser("alice", "AlicesGroup");
+        charlieGroup = _createAndPrepareGroupUser("charlie", "CharliesGroup");
 
         // Create 9 regular members for 3 groups × 3 members each
         member1 = _createMember("member1");
@@ -74,12 +78,12 @@ abstract contract BaseGroupFlowTest is Test {
     }
 
     function _finishLaunch() internal {
-        FlowUserParams memory launcher1 = h.createUser(
+        launcher1 = h.createUser(
             "launcher1",
             h.firstTokenAddress(),
             FIRST_PARENT_TOKEN_FUNDRAISING_GOAL
         );
-        FlowUserParams memory launcher2 = h.createUser(
+        launcher2 = h.createUser(
             "launcher2",
             h.firstTokenAddress(),
             FIRST_PARENT_TOKEN_FUNDRAISING_GOAL
@@ -104,8 +108,13 @@ abstract contract BaseGroupFlowTest is Test {
             groupName
         );
 
-        uint256 tokenAmount = 1_000_000_000 ether;
-        h.forceMint(h.firstTokenAddress(), user.flow.userAddress, tokenAmount);
+        uint256 tokenAmount = 100_000_000 ether;
+        h.transfer(
+            launcher1,
+            h.firstTokenAddress(),
+            user.flow.userAddress,
+            tokenAmount
+        );
 
         h.stake_liquidity(user.flow);
         h.stake_token(user.flow);
@@ -132,4 +141,3 @@ abstract contract BaseGroupFlowTest is Test {
         return user;
     }
 }
-

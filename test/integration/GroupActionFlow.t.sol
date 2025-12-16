@@ -14,42 +14,42 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
     /// @notice Test complete group action flow: create → submit → vote → activate → join → score → claim reward
     function test_full_group_action_flow() public {
         // 1. Create and setup group action
-        bob.groupActionAddress = h.group_action_create(bob);
-        bob.groupActionId = h.submit_group_action(bob);
-        bob.flow.actionId = bob.groupActionId;
-        h.vote(bob.flow);
+        bobGroup1.groupActionAddress = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = bobGroup1.groupActionId;
+        h.vote(bobGroup1.flow);
 
         // 2. Activate and join
         h.next_phase();
-        h.group_activate(bob);
+        h.group_activate(bobGroup1);
 
         GroupUserParams memory m1;
         m1.flow = member1;
         m1.joinAmount = 10e18;
-        m1.groupActionAddress = bob.groupActionAddress;
-        h.group_join(m1, bob);
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
 
         GroupUserParams memory m2;
         m2.flow = member2;
         m2.joinAmount = 20e18;
-        m2.groupActionAddress = bob.groupActionAddress;
-        h.group_join(m2, bob);
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
 
         // 3. Submit scores in verify phase
         h.next_phase();
         uint256 verifyRound = h.verifyContract().currentRound();
         _submitTwoMemberScores();
 
-        // 4. Core protocol verification - bob verifies extension contract
-        h.core_verify_extension(bob, bob.groupActionAddress);
+        // 4. Core protocol verification - bobGroup1 verifies extension contract
+        h.core_verify_extension(bobGroup1, bobGroup1.groupActionAddress);
 
         // Verify join state
         LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
-            bob.groupActionAddress
+            bobGroup1.groupActionAddress
         );
         assertEq(ga.totalJoinedAmount(), 30e18, "Total joined amount mismatch");
         assertEq(
-            ga.accountsByGroupIdCount(bob.groupId),
+            ga.accountsByGroupIdCount(bobGroup1.groupId),
             2,
             "Member count mismatch"
         );
@@ -60,13 +60,10 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
     }
 
     function _submitTwoMemberScores() internal {
-        address[] memory members = new address[](2);
-        members[0] = member1.userAddress;
-        members[1] = member2.userAddress;
         uint256[] memory scores = new uint256[](2);
         scores[0] = 80;
         scores[1] = 90;
-        h.group_submit_score(bob, members, scores);
+        h.group_submit_score(bobGroup1, scores);
     }
 
     function _verifyMemberRewardClaim(
@@ -75,7 +72,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         uint256 verifyRound
     ) internal {
         LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
-            bob.groupActionAddress
+            bobGroup1.groupActionAddress
         );
 
         // Get expected total reward from mint contract (source of truth)
@@ -84,8 +81,8 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
             .actionRewardByActionIdByAccount(
                 h.firstTokenAddress(),
                 verifyRound,
-                bob.groupActionId,
-                bob.groupActionAddress
+                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress
             );
         assertTrue(expectedTotalReward > 0, "Expected total reward > 0");
 
@@ -163,7 +160,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         uint256 balBefore = IERC20(h.firstTokenAddress()).balanceOf(
             member.flow.userAddress
         );
-        uint256 claimed = h.group_action_claim_reward(member, bob, verifyRound);
+        uint256 claimed = h.group_action_claim_reward(member, bobGroup1, verifyRound);
 
         // Verify claimed amount matches calculated
         assertEq(claimed, expectedReward, "Claimed matches calculated");
@@ -174,4 +171,3 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         );
     }
 }
-
