@@ -505,6 +505,29 @@ contract TestGroupFlowHelper is Test {
         return user;
     }
 
+    /// @notice Create additional group for existing user (same user can own multiple groups)
+    function createGroupForExistingUser(
+        GroupUserParams memory existingUser,
+        string memory groupName
+    ) public returns (uint256 groupId) {
+        address userAddress = existingUser.flow.userAddress;
+        address tokenAddress = existingUser.flow.tokenAddress;
+
+        uint256 mintCost = group.calculateMintCost(groupName);
+        IERC20 token = IERC20(tokenAddress);
+
+        if (mintCost > token.balanceOf(userAddress)) {
+            forceMint(tokenAddress, userAddress, mintCost);
+        }
+
+        vm.startPrank(userAddress);
+        if (mintCost > 0) {
+            token.approve(address(group), mintCost);
+        }
+        groupId = group.mint(groupName);
+        vm.stopPrank();
+    }
+
     // ============ Utility Functions ============
 
     function forceMint(
@@ -908,6 +931,76 @@ contract TestGroupFlowHelper is Test {
 
         vm.prank(voter.flow.userAddress, voter.flow.userAddress);
         groupAction.distrustVote(target.flow.userAddress, amount, reason);
+    }
+
+    // ============ Core Verify Helpers ============
+
+    /// @notice Verify extension (give score to extension contract in core Verify)
+    /// @dev Verifier must have voted for the action and calls LOVE20Verify.verify()
+    function core_verify_extension(
+        FlowUserParams memory verifier,
+        address tokenAddress,
+        uint256 actionId,
+        address extensionAddress
+    ) public {
+        // Get random accounts from join contract
+        address[] memory accounts = joinContract.prepareRandomAccountsIfNeeded(
+            tokenAddress,
+            actionId
+        );
+
+        // Build scores array - give full score to extension account
+        uint256[] memory scores = new uint256[](accounts.length);
+        for (uint256 i = 0; i < accounts.length; i++) {
+            if (accounts[i] == extensionAddress) {
+                scores[i] = 100;
+            }
+        }
+
+        vm.prank(verifier.userAddress);
+        verifyContract.verify(tokenAddress, actionId, 0, scores);
+    }
+
+    /// @notice Shorthand for group action verification
+    function core_verify_extension(
+        GroupUserParams memory verifier,
+        address extensionAddress
+    ) public {
+        core_verify_extension(
+            verifier.flow,
+            verifier.flow.tokenAddress,
+            verifier.groupActionId,
+            extensionAddress
+        );
+    }
+
+    // ============ Reward Claim Helpers ============
+
+    /// @notice Claim reward for group action participant
+    function group_action_claim_reward(
+        GroupUserParams memory member,
+        GroupUserParams memory groupOwner,
+        uint256 round
+    ) public returns (uint256 reward) {
+        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+            groupOwner.groupActionAddress
+        );
+
+        vm.prank(member.flow.userAddress);
+        reward = groupAction.claimReward(round);
+    }
+
+    /// @notice Claim reward for group service provider
+    function group_service_claim_reward(
+        GroupUserParams memory groupOwner,
+        uint256 round
+    ) public returns (uint256 reward) {
+        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+            groupOwner.groupServiceAddress
+        );
+
+        vm.prank(groupOwner.flow.userAddress);
+        reward = groupService.claimReward(round);
     }
 
     // ============ View Helpers ============

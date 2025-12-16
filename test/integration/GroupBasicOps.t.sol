@@ -1,239 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {Test} from "forge-std/Test.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    TestGroupFlowHelper,
-    GroupUserParams,
-    FlowUserParams
-} from "./helper/TestGroupFlowHelper.sol";
-import {FIRST_PARENT_TOKEN_FUNDRAISING_GOAL} from "@core-test/Constant.sol";
+import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
+import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
     LOVE20ExtensionGroupAction
 } from "../../src/LOVE20ExtensionGroupAction.sol";
-import {
-    LOVE20ExtensionGroupService
-} from "../../src/LOVE20ExtensionGroupService.sol";
 
-/// @title GroupFlowTest
-/// @notice Integration tests for Group Action and Group Service extensions using REAL contracts
-contract GroupFlowTest is Test {
-    TestGroupFlowHelper public h;
-
-    // Test users - Group owners
-    GroupUserParams public bob;
-    GroupUserParams public alice;
-
-    // Regular flow users (for members)
-    FlowUserParams public member1;
-    FlowUserParams public member2;
-    FlowUserParams public member3;
-
-    function setUp() public virtual {
-        h = new TestGroupFlowHelper();
-
-        // Complete launch phase first (required for real contracts)
-        _finishLaunch();
-
-        // Create group owners - they need to stake first to have gov votes
-        bob = _createAndPrepareGroupUser("bob", "BobsGroup");
-        alice = _createAndPrepareGroupUser("alice", "AlicesGroup");
-
-        // Create regular members (no need for staking)
-        member1 = h.createUser(
-            "member1",
-            h.firstTokenAddress(),
-            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL / 10
-        );
-        member2 = h.createUser(
-            "member2",
-            h.firstTokenAddress(),
-            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL / 10
-        );
-        member3 = h.createUser(
-            "member3",
-            h.firstTokenAddress(),
-            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL / 10
-        );
-    }
-
-    function _finishLaunch() internal {
-        // Create two temp users to complete launch
-        FlowUserParams memory launcher1 = h.createUser(
-            "launcher1",
-            h.firstTokenAddress(),
-            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL
-        );
-        FlowUserParams memory launcher2 = h.createUser(
-            "launcher2",
-            h.firstTokenAddress(),
-            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL
-        );
-
-        h.launch_contribute(launcher1);
-        h.jump_second_half_min();
-        h.launch_contribute(launcher2);
-        h.launch_skip_claim_delay();
-        h.launch_claim(launcher1);
-        h.launch_claim(launcher2);
-    }
-
-    function _createAndPrepareGroupUser(
-        string memory userName,
-        string memory groupName
-    ) internal returns (GroupUserParams memory user) {
-        // Create user with parent tokens
-        user = h.createGroupUser(
-            userName,
-            h.firstTokenAddress(),
-            FIRST_PARENT_TOKEN_FUNDRAISING_GOAL,
-            groupName
-        );
-
-        // User needs to have child tokens for staking
-        // Mint tokens to user (using forceMint through minter)
-        uint256 tokenAmount = 1_000_000_000 ether; // 1 billion tokens
-        h.forceMint(h.firstTokenAddress(), user.flow.userAddress, tokenAmount);
-
-        // Stake liquidity and token to get gov votes (required for group operations)
-        h.stake_liquidity(user.flow);
-        h.stake_token(user.flow);
-
-        return user;
-    }
-
-    // ============ Full Group Action Flow Tests ============
-
-    /// @notice Test complete group action flow: create → submit → vote → activate → join → score
-    function test_full_group_action_flow() public {
-        // 1. Create group action extension
-        address extensionAddr = h.group_action_create(bob);
-        bob.groupActionAddress = extensionAddr;
-
-        // 2. Submit action with extension
-        uint256 actionId = h.submit_group_action(bob);
-        bob.flow.actionId = actionId;
-        bob.groupActionId = actionId;
-
-        // 3. Vote for the action
-        h.vote(bob.flow);
-
-        // 4. Move to join phase and activate group
-        h.next_phase();
-        h.group_activate(bob);
-
-        // 5. Members join the group
-        GroupUserParams memory m1;
-        m1.flow = member1;
-        m1.joinAmount = 10e18;
-        m1.groupActionAddress = bob.groupActionAddress;
-        h.group_join(m1, bob);
-
-        GroupUserParams memory m2;
-        m2.flow = member2;
-        m2.joinAmount = 20e18;
-        m2.groupActionAddress = bob.groupActionAddress;
-        h.group_join(m2, bob);
-
-        // 6. Move to verify phase and submit scores
-        h.next_phase();
-
-        address[] memory members = new address[](2);
-        members[0] = member1.userAddress;
-        members[1] = member2.userAddress;
-
-        uint256[] memory scores = new uint256[](2);
-        scores[0] = 80;
-        scores[1] = 90;
-
-        h.group_submit_score(bob, members, scores);
-
-        // Verify final state
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            bob.groupActionAddress
-        );
-        assertEq(
-            groupAction.totalJoinedAmount(),
-            m1.joinAmount + m2.joinAmount,
-            "Total joined amount mismatch"
-        );
-        assertEq(
-            groupAction.accountsByGroupIdCount(bob.groupId),
-            2,
-            "Member count mismatch"
-        );
-    }
-
-    /// @notice Test group action with multiple group owners
-    function test_multi_group_owners() public {
-        // 1. Bob creates and submits group action
-        address bobExtension = h.group_action_create(bob);
-        bob.groupActionAddress = bobExtension;
-        uint256 bobActionId = h.submit_group_action(bob);
-        bob.flow.actionId = bobActionId;
-        bob.groupActionId = bobActionId;
-
-        // 2. Alice also uses same extension (share same action ID)
-        alice.groupActionAddress = bobExtension;
-        alice.flow.actionId = bobActionId;
-        alice.groupActionId = bobActionId;
-
-        // 3. Both vote for the action
-        h.vote(bob.flow);
-        h.vote(alice.flow);
-
-        // 4. Move to join phase - Bob activates first (which initializes extension)
-        h.next_phase();
-        h.group_activate(bob);
-
-        // Alice activates her group (extension already initialized)
-        h.group_activate_without_init(alice);
-
-        // 5. Members join different groups
-        GroupUserParams memory m1;
-        m1.flow = member1;
-        m1.joinAmount = 10e18;
-        m1.groupActionAddress = bobExtension;
-        h.group_join(m1, bob);
-
-        GroupUserParams memory m2;
-        m2.flow = member2;
-        m2.joinAmount = 15e18;
-        m2.groupActionAddress = bobExtension;
-        h.group_join(m2, alice);
-
-        // 6. Move to verify phase
-        h.next_phase();
-
-        // Both owners submit scores for their members
-        address[] memory bobMembers = new address[](1);
-        bobMembers[0] = member1.userAddress;
-        uint256[] memory bobScores = new uint256[](1);
-        bobScores[0] = 85;
-        h.group_submit_score(bob, bobMembers, bobScores);
-
-        address[] memory aliceMembers = new address[](1);
-        aliceMembers[0] = member2.userAddress;
-        uint256[] memory aliceScores = new uint256[](1);
-        aliceScores[0] = 90;
-        h.group_submit_score(alice, aliceMembers, aliceScores);
-
-        // Verify both verifiers registered
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            bobExtension
-        );
-        uint256 round = h.verifyContract().currentRound();
-        assertEq(
-            groupAction.verifiersCount(round),
-            2,
-            "Verifiers count mismatch"
-        );
-    }
-
+/// @title GroupBasicOpsTest
+/// @notice Integration tests for basic group operations: expansion, deactivation, exit/rejoin, etc.
+contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test group expansion
     function test_group_expansion() public {
-        // 1. Setup group action with lower initial stake to allow expansion
+        // 1. Setup group action
         address extensionAddr = h.group_action_create(bob);
         bob.groupActionAddress = extensionAddr;
         uint256 actionId = h.submit_group_action(bob);
@@ -306,8 +85,6 @@ contract GroupFlowTest is Test {
         );
     }
 
-    // ============ Cross-Round Tests ============
-
     /// @notice Test behavior across multiple rounds
     function test_cross_round_behavior() public {
         // 1. Setup group action
@@ -370,8 +147,6 @@ contract GroupFlowTest is Test {
             "Round 2 score should be 90"
         );
     }
-
-    // ============ Edge Cases ============
 
     /// @notice Test member exit and rejoin
     function test_member_exit_and_rejoin() public {
