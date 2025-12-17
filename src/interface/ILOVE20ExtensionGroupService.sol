@@ -74,6 +74,13 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
             uint256 ownerAmount
         );
 
+    function hasActiveGroups(address account) external view returns (bool);
+
+    function generatedRewardByVerifier(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256 accountReward, uint256 totalReward);
+
     // ============ Write Functions ============
 
     function setRecipients(

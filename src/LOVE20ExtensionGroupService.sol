@@ -105,13 +105,13 @@ contract LOVE20ExtensionGroupService is
     function join(
         string[] memory verificationInfos
     ) public override(IJoin, JoinBase) {
-        if (!_hasActiveGroups(msg.sender)) revert NoActiveGroups();
+        if (!hasActiveGroups(msg.sender)) revert NoActiveGroups();
 
         super.join(verificationInfos);
     }
 
-    /// @dev Check if account has staked in any valid group action
-    function _hasActiveGroups(address account) internal view returns (bool) {
+    /// @notice Check if account has staked in any valid group action
+    function hasActiveGroups(address account) public view returns (bool) {
         ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
         ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
             GROUP_ACTION_FACTORY_ADDRESS
@@ -443,18 +443,18 @@ contract LOVE20ExtensionGroupService is
         (
             uint256 accountTotalReward,
             uint256 allActionsTotalReward
-        ) = _getRewardsFromAllActions(round, account);
+        ) = generatedRewardByVerifier(round, account);
 
         if (accountTotalReward == 0 || allActionsTotalReward == 0) return 0;
 
         return (totalReward * accountTotalReward) / allActionsTotalReward;
     }
 
-    /// @dev Get account reward and total reward from all valid group actions
-    function _getRewardsFromAllActions(
+    /// @notice Get verifier reward and total reward from all valid group actions
+    function generatedRewardByVerifier(
         uint256 round,
-        address account
-    ) internal view returns (uint256 accountReward, uint256 totalReward) {
+        address verifier
+    ) public view returns (uint256 accountReward, uint256 totalReward) {
         ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
         ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
             GROUP_ACTION_FACTORY_ADDRESS
@@ -482,7 +482,7 @@ contract LOVE20ExtensionGroupService is
                 );
             accountReward += groupAction.generatedRewardByVerifier(
                 round,
-                account
+                verifier
             );
             totalReward += groupAction.reward(round);
         }
