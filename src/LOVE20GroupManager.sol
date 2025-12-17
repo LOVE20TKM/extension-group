@@ -141,10 +141,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId,
         string memory description,
-        uint256 groupMaxCapacity,
-        uint256 groupMinJoinAmount,
-        uint256 groupMaxJoinAmount,
-        uint256 groupMaxAccounts_
+        uint256 maxCapacity,
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts_
     ) external override returns (bool) {
         address extension = _getExtension(tokenAddress, actionId);
         Config storage cfg = _getConfig(extension);
@@ -153,9 +153,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         GroupInfo storage group = _groupInfo[extension][groupId];
 
         if (group.isActive) revert GroupAlreadyActivated();
-        if (
-            groupMaxJoinAmount != 0 && groupMaxJoinAmount < groupMinJoinAmount
-        ) {
+        if (maxJoinAmount != 0 && maxJoinAmount < minJoinAmount) {
             revert InvalidMinMaxJoinAmount();
         }
 
@@ -169,10 +167,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         // Set group info
         group.groupId = groupId;
         group.description = description;
-        group.groupMaxCapacity = groupMaxCapacity;
-        group.groupMinJoinAmount = groupMinJoinAmount;
-        group.groupMaxJoinAmount = groupMaxJoinAmount;
-        group.groupMaxAccounts = groupMaxAccounts_;
+        group.maxCapacity = maxCapacity;
+        group.minJoinAmount = minJoinAmount;
+        group.maxJoinAmount = maxJoinAmount;
+        group.maxAccounts = maxAccounts_;
         group.activatedRound = _join.currentRound();
         group.isActive = true;
         group.deactivatedRound = 0;
@@ -186,8 +184,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             group.activatedRound,
             groupId,
             msg.sender,
-            groupMaxCapacity,
-            groupMaxAccounts_
+            maxCapacity,
+            maxAccounts_
         );
         return true;
     }
@@ -251,10 +249,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         }
 
         group.description = newDescription;
-        group.groupMaxCapacity = newMaxCapacity;
-        group.groupMinJoinAmount = newMinJoinAmount;
-        group.groupMaxJoinAmount = newMaxJoinAmount;
-        group.groupMaxAccounts = newMaxAccounts;
+        group.maxCapacity = newMaxCapacity;
+        group.minJoinAmount = newMinJoinAmount;
+        group.maxJoinAmount = newMaxJoinAmount;
+        group.maxAccounts = newMaxAccounts;
 
         emit GroupInfoUpdate(
             tokenAddress,
@@ -282,10 +280,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         returns (
             uint256 groupId_,
             string memory description,
-            uint256 groupMaxCapacity,
-            uint256 groupMinJoinAmount,
-            uint256 groupMaxJoinAmount,
-            uint256 groupMaxAccounts,
+            uint256 maxCapacity,
+            uint256 minJoinAmount,
+            uint256 maxJoinAmount,
+            uint256 maxAccounts,
             bool isActive,
             uint256 activatedRound,
             uint256 deactivatedRound
@@ -296,10 +294,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         return (
             info.groupId,
             info.description,
-            info.groupMaxCapacity,
-            info.groupMinJoinAmount,
-            info.groupMaxJoinAmount,
-            info.groupMaxAccounts,
+            info.maxCapacity,
+            info.minJoinAmount,
+            info.maxJoinAmount,
+            info.maxAccounts,
             info.isActive,
             info.activatedRound,
             info.deactivatedRound

@@ -26,8 +26,8 @@ interface ILOVE20GroupManager {
         uint256 round,
         uint256 groupId,
         address owner,
-        uint256 groupMaxCapacity,
-        uint256 groupMaxAccounts
+        uint256 maxCapacity,
+        uint256 maxAccounts
     );
     event GroupDeactivate(
         address indexed tokenAddress,
@@ -59,10 +59,10 @@ interface ILOVE20GroupManager {
     struct GroupInfo {
         uint256 groupId;
         string description;
-        uint256 groupMaxCapacity; // 0 = use owner's theoretical max capacity
-        uint256 groupMinJoinAmount;
-        uint256 groupMaxJoinAmount; // 0 = no limit
-        uint256 groupMaxAccounts; // 0 = no limit
+        uint256 maxCapacity; // 0 = use owner's theoretical max capacity
+        uint256 minJoinAmount;
+        uint256 maxJoinAmount; // 0 = no limit
+        uint256 maxAccounts; // 0 = no limit
         bool isActive;
         uint256 activatedRound; // 0 = never activated
         uint256 deactivatedRound; // 0 = never deactivated
@@ -108,10 +108,10 @@ interface ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId,
         string memory description,
-        uint256 groupMaxCapacity,
-        uint256 groupMinJoinAmount,
-        uint256 groupMaxJoinAmount,
-        uint256 groupMaxAccounts_
+        uint256 maxCapacity,
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts_
     ) external returns (bool);
 
     function deactivateGroup(
@@ -143,10 +143,10 @@ interface ILOVE20GroupManager {
         returns (
             uint256 groupId_,
             string memory description,
-            uint256 groupMaxCapacity,
-            uint256 groupMinJoinAmount,
-            uint256 groupMaxJoinAmount,
-            uint256 groupMaxAccounts,
+            uint256 maxCapacity,
+            uint256 minJoinAmount,
+            uint256 maxJoinAmount,
+            uint256 maxAccounts,
             bool isActive,
             uint256 activatedRound,
             uint256 deactivatedRound

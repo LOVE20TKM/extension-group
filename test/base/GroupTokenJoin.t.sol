@@ -117,8 +117,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             "Group1",
-            0, // groupMaxCapacity
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity
+            1e18, // minJoinAmount
             0,
             0
         );
@@ -129,8 +129,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
             ACTION_ID,
             groupId2,
             "Group2",
-            0, // groupMaxCapacity
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity
+            1e18, // minJoinAmount
             0,
             0
         );
@@ -266,7 +266,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
     }
 
     function test_Join_RevertAmountExceedsAccountCap() public {
-        // Update groupMaxJoinAmount to a small value
+        // Update maxJoinAmount to a small value
         vm.prank(groupOwner1, groupOwner1);
         groupManager.updateGroupInfo(
             address(token),
@@ -274,7 +274,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             groupId1,
             "Group1",
             0, // newMaxCapacity
-            1e18, // groupMinJoinAmount
+            1e18, // minJoinAmount
             5e18,
             0
         ); // maxJoinAmount = 5e18
@@ -296,7 +296,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             groupId1,
             "Group1",
             0, // newMaxCapacity
-            1e18, // groupMinJoinAmount
+            1e18, // minJoinAmount
             0,
             2
         );

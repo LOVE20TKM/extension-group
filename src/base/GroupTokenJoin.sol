@@ -139,10 +139,10 @@ abstract contract GroupTokenJoin is
         (
             ,
             ,
-            uint256 groupMaxCapacity,
-            uint256 groupMinJoinAmount,
-            uint256 groupMaxJoinAmount,
-            uint256 groupMaxAccounts,
+            uint256 maxCapacity,
+            uint256 minJoinAmount,
+            uint256 maxJoinAmount,
+            uint256 maxAccounts,
             bool isActive,
             ,
 
@@ -154,15 +154,15 @@ abstract contract GroupTokenJoin is
 
         if (isFirstJoin) {
             if (
-                groupMaxAccounts > 0 &&
+                maxAccounts > 0 &&
                 _accountCountByGroupIdHistory[groupId].latestValue() >=
-                groupMaxAccounts
+                maxAccounts
             ) revert GroupAccountsFull();
 
-            if (amount < groupMinJoinAmount) revert AmountBelowMinimum();
+            if (amount < minJoinAmount) revert AmountBelowMinimum();
         }
 
-        if (groupMaxJoinAmount > 0 && newTotal > groupMaxJoinAmount) {
+        if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
             revert AmountExceedsAccountCap();
         }
         if (
@@ -171,11 +171,11 @@ abstract contract GroupTokenJoin is
         ) revert AmountExceedsAccountCap();
 
         // Check group's max capacity (if set)
-        if (groupMaxCapacity > 0) {
+        if (maxCapacity > 0) {
             if (
                 _totalJoinedAmountHistoryByGroupId[groupId].latestValue() +
                     amount >
-                groupMaxCapacity
+                maxCapacity
             ) {
                 revert GroupCapacityExceeded();
             }

@@ -49,9 +49,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         return v;
     }
 
-    function _groupMinJoinAmount(
-        uint256 groupId
-    ) internal view returns (uint256) {
+    function _minJoinAmount(uint256 groupId) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -62,16 +60,14 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         );
         require(ok, "groupInfo call failed");
         uint256 v;
-        // groupMinJoinAmount is word 3 in the ABI head (after capacity removed)
+        // minJoinAmount is word 3 in the ABI head (after capacity removed)
         assembly {
             v := mload(add(data, 0x80))
         }
         return v;
     }
 
-    function _groupMaxJoinAmount(
-        uint256 groupId
-    ) internal view returns (uint256) {
+    function _maxJoinAmount(uint256 groupId) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 ILOVE20GroupManager.groupInfo.selector,
@@ -82,7 +78,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         );
         require(ok, "groupInfo call failed");
         uint256 v;
-        // groupMaxJoinAmount is word 4 in the ABI head (after capacity removed)
+        // maxJoinAmount is word 4 in the ABI head (after capacity removed)
         assembly {
             v := mload(add(data, 0xa0))
         }
@@ -164,8 +160,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             "Group1",
-            0, // groupMaxCapacity (0 = use owner's theoretical max)
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity (0 = use owner's theoretical max)
+            1e18, // minJoinAmount
             0,
             0
         );
@@ -176,8 +172,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             ACTION_ID,
             groupId2,
             "Group2",
-            0, // groupMaxCapacity (0 = use owner's theoretical max)
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity (0 = use owner's theoretical max)
+            1e18, // minJoinAmount
             0,
             0
         );
@@ -452,8 +448,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         );
 
         string memory desc = _groupDescription(groupId1);
-        uint256 minJoin = _groupMinJoinAmount(groupId1);
-        uint256 maxJoin = _groupMaxJoinAmount(groupId1);
+        uint256 minJoin = _minJoinAmount(groupId1);
+        uint256 maxJoin = _maxJoinAmount(groupId1);
         assertEq(desc, newDesc);
         assertEq(minJoin, newMin);
         assertEq(maxJoin, newMax);

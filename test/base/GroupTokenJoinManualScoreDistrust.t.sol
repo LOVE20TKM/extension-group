@@ -144,8 +144,8 @@ contract GroupTokenJoinManualScoreDistrustTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             "Group1",
-            0, // groupMaxCapacity
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity
+            1e18, // minJoinAmount
             0,
             0
         );
@@ -156,8 +156,8 @@ contract GroupTokenJoinManualScoreDistrustTest is BaseGroupTest {
             ACTION_ID,
             groupId2,
             "Group2",
-            0, // groupMaxCapacity
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity
+            1e18, // minJoinAmount
             0,
             0
         );
@@ -414,8 +414,8 @@ contract GroupTokenJoinManualScoreDistrustTest is BaseGroupTest {
             ACTION_ID,
             groupId3,
             "Group3",
-            0, // groupMaxCapacity
-            1e18, // groupMinJoinAmount
+            0, // maxCapacity
+            1e18, // minJoinAmount
             0,
             0
         );
