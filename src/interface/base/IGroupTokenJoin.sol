@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
+import {IExit} from "@extension/src/interface/base/IExit.sol";
+
 /// @title IGroupTokenJoin
 /// @notice Interface for token-based group joining
-interface IGroupTokenJoin {
+interface IGroupTokenJoin is IExit {
     // ============ Errors ============
 
     error InvalidJoinTokenAddress();
@@ -65,6 +67,10 @@ interface IGroupTokenJoin {
     function groupIdByAccountByRound(
         address account,
         uint256 round
+    ) external view returns (uint256);
+
+    function totalJoinedAmountByGroupId(
+        uint256 groupId
     ) external view returns (uint256);
 
     function totalJoinedAmountByGroupIdByRound(
