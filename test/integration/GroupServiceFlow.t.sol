@@ -10,6 +10,9 @@ import {
 import {
     LOVE20ExtensionGroupService
 } from "../../src/LOVE20ExtensionGroupService.sol";
+import {
+    ILOVE20ExtensionGroupService
+} from "../../src/interface/ILOVE20ExtensionGroupService.sol";
 
 /// @title GroupServiceFlowTest
 /// @notice Integration test for complete group service flow with reward claiming
@@ -182,6 +185,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // Verify recipients configuration
         (address[] memory addrs, uint256[] memory bps) = gs.recipients(
             bobGroup1.flow.userAddress,
+            bobGroup1.groupActionId,
+            bobGroup1.groupId,
             verifyRound
         );
         assertEq(addrs.length, 2, "Should have 2 recipients");
@@ -200,6 +205,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             gs.rewardByRecipient(
                 verifyRound,
                 bobGroup1.flow.userAddress,
+                bobGroup1.groupActionId,
+                bobGroup1.groupId,
                 member2().userAddress
             ),
             expectedM2,
@@ -209,6 +216,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             gs.rewardByRecipient(
                 verifyRound,
                 bobGroup1.flow.userAddress,
+                bobGroup1.groupActionId,
+                bobGroup1.groupId,
                 member3().userAddress
             ),
             expectedM3,
@@ -218,6 +227,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             gs.rewardByRecipient(
                 verifyRound,
                 bobGroup1.flow.userAddress,
+                bobGroup1.groupActionId,
+                bobGroup1.groupId,
                 bobGroup1.flow.userAddress
             ),
             expectedBob,
@@ -230,7 +241,12 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             uint256[] memory distBps,
             uint256[] memory distAmounts,
             uint256 ownerAmt
-        ) = gs.rewardDistribution(verifyRound, bobGroup1.flow.userAddress);
+        ) = gs.rewardDistribution(
+                verifyRound,
+                bobGroup1.flow.userAddress,
+                bobGroup1.groupActionId,
+                bobGroup1.groupId
+            );
 
         assertEq(distAddrs.length, 2, "Distribution has 2 recipients");
         assertEq(distAmounts[0], expectedM2, "Distribution amt 0");
@@ -354,4 +370,176 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         (, bool claimed) = ga.rewardByAccount(verifyRound, m1.flow.userAddress);
         assertTrue(claimed, "Member1 action reward should be claimed");
     }
+
+    /// @notice Test multi-group scenario with different recipients per group
+    function test_multi_group_different_recipients() public {
+        // === Vote Phase ===
+        // Bob creates and submits group action
+        bobGroup1.groupActionAddress = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = bobGroup1.groupActionId;
+        h.vote(bobGroup1.flow);
+
+        // Alice creates and submits group service
+        aliceGroup.groupServiceAddress = h.group_service_create(
+            aliceGroup,
+            h.firstTokenAddress()
+        );
+        aliceGroup.groupServiceActionId = h.submit_group_service_action(
+            aliceGroup
+        );
+        aliceGroup.flow.actionId = aliceGroup.groupServiceActionId;
+        h.vote(aliceGroup.flow);
+
+        // === Join Phase ===
+        h.next_phase();
+
+        // Activate both groups for Bob
+        h.group_activate(bobGroup1);
+        bobGroup2.groupActionAddress = bobGroup1.groupActionAddress;
+        bobGroup2.groupActionId = bobGroup1.groupActionId;
+        h.group_activate(bobGroup2);
+
+        // Members join different groups
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup2);
+
+        // Bob joins service
+        bobGroup1.groupServiceAddress = aliceGroup.groupServiceAddress;
+        bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
+        bobGroup2.groupServiceAddress = aliceGroup.groupServiceAddress;
+        bobGroup2.groupServiceActionId = aliceGroup.groupServiceActionId;
+        h.group_service_join(bobGroup1);
+
+        // Set different recipients for different groups
+        // Group1: 30% to member3, 20% to member4
+        address[] memory recipients1 = new address[](2);
+        recipients1[0] = member3().userAddress;
+        recipients1[1] = member4().userAddress;
+        uint256[] memory bps1 = new uint256[](2);
+        bps1[0] = 3000;
+        bps1[1] = 2000;
+        bobGroup1.recipients = recipients1;
+        bobGroup1.basisPoints = bps1;
+        h.group_service_set_recipients(bobGroup1);
+
+        // Group2: 60% to member5
+        address[] memory recipients2 = new address[](1);
+        recipients2[0] = member5().userAddress;
+        uint256[] memory bps2 = new uint256[](1);
+        bps2[0] = 6000;
+        bobGroup2.recipients = recipients2;
+        bobGroup2.basisPoints = bps2;
+        h.group_service_set_recipients(bobGroup2);
+
+        // === Verify Phase ===
+        h.next_phase();
+        uint256 verifyRound = h.verifyContract().currentRound();
+
+        // Submit scores for both groups
+        uint256[] memory scores1 = new uint256[](1);
+        scores1[0] = 100;
+        h.group_submit_score(bobGroup1, scores1);
+
+        uint256[] memory scores2 = new uint256[](1);
+        scores2[0] = 100;
+        h.group_submit_score(bobGroup2, scores2);
+
+        // Core verify
+        h.core_verify_extension(bobGroup1, bobGroup1.groupActionAddress);
+        h.core_verify_extension(
+            aliceGroup.flow,
+            h.firstTokenAddress(),
+            aliceGroup.groupServiceActionId,
+            aliceGroup.groupServiceAddress
+        );
+
+        // === Claim Phase ===
+        h.next_phase();
+
+        LOVE20ExtensionGroupService gs = LOVE20ExtensionGroupService(
+            aliceGroup.groupServiceAddress
+        );
+
+        // Verify rewardDistributionAll returns both groups
+        ILOVE20ExtensionGroupService.GroupDistribution[]
+            memory distributions = gs.rewardDistributionAll(
+                verifyRound,
+                bobGroup1.flow.userAddress
+            );
+        assertEq(distributions.length, 2, "Should have 2 group distributions");
+
+        // Record balances before claim
+        uint256 m3Bal = IERC20(h.firstTokenAddress()).balanceOf(
+            member3().userAddress
+        );
+        uint256 m4Bal = IERC20(h.firstTokenAddress()).balanceOf(
+            member4().userAddress
+        );
+        uint256 m5Bal = IERC20(h.firstTokenAddress()).balanceOf(
+            member5().userAddress
+        );
+        uint256 bobBal = IERC20(h.firstTokenAddress()).balanceOf(
+            bobGroup1.flow.userAddress
+        );
+
+        // Claim
+        uint256 totalClaimed = h.group_service_claim_reward(
+            bobGroup1,
+            verifyRound
+        );
+        assertTrue(totalClaimed > 0, "Should claim some reward");
+
+        // Calculate expected distribution per group
+        // Group1 reward: 30% to m3, 20% to m4, 50% to bob
+        // Group2 reward: 60% to m5, 40% to bob
+        uint256 group1Reward = distributions[0].groupId == bobGroup1.groupId
+            ? distributions[0].groupReward
+            : distributions[1].groupReward;
+        uint256 group2Reward = distributions[0].groupId == bobGroup2.groupId
+            ? distributions[0].groupReward
+            : distributions[1].groupReward;
+
+        uint256 expectedM3 = (group1Reward * 3000) / 10000;
+        uint256 expectedM4 = (group1Reward * 2000) / 10000;
+        uint256 expectedM5 = (group2Reward * 6000) / 10000;
+        uint256 expectedBob = totalClaimed - expectedM3 - expectedM4 - expectedM5;
+
+        // Verify transfers
+        assertEq(
+            IERC20(h.firstTokenAddress()).balanceOf(member3().userAddress) -
+                m3Bal,
+            expectedM3,
+            "Member3 should receive group1 30%"
+        );
+        assertEq(
+            IERC20(h.firstTokenAddress()).balanceOf(member4().userAddress) -
+                m4Bal,
+            expectedM4,
+            "Member4 should receive group1 20%"
+        );
+        assertEq(
+            IERC20(h.firstTokenAddress()).balanceOf(member5().userAddress) -
+                m5Bal,
+            expectedM5,
+            "Member5 should receive group2 60%"
+        );
+        assertEq(
+            IERC20(h.firstTokenAddress()).balanceOf(
+                bobGroup1.flow.userAddress
+            ) - bobBal,
+            expectedBob,
+            "Bob should receive remaining"
+        );
+    }
+
 }

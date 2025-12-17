@@ -18,6 +18,8 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     error ArrayLengthMismatch();
     error DuplicateAddress();
     error InvalidGroupActionTokenAddress();
+    error NotGroupOwner();
+    error RecipientCannotBeSelf();
 
     // ============ Events ============
 
@@ -25,10 +27,23 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
-        address indexed account,
+        uint256 indexed groupId,
+        address account,
         address[] recipients,
         uint256[] basisPoints
     );
+
+    // ============ Structs ============
+
+    struct GroupDistribution {
+        uint256 actionId;
+        uint256 groupId;
+        uint256 groupReward;
+        address[] recipients;
+        uint256[] basisPoints;
+        uint256[] amounts;
+        uint256 ownerAmount;
+    }
 
     // ============ Constants ============
 
@@ -40,8 +55,12 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
     function MAX_RECIPIENTS() external view returns (uint256);
 
+    // ============ View Functions ============
+
     function recipients(
         address groupOwner,
+        uint256 actionId,
+        uint256 groupId,
         uint256 round
     )
         external
@@ -49,7 +68,9 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
         returns (address[] memory addrs, uint256[] memory basisPoints);
 
     function recipientsLatest(
-        address groupOwner
+        address groupOwner,
+        uint256 actionId,
+        uint256 groupId
     )
         external
         view
@@ -58,12 +79,16 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     function rewardByRecipient(
         uint256 round,
         address groupOwner,
+        uint256 actionId,
+        uint256 groupId,
         address recipient
     ) external view returns (uint256);
 
     function rewardDistribution(
         uint256 round,
-        address groupOwner
+        address groupOwner,
+        uint256 actionId,
+        uint256 groupId
     )
         external
         view
@@ -73,6 +98,11 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
             uint256[] memory amounts,
             uint256 ownerAmount
         );
+
+    function rewardDistributionAll(
+        uint256 round,
+        address groupOwner
+    ) external view returns (GroupDistribution[] memory distributions);
 
     function hasActiveGroups(address account) external view returns (bool);
 
@@ -84,6 +114,8 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     // ============ Write Functions ============
 
     function setRecipients(
+        uint256 actionId,
+        uint256 groupId,
         address[] calldata addrs,
         uint256[] calldata basisPoints
     ) external;

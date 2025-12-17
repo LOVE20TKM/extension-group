@@ -915,6 +915,8 @@ contract TestGroupFlowHelper is Test {
 
         vm.prank(groupOwner.flow.userAddress);
         groupService.setRecipients(
+            groupOwner.groupActionId,
+            groupOwner.groupId,
             groupOwner.recipients,
             groupOwner.basisPoints
         );
