@@ -13,6 +13,7 @@ import {
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
 import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
+import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
 using RoundHistoryAddress for RoundHistoryAddress.History;
@@ -79,6 +80,7 @@ abstract contract GroupTokenJoin is
         uint256 newTotal = prevAmount + amount;
 
         _validateJoin(groupId, amount, isFirstJoin, joinedGroupId, newTotal);
+        _validateOwnerCapacity(groupId, amount);
 
         // Transfer tokens
         _joinToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -137,8 +139,7 @@ abstract contract GroupTokenJoin is
         (
             ,
             ,
-            ,
-            uint256 capacity,
+            uint256 groupMaxCapacity,
             uint256 groupMinJoinAmount,
             uint256 groupMaxJoinAmount,
             uint256 groupMaxAccounts,
@@ -158,10 +159,7 @@ abstract contract GroupTokenJoin is
                 groupMaxAccounts
             ) revert GroupAccountsFull();
 
-            uint256 minAmount = groupMinJoinAmount > MIN_JOIN_AMOUNT
-                ? groupMinJoinAmount
-                : MIN_JOIN_AMOUNT;
-            if (amount < minAmount) revert AmountBelowMinimum();
+            if (amount < groupMinJoinAmount) revert AmountBelowMinimum();
         }
 
         if (groupMaxJoinAmount > 0 && newTotal > groupMaxJoinAmount) {
@@ -172,10 +170,32 @@ abstract contract GroupTokenJoin is
             _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
         ) revert AmountExceedsAccountCap();
 
-        if (
-            _totalJoinedAmountHistoryByGroupId[groupId].latestValue() + amount >
-            capacity
-        ) revert GroupCapacityFull();
+        // Check group's max capacity (if set)
+        if (groupMaxCapacity > 0) {
+            if (
+                _totalJoinedAmountHistoryByGroupId[groupId].latestValue() +
+                    amount >
+                groupMaxCapacity
+            ) {
+                revert GroupCapacityExceeded();
+            }
+        }
+    }
+
+    function _validateOwnerCapacity(
+        uint256 groupId,
+        uint256 amount
+    ) internal view {
+        address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
+        uint256 ownerTotalJoined = _totalJoinedAmountByOwner(groupOwner);
+        uint256 ownerMaxCapacity = _groupManager.maxCapacityByOwner(
+            tokenAddress,
+            actionId,
+            groupOwner
+        );
+        if (ownerTotalJoined + amount > ownerMaxCapacity) {
+            revert OwnerCapacityExceeded();
+        }
     }
 
     function exit() public virtual nonReentrant {
@@ -300,6 +320,21 @@ abstract contract GroupTokenJoin is
     }
 
     // ============ Internal Functions ============
+
+    /// @dev Calculate total joined amount for all active groups owned by owner
+    function _totalJoinedAmountByOwner(
+        address owner
+    ) internal view returns (uint256 total) {
+        uint256[] memory ownerGroupIds = _groupManager.activeGroupIdsByOwner(
+            tokenAddress,
+            actionId,
+            owner
+        );
+        for (uint256 i = 0; i < ownerGroupIds.length; i++) {
+            total += _totalJoinedAmountHistoryByGroupId[ownerGroupIds[i]]
+                .latestValue();
+        }
+    }
 
     function _addAccountToGroup(
         uint256 round,

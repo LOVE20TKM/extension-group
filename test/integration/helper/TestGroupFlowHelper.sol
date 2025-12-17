@@ -83,6 +83,7 @@ struct GroupUserParams {
     uint256 groupActionId;
     uint256 groupServiceActionId;
     uint256 stakeAmount;
+    uint256 maxCapacity;
     uint256 minJoinAmount;
     uint256 maxJoinAmount;
     string groupDescription;
@@ -128,13 +129,11 @@ contract TestGroupFlowHelper is Test {
     // ============ Constants ============
 
     uint256 constant DEFAULT_MIN_GOV_VOTE_RATIO_BPS = 1; // 0.0001%
-    uint256 constant DEFAULT_CAPACITY_MULTIPLIER = 10;
-    uint256 constant DEFAULT_STAKING_MULTIPLIER = 100;
+    uint256 constant DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
     uint256 constant DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER = 100;
-    uint256 constant DEFAULT_MIN_JOIN_AMOUNT = 1e18;
-    uint256 constant DEFAULT_STAKE_AMOUNT = 100_000_000e18; // 100M tokens
     uint256 constant DEFAULT_MAX_RECIPIENTS = 10;
     uint256 constant DEFAULT_JOIN_AMOUNT = 1e18;
+    uint256 constant DEFAULT_GROUP_MIN_JOIN_AMOUNT = 1e18;
 
     // Core constants
     uint256 constant TOKEN_SYMBOL_LENGTH = 4;
@@ -400,43 +399,50 @@ contract TestGroupFlowHelper is Test {
         string memory userName,
         address tokenAddress,
         uint256 mintAmountOfParentToken
-    ) public returns (FlowUserParams memory) {
-        address parentTokenAddress = ILOVE20Token(tokenAddress)
-            .parentTokenAddress();
+    ) public returns (FlowUserParams memory user) {
         address userAddress = makeAddr(userName);
-
-        FlowUserParams memory user;
+        
         user.userName = userName;
         user.userAddress = userAddress;
         user.tokenAddress = tokenAddress;
-        user.actionId = 0;
+        
+        _initUserLaunchParams(user, userAddress);
+        _initUserStakeParams(user);
+        _initUserSubmitParams(user);
+        _initUserVoteParams(user);
+        _initUserJoinParams(user);
+        _initUserVerifyParams(user);
+        _mintParentTokens(tokenAddress, userAddress, mintAmountOfParentToken);
+    }
 
-        // launch params
+    function _initUserLaunchParams(FlowUserParams memory user, address userAddress) internal pure {
         user.launch.contributeParentTokenAmountPercent = 50;
-        user.launch.contributeParentTokenAmount = 0;
         user.launch.contributeToAddress = userAddress;
+    }
 
-        // stake params
+    function _initUserStakeParams(FlowUserParams memory user) internal pure {
         user.stake.tokenAmountForLpPercent = 50;
         user.stake.parentTokenAmountForLpPercent = 50;
         user.stake.tokenAmountPercent = 50;
         user.stake.promisedWaitingPhases = 4;
+    }
 
-        // submit params
+    function _initUserSubmitParams(FlowUserParams memory user) internal pure {
         user.submit.minStake = 100;
         user.submit.maxRandomAccounts = 3;
-        user.submit.whiteListAddress = address(0);
         user.submit.title = "default title";
         user.submit.verificationRule = "default verificationRule";
         user.submit.verificationKeys = new string[](1);
-        user.submit.verificationKeys[0] = "key1"; // Max 6 chars
+        user.submit.verificationKeys[0] = "key1";
         user.submit.verificationInfoGuides = new string[](1);
         user.submit.verificationInfoGuides[0] = "guide1";
+    }
 
-        // vote params
+    function _initUserVoteParams(FlowUserParams memory user) internal pure {
         user.vote.votePercent = 100;
+    }
 
-        // join params
+    function _initUserJoinParams(FlowUserParams memory user) internal pure {
         user.join.tokenAmountPercent = 50;
         user.join.additionalTokenAmountPercent = 50;
         user.join.verificationInfos = new string[](1);
@@ -444,23 +450,26 @@ contract TestGroupFlowHelper is Test {
         user.join.updateVerificationInfos = new string[](1);
         user.join.updateVerificationInfos[0] = "updated verificationInfo";
         user.join.rounds = 4;
+    }
 
-        // verify params
+    function _initUserVerifyParams(FlowUserParams memory user) internal pure {
         user.verify.scorePercent = 50;
+    }
 
-        // Mint parent tokens
+    function _mintParentTokens(
+        address tokenAddress,
+        address userAddress,
+        uint256 mintAmount
+    ) internal {
+        address parentTokenAddress = ILOVE20Token(tokenAddress).parentTokenAddress();
         if (parentTokenAddress == rootParentTokenAddress) {
-            vm.deal(userAddress, mintAmountOfParentToken);
+            vm.deal(userAddress, mintAmount);
             vm.startPrank(userAddress);
-            IETH20(rootParentTokenAddress).deposit{
-                value: mintAmountOfParentToken
-            }();
+            IETH20(rootParentTokenAddress).deposit{value: mintAmount}();
             vm.stopPrank();
         } else {
-            forceMint(parentTokenAddress, userAddress, mintAmountOfParentToken);
+            forceMint(parentTokenAddress, userAddress, mintAmount);
         }
-
-        return user;
     }
 
     function createGroupUser(
@@ -468,41 +477,41 @@ contract TestGroupFlowHelper is Test {
         address tokenAddress,
         uint256 mintAmountOfParentToken,
         string memory groupName
-    ) public returns (GroupUserParams memory) {
-        FlowUserParams memory flowUser = createUser(
-            userName,
-            tokenAddress,
-            mintAmountOfParentToken
-        );
+    ) public returns (GroupUserParams memory user) {
+        user.flow = createUser(userName, tokenAddress, mintAmountOfParentToken);
+        _initGroupUserParams(user, groupName);
+        _mintGroupNFT(user, tokenAddress, groupName);
+    }
 
-        GroupUserParams memory user;
-        user.flow = flowUser;
-        user.stakeAmount = DEFAULT_STAKE_AMOUNT;
-        user.minJoinAmount = DEFAULT_MIN_JOIN_AMOUNT;
-        user.maxJoinAmount = 0;
-        user.groupDescription = string(
-            abi.encodePacked(groupName, " Description")
-        );
-        user.joinAmount = DEFAULT_MIN_JOIN_AMOUNT * 10;
+    function _initGroupUserParams(
+        GroupUserParams memory user,
+        string memory groupName
+    ) internal pure {
+        user.stakeAmount = DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT;
+        user.minJoinAmount = DEFAULT_GROUP_MIN_JOIN_AMOUNT;
+        user.groupDescription = string(abi.encodePacked(groupName, " Description"));
+        user.joinAmount = DEFAULT_GROUP_MIN_JOIN_AMOUNT * 10;
         user.scorePercent = 80;
+    }
 
-        // Mint group NFT (need tokens to pay mint cost)
+    function _mintGroupNFT(
+        GroupUserParams memory user,
+        address tokenAddress,
+        string memory groupName
+    ) internal {
         uint256 mintCost = group.calculateMintCost(groupName);
-
-        // Ensure user has enough tokens for mint cost
-        IERC20 token = IERC20(tokenAddress);
-        if (mintCost > token.balanceOf(flowUser.userAddress)) {
-            forceMint(tokenAddress, flowUser.userAddress, mintCost);
+        address userAddress = user.flow.userAddress;
+        
+        if (mintCost > IERC20(tokenAddress).balanceOf(userAddress)) {
+            forceMint(tokenAddress, userAddress, mintCost);
         }
 
-        vm.startPrank(flowUser.userAddress);
+        vm.startPrank(userAddress);
         if (mintCost > 0) {
-            token.approve(address(group), mintCost);
+            IERC20(tokenAddress).approve(address(group), mintCost);
         }
         user.groupId = group.mint(groupName);
         vm.stopPrank();
-
-        return user;
     }
 
     /// @notice Create additional group for existing user (same user can own multiple groups)
@@ -551,6 +560,17 @@ contract TestGroupFlowHelper is Test {
         uint256 amount
     ) public {
         vm.startPrank(from.userAddress);
+        IERC20(tokenAddress).transfer(to, amount);
+        vm.stopPrank();
+    }
+
+    function transferFrom(
+        address from,
+        address tokenAddress,
+        address to,
+        uint256 amount
+    ) public {
+        vm.startPrank(from);
         IERC20(tokenAddress).transfer(to, amount);
         vm.stopPrank();
     }
@@ -653,7 +673,13 @@ contract TestGroupFlowHelper is Test {
     function submit_new_action(
         FlowUserParams memory p
     ) public returns (uint256 actionId) {
-        ActionBody memory actionBody;
+        ActionBody memory actionBody = _buildActionBody(p);
+        actionId = _doSubmit(p.userAddress, p.tokenAddress, actionBody);
+    }
+
+    function _buildActionBody(
+        FlowUserParams memory p
+    ) internal pure returns (ActionBody memory actionBody) {
         actionBody.minStake = p.submit.minStake;
         actionBody.maxRandomAccounts = p.submit.maxRandomAccounts;
         actionBody.whiteListAddress = p.submit.whiteListAddress;
@@ -661,12 +687,16 @@ contract TestGroupFlowHelper is Test {
         actionBody.verificationRule = p.submit.verificationRule;
         actionBody.verificationKeys = p.submit.verificationKeys;
         actionBody.verificationInfoGuides = p.submit.verificationInfoGuides;
+    }
 
-        vm.startPrank(p.userAddress);
-        actionId = submitContract.submitNewAction(p.tokenAddress, actionBody);
+    function _doSubmit(
+        address userAddress,
+        address tokenAddress,
+        ActionBody memory actionBody
+    ) internal returns (uint256 actionId) {
+        vm.startPrank(userAddress);
+        actionId = submitContract.submitNewAction(tokenAddress, actionBody);
         vm.stopPrank();
-
-        return actionId;
     }
 
     // ============ Vote Helpers ============
@@ -713,10 +743,8 @@ contract TestGroupFlowHelper is Test {
             address(groupDistrust),
             user.flow.tokenAddress,
             DEFAULT_MIN_GOV_VOTE_RATIO_BPS,
-            DEFAULT_CAPACITY_MULTIPLIER,
-            DEFAULT_STAKING_MULTIPLIER,
-            DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER,
-            DEFAULT_MIN_JOIN_AMOUNT
+            DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT,
+            DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER
         );
         vm.stopPrank();
 
@@ -749,7 +777,7 @@ contract TestGroupFlowHelper is Test {
             user.groupActionId,
             user.groupId,
             user.groupDescription,
-            user.stakeAmount,
+            user.maxCapacity,
             user.minJoinAmount,
             user.maxJoinAmount,
             0
@@ -815,24 +843,6 @@ contract TestGroupFlowHelper is Test {
 
         vm.prank(member.flow.userAddress);
         groupAction.exit();
-    }
-
-    function group_expand(
-        GroupUserParams memory groupOwner,
-        uint256 additionalStake
-    ) public {
-        address tokenAddress = groupOwner.flow.tokenAddress;
-        forceMint(tokenAddress, groupOwner.flow.userAddress, additionalStake);
-
-        vm.startPrank(groupOwner.flow.userAddress, groupOwner.flow.userAddress);
-        IERC20(tokenAddress).approve(address(groupManager), additionalStake);
-        groupManager.expandGroup(
-            tokenAddress,
-            groupOwner.groupActionId,
-            groupOwner.groupId,
-            additionalStake
-        );
-        vm.stopPrank();
     }
 
     function group_deactivate(GroupUserParams memory groupOwner) public {

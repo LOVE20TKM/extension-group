@@ -66,10 +66,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         // Deploy GroupService (use actionFactory as GROUP_ACTION_FACTORY_ADDRESS)
@@ -103,9 +101,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         // Activate groups
-        uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupManager));
-        setupUser(groupOwner2, stakeAmount, address(groupManager));
+        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -113,8 +110,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             "Group1",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity
+            1e18, // groupMinJoinAmount
             0,
             0
         );
@@ -125,8 +122,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             ACTION_ID,
             groupId2,
             "Group2",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity
+            1e18, // groupMinJoinAmount
             0,
             0
         );

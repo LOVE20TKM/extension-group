@@ -76,11 +76,8 @@ abstract contract BaseGroupTest is Test {
 
     // Group configuration constants
     uint256 constant MIN_GOV_VOTE_RATIO_BPS = 100; // 1%
-    uint256 constant CAPACITY_MULTIPLIER = 10;
-    uint256 constant STAKING_MULTIPLIER = 100;
+    uint256 constant GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
     uint256 constant MAX_JOIN_AMOUNT_MULTIPLIER = 100;
-    uint256 constant MIN_JOIN_AMOUNT = 1e18;
-    uint256 constant DEFAULT_STAKE_AMOUNT = 10000e18; // Min stake based on total supply
 
     // ============ Setup Functions ============
 
@@ -145,10 +142,8 @@ abstract contract BaseGroupTest is Test {
             ILOVE20GroupManager.Config({
                 stakeTokenAddress: address(token),
                 minGovVoteRatioBps: MIN_GOV_VOTE_RATIO_BPS,
-                capacityMultiplier: CAPACITY_MULTIPLIER,
-                stakingMultiplier: STAKING_MULTIPLIER,
-                maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER,
-                minJoinAmount: MIN_JOIN_AMOUNT
+                activationStakeAmount: GROUP_ACTIVATION_STAKE_AMOUNT,
+                maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER
             });
     }
 

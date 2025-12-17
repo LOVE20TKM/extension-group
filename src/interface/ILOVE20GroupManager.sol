@@ -11,12 +11,9 @@ interface ILOVE20GroupManager {
     error GroupAlreadyActivated();
     error GroupAlreadyDeactivated();
     error GroupNotActive();
-    error ZeroStakeAmount();
     error InvalidMinMaxJoinAmount();
     error InvalidMaxAccounts();
     error InsufficientGovVotes();
-    error ExceedsMaxStake();
-    error MinStakeNotMet();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
 
@@ -30,17 +27,8 @@ interface ILOVE20GroupManager {
         uint256 round,
         uint256 groupId,
         address owner,
-        uint256 stakedAmount,
-        uint256 capacity,
+        uint256 groupMaxCapacity,
         uint256 groupMaxAccounts
-    );
-    event GroupExpand(
-        address indexed tokenAddress,
-        uint256 indexed actionId,
-        uint256 round,
-        uint256 groupId,
-        uint256 additionalStake,
-        uint256 newCapacity
     );
     event GroupDeactivate(
         address indexed tokenAddress,
@@ -55,6 +43,7 @@ interface ILOVE20GroupManager {
         uint256 round,
         uint256 groupId,
         string newDescription,
+        uint256 newMaxCapacity,
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
@@ -65,17 +54,14 @@ interface ILOVE20GroupManager {
     struct Config {
         address stakeTokenAddress;
         uint256 minGovVoteRatioBps;
-        uint256 capacityMultiplier;
-        uint256 stakingMultiplier;
+        uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
-        uint256 minJoinAmount;
     }
 
     struct GroupInfo {
         uint256 groupId;
         string description;
-        uint256 stakedAmount;
-        uint256 capacity;
+        uint256 groupMaxCapacity; // 0 = use owner's theoretical max capacity
         uint256 groupMinJoinAmount;
         uint256 groupMaxJoinAmount; // 0 = no limit
         uint256 groupMaxAccounts; // 0 = no limit
@@ -102,10 +88,8 @@ interface ILOVE20GroupManager {
     function setConfig(
         address stakeTokenAddress,
         uint256 minGovVoteRatioBps,
-        uint256 capacityMultiplier,
-        uint256 stakingMultiplier,
-        uint256 maxJoinAmountMultiplier,
-        uint256 minJoinAmount
+        uint256 activationStakeAmount,
+        uint256 maxJoinAmountMultiplier
     ) external;
 
     function config(
@@ -117,10 +101,8 @@ interface ILOVE20GroupManager {
         returns (
             address stakeTokenAddress,
             uint256 minGovVoteRatioBps,
-            uint256 capacityMultiplier,
-            uint256 stakingMultiplier,
-            uint256 maxJoinAmountMultiplier,
-            uint256 minJoinAmount
+            uint256 activationStakeAmount,
+            uint256 maxJoinAmountMultiplier
         );
 
     // ============ Write Functions ============
@@ -130,18 +112,11 @@ interface ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId,
         string memory description,
-        uint256 stakedAmount,
+        uint256 groupMaxCapacity,
         uint256 groupMinJoinAmount,
         uint256 groupMaxJoinAmount,
         uint256 groupMaxAccounts_
     ) external returns (bool);
-
-    function expandGroup(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId,
-        uint256 additionalStake
-    ) external returns (uint256 newStakedAmount, uint256 newCapacity);
 
     function deactivateGroup(
         address tokenAddress,
@@ -154,6 +129,7 @@ interface ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId,
         string memory newDescription,
+        uint256 newMaxCapacity,
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
@@ -171,8 +147,7 @@ interface ILOVE20GroupManager {
         returns (
             uint256 groupId_,
             string memory description,
-            uint256 stakedAmount,
-            uint256 capacity,
+            uint256 groupMaxCapacity,
             uint256 groupMinJoinAmount,
             uint256 groupMaxJoinAmount,
             uint256 groupMaxAccounts,
@@ -232,19 +207,4 @@ interface ILOVE20GroupManager {
         address tokenAddress,
         uint256 actionId
     ) external view returns (uint256);
-
-    function expandableInfo(
-        address tokenAddress,
-        uint256 actionId,
-        address owner
-    )
-        external
-        view
-        returns (
-            uint256 currentCapacity,
-            uint256 maxCapacity,
-            uint256 currentStake,
-            uint256 maxStake,
-            uint256 additionalStakeAllowed
-        );
 }

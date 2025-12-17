@@ -50,10 +50,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         assertTrue(extension != address(0));
@@ -69,10 +67,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         assertEq(factory.extensionsCount(), 1);
@@ -93,10 +89,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -113,10 +107,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
@@ -143,10 +135,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         address ext2 = factory.createExtension(
@@ -155,10 +145,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token2),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         address ext3 = factory.createExtension(
@@ -167,10 +155,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token3),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         assertEq(factory.extensionsCount(), 3);
@@ -190,10 +176,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         LOVE20ExtensionGroupActionFactory.ExtensionParams
@@ -203,7 +187,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(params.groupManagerAddress, address(groupManager));
         assertEq(params.groupDistrustAddress, address(groupDistrust));
         assertEq(params.minGovVoteRatioBps, MIN_GOV_VOTE_RATIO_BPS);
-        assertEq(params.capacityMultiplier, CAPACITY_MULTIPLIER);
+        assertEq(params.activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
     }
 
     function test_ExtensionParams_ZeroForNonExistent() public view {
@@ -227,10 +211,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         assertTrue(factory.exists(extension));

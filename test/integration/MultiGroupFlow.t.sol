@@ -133,13 +133,13 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
 
         // 5. Members join different groups
         GroupUserParams memory m1;
-        m1.flow = member1;
+        m1.flow = member1();
         m1.joinAmount = 10e18;
         m1.groupActionAddress = extensionAddr;
         h.group_join(m1, bobGroup1);
 
         GroupUserParams memory m2;
-        m2.flow = member2;
+        m2.flow = member2();
         m2.joinAmount = 15e18;
         m2.groupActionAddress = extensionAddr;
         h.group_join(m2, aliceGroup);
@@ -174,17 +174,17 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         address extensionAddr
     ) internal returns (GroupUserParams[3] memory members) {
         // m1: join=10e18, score=80; m2: join=20e18, score=90; m3: join=15e18, score=85
-        members[0].flow = member1;
+        members[0].flow = member1();
         members[0].joinAmount = 10e18;
         members[0].groupActionAddress = extensionAddr;
         h.group_join(members[0], bobGroup1);
 
-        members[1].flow = member2;
+        members[1].flow = member2();
         members[1].joinAmount = 20e18;
         members[1].groupActionAddress = extensionAddr;
         h.group_join(members[1], bobGroup1);
 
-        members[2].flow = member3;
+        members[2].flow = member3();
         members[2].joinAmount = 15e18;
         members[2].groupActionAddress = extensionAddr;
         h.group_join(members[2], bobGroup1);
@@ -194,17 +194,17 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         address extensionAddr
     ) internal returns (GroupUserParams[3] memory members) {
         // m4: join=25e18, score=75; m5: join=30e18, score=95; m6: join=12e18, score=88
-        members[0].flow = member4;
+        members[0].flow = member4();
         members[0].joinAmount = 25e18;
         members[0].groupActionAddress = extensionAddr;
         h.group_join(members[0], bobGroup2);
 
-        members[1].flow = member5;
+        members[1].flow = member5();
         members[1].joinAmount = 30e18;
         members[1].groupActionAddress = extensionAddr;
         h.group_join(members[1], bobGroup2);
 
-        members[2].flow = member6;
+        members[2].flow = member6();
         members[2].joinAmount = 12e18;
         members[2].groupActionAddress = extensionAddr;
         h.group_join(members[2], bobGroup2);
@@ -214,17 +214,17 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         address extensionAddr
     ) internal returns (GroupUserParams[3] memory members) {
         // m7: join=18e18, score=82; m8: join=22e18, score=93; m9: join=16e18, score=78
-        members[0].flow = member7;
+        members[0].flow = member7();
         members[0].joinAmount = 18e18;
         members[0].groupActionAddress = extensionAddr;
         h.group_join(members[0], aliceGroup);
 
-        members[1].flow = member8;
+        members[1].flow = member8();
         members[1].joinAmount = 22e18;
         members[1].groupActionAddress = extensionAddr;
         h.group_join(members[1], aliceGroup);
 
-        members[2].flow = member9;
+        members[2].flow = member9();
         members[2].joinAmount = 16e18;
         members[2].groupActionAddress = extensionAddr;
         h.group_join(members[2], aliceGroup);

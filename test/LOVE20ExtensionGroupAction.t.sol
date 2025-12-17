@@ -49,24 +49,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         return v;
     }
 
-    function _groupCapacity(uint256 groupId) internal view returns (uint256) {
-        (bool ok, bytes memory data) = address(groupManager).staticcall(
-            abi.encodeWithSelector(
-                ILOVE20GroupManager.groupInfo.selector,
-                address(token),
-                ACTION_ID,
-                groupId
-            )
-        );
-        require(ok, "groupInfo call failed");
-        uint256 v;
-        // capacity is word 3 in the ABI head
-        assembly {
-            v := mload(add(data, 0x80))
-        }
-        return v;
-    }
-
     function _groupMinJoinAmount(
         uint256 groupId
     ) internal view returns (uint256) {
@@ -80,9 +62,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         );
         require(ok, "groupInfo call failed");
         uint256 v;
-        // groupMinJoinAmount is word 4 in the ABI head
+        // groupMinJoinAmount is word 3 in the ABI head (after capacity removed)
         assembly {
-            v := mload(add(data, 0xa0))
+            v := mload(add(data, 0x80))
         }
         return v;
     }
@@ -100,9 +82,9 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         );
         require(ok, "groupInfo call failed");
         uint256 v;
-        // groupMaxJoinAmount is word 5 in the ABI head
+        // groupMaxJoinAmount is word 4 in the ABI head (after capacity removed)
         assembly {
-            v := mload(add(data, 0xc0))
+            v := mload(add(data, 0xa0))
         }
         return v;
     }
@@ -149,10 +131,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             address(groupDistrust),
             address(token), // stakeTokenAddress
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         // Register extension
@@ -168,9 +148,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         prepareExtensionInit(address(groupAction), address(token), ACTION_ID);
 
         // Activate groups (through GroupManager directly)
-        uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupManager));
-        setupUser(groupOwner2, stakeAmount, address(groupManager));
+        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -178,8 +157,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             "Group1",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity (0 = use owner's theoretical max)
+            1e18, // groupMinJoinAmount
             0,
             0
         );
@@ -190,8 +169,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             ACTION_ID,
             groupId2,
             "Group2",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity (0 = use owner's theoretical max)
+            1e18, // groupMinJoinAmount
             0,
             0
         );
@@ -264,30 +243,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         vm.expectRevert(IGroupTokenJoin.CannotJoinDeactivatedGroup.selector);
         groupAction.join(groupId1, joinAmount, new string[](0));
-    }
-
-    function test_GroupExpansion() public {
-        uint256 additionalStake = 50e18;
-        setupUser(groupOwner1, additionalStake, address(groupManager));
-
-        uint256 stakedBefore = _groupStakedAmount(groupId1);
-        uint256 capacityBefore = _groupCapacity(groupId1);
-
-        vm.prank(groupOwner1, groupOwner1);
-        (uint256 newStaked, uint256 newCapacity) = groupManager.expandGroup(
-            address(token),
-            ACTION_ID,
-            groupId1,
-            additionalStake
-        );
-
-        uint256 stakedAfter = _groupStakedAmount(groupId1);
-        uint256 capacityAfter = _groupCapacity(groupId1);
-
-        assertEq(newStaked, stakedBefore + additionalStake);
-        assertEq(stakedAfter, newStaked);
-        assertTrue(capacityAfter >= capacityBefore);
-        assertTrue(newCapacity >= capacityAfter);
     }
 
     function test_DelegatedVerification() public {
@@ -483,6 +438,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             newDesc,
+            0, // newMaxCapacity
             newMin,
             newMax,
             0
@@ -514,8 +470,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         assertTrue(maxCapacity > 0, "maxCapacity should be > 0");
         assertTrue(maxPerAccount > 0, "maxPerAccount should be > 0");
 
-        // Use a small amount that's within limits
-        uint256 joinAmount = MIN_JOIN_AMOUNT;
+        // Use a small amount that's within limits (1e18 is the minStake from submit)
+        uint256 joinAmount = 1e18;
 
         // Have users join group
         setupUser(user1, joinAmount, address(groupAction));

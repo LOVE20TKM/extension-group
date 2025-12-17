@@ -12,8 +12,6 @@ interface IGroupCore {
     function GROUP_ADDRESS() external view returns (address);
     function STAKE_TOKEN_ADDRESS() external view returns (address);
     function MIN_GOV_VOTE_RATIO_BPS() external view returns (uint256);
-    function CAPACITY_MULTIPLIER() external view returns (uint256);
-    function STAKING_MULTIPLIER() external view returns (uint256);
+    function GROUP_ACTIVATION_STAKE_AMOUNT() external view returns (uint256);
     function MAX_JOIN_AMOUNT_MULTIPLIER() external view returns (uint256);
-    function MIN_JOIN_AMOUNT() external view returns (uint256);
 }

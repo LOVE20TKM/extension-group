@@ -17,10 +17,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupDistrustAddress;
         address stakeTokenAddress;
         uint256 minGovVoteRatioBps;
-        uint256 capacityMultiplier;
-        uint256 stakingMultiplier;
+        uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
-        uint256 minJoinAmount;
     }
 
     // ============ Storage ============
@@ -40,10 +38,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupDistrustAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
-        uint256 capacityMultiplier_,
-        uint256 stakingMultiplier_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 minJoinAmount_
+        uint256 activationStakeAmount_,
+        uint256 maxJoinAmountMultiplier_
     ) external returns (address extension) {
         extension = address(
             new LOVE20ExtensionGroupAction(
@@ -53,10 +49,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
                 groupDistrustAddress_,
                 stakeTokenAddress_,
                 minGovVoteRatioBps_,
-                capacityMultiplier_,
-                stakingMultiplier_,
-                maxJoinAmountMultiplier_,
-                minJoinAmount_
+                activationStakeAmount_,
+                maxJoinAmountMultiplier_
             )
         );
 
@@ -66,10 +60,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
             groupDistrustAddress: groupDistrustAddress_,
             stakeTokenAddress: stakeTokenAddress_,
             minGovVoteRatioBps: minGovVoteRatioBps_,
-            capacityMultiplier: capacityMultiplier_,
-            stakingMultiplier: stakingMultiplier_,
-            maxJoinAmountMultiplier: maxJoinAmountMultiplier_,
-            minJoinAmount: minJoinAmount_
+            activationStakeAmount: activationStakeAmount_,
+            maxJoinAmountMultiplier: maxJoinAmountMultiplier_
         });
 
         _registerExtension(extension, tokenAddress_);

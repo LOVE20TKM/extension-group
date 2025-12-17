@@ -40,7 +40,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
 
         // Member joins the group
         GroupUserParams memory m1;
-        m1.flow = member1;
+        m1.flow = member1();
         m1.joinAmount = 10e18;
         m1.groupActionAddress = bobGroup1.groupActionAddress;
         h.group_join(m1, bobGroup1);
@@ -78,8 +78,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
 
     function _setServiceRecipients() internal {
         address[] memory recipients = new address[](2);
-        recipients[0] = member2.userAddress;
-        recipients[1] = member3.userAddress;
+        recipients[0] = member2().userAddress;
+        recipients[1] = member3().userAddress;
         uint256[] memory basisPoints = new uint256[](2);
         basisPoints[0] = 5000; // 50%
         basisPoints[1] = 3000; // 30%
@@ -178,15 +178,15 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         LOVE20ExtensionGroupService gs,
         uint256 verifyRound,
         uint256 expectedTotal
-    ) internal view {
+    ) internal {
         // Verify recipients configuration
         (address[] memory addrs, uint256[] memory bps) = gs.recipients(
             bobGroup1.flow.userAddress,
             verifyRound
         );
         assertEq(addrs.length, 2, "Should have 2 recipients");
-        assertEq(addrs[0], member2.userAddress, "Recipient 0 = member2");
-        assertEq(addrs[1], member3.userAddress, "Recipient 1 = member3");
+        assertEq(addrs[0], member2().userAddress, "Recipient 0 = member2");
+        assertEq(addrs[1], member3().userAddress, "Recipient 1 = member3");
         assertEq(bps[0], 5000, "Recipient 0 = 50%");
         assertEq(bps[1], 3000, "Recipient 1 = 30%");
 
@@ -200,7 +200,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             gs.rewardByRecipient(
                 verifyRound,
                 bobGroup1.flow.userAddress,
-                member2.userAddress
+                member2().userAddress
             ),
             expectedM2,
             "rewardByRecipient m2"
@@ -209,7 +209,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             gs.rewardByRecipient(
                 verifyRound,
                 bobGroup1.flow.userAddress,
-                member3.userAddress
+                member3().userAddress
             ),
             expectedM3,
             "rewardByRecipient m3"
@@ -255,10 +255,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             bobGroup1.flow.userAddress
         );
         uint256 m2Bal = IERC20(h.firstTokenAddress()).balanceOf(
-            member2.userAddress
+            member2().userAddress
         );
         uint256 m3Bal = IERC20(h.firstTokenAddress()).balanceOf(
-            member3.userAddress
+            member3().userAddress
         );
 
         // Claim
@@ -274,13 +274,13 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
 
         // Verify token transfers
         assertEq(
-            IERC20(h.firstTokenAddress()).balanceOf(member2.userAddress) -
+            IERC20(h.firstTokenAddress()).balanceOf(member2().userAddress) -
                 m2Bal,
             expectedM2,
             "Member2 transfer"
         );
         assertEq(
-            IERC20(h.firstTokenAddress()).balanceOf(member3.userAddress) -
+            IERC20(h.firstTokenAddress()).balanceOf(member3().userAddress) -
                 m3Bal,
             expectedM3,
             "Member3 transfer"

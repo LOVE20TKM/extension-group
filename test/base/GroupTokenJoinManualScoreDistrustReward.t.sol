@@ -32,10 +32,8 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
         address groupDistrustAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
-        uint256 capacityMultiplier_,
-        uint256 stakingMultiplier_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 minJoinAmount_
+        uint256 groupActivationStakeAmount_,
+        uint256 maxJoinAmountMultiplier_
     )
         GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
@@ -44,10 +42,8 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
             groupManagerAddress_,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
-            capacityMultiplier_,
-            stakingMultiplier_,
-            maxJoinAmountMultiplier_,
-            minJoinAmount_
+            groupActivationStakeAmount_,
+            maxJoinAmountMultiplier_
         )
         GroupTokenJoin(tokenAddress_)
     {}
@@ -117,10 +113,8 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         token.mint(address(this), 1e18);
@@ -136,9 +130,8 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             ACTION_ID
         );
 
-        uint256 stakeAmount = 10000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupManager));
-        setupUser(groupOwner2, stakeAmount, address(groupManager));
+        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -146,8 +139,8 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             ACTION_ID,
             groupId1,
             "Group1",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity
+            1e18, // groupMinJoinAmount
             0,
             0
         );
@@ -158,8 +151,8 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             ACTION_ID,
             groupId2,
             "Group2",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity
+            1e18, // groupMinJoinAmount
             0,
             0
         );
@@ -298,8 +291,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         // Increase governance votes to allow multiple groups
         stake.setValidGovVotes(address(token), groupOwner1, 30000e18);
 
-        uint256 stakeAmount = 5000e18;
-        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -307,8 +299,8 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             ACTION_ID,
             groupId3,
             "Group3",
-            stakeAmount,
-            MIN_JOIN_AMOUNT,
+            0, // groupMaxCapacity
+            1e18, // groupMinJoinAmount
             0,
             0
         );

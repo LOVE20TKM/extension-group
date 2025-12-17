@@ -20,10 +20,8 @@ contract MockGroupCore is GroupCore {
         address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 minGovVoteRatioBps_,
-        uint256 capacityMultiplier_,
-        uint256 stakingMultiplier_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 minJoinAmount_
+        uint256 groupActivationStakeAmount_,
+        uint256 maxJoinAmountMultiplier_
     )
         GroupCore(
             factory_,
@@ -31,10 +29,8 @@ contract MockGroupCore is GroupCore {
             groupManagerAddress_,
             stakeTokenAddress_,
             minGovVoteRatioBps_,
-            capacityMultiplier_,
-            stakingMultiplier_,
-            maxJoinAmountMultiplier_,
-            minJoinAmount_
+            groupActivationStakeAmount_,
+            maxJoinAmountMultiplier_
         )
     {}
 
@@ -75,10 +71,8 @@ contract GroupCoreTest is BaseGroupTest {
             address(groupManager),
             address(token),
             MIN_GOV_VOTE_RATIO_BPS,
-            CAPACITY_MULTIPLIER,
-            STAKING_MULTIPLIER,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
-            MIN_JOIN_AMOUNT
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER
         );
 
         // Register extension
@@ -94,12 +88,10 @@ contract GroupCoreTest is BaseGroupTest {
         assertEq(groupCore.GROUP_ADDRESS(), address(group));
         assertEq(groupCore.STAKE_TOKEN_ADDRESS(), address(token));
         assertEq(groupCore.MIN_GOV_VOTE_RATIO_BPS(), MIN_GOV_VOTE_RATIO_BPS);
-        assertEq(groupCore.CAPACITY_MULTIPLIER(), CAPACITY_MULTIPLIER);
-        assertEq(groupCore.STAKING_MULTIPLIER(), STAKING_MULTIPLIER);
+        assertEq(groupCore.GROUP_ACTIVATION_STAKE_AMOUNT(), GROUP_ACTIVATION_STAKE_AMOUNT);
         assertEq(
             groupCore.MAX_JOIN_AMOUNT_MULTIPLIER(),
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
-        assertEq(groupCore.MIN_JOIN_AMOUNT(), MIN_JOIN_AMOUNT);
     }
 }

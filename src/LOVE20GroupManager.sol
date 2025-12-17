@@ -10,6 +10,8 @@ import {
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
+import {ILOVE20SLToken} from "@core/interfaces/ILOVE20SLToken.sol";
+import {ILOVE20STToken} from "@core/interfaces/ILOVE20STToken.sol";
 import {
     ILOVE20ExtensionCenter
 } from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
@@ -73,10 +75,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     function setConfig(
         address stakeTokenAddress,
         uint256 minGovVoteRatioBps,
-        uint256 capacityMultiplier,
-        uint256 stakingMultiplier,
-        uint256 maxJoinAmountMultiplier,
-        uint256 minJoinAmount
+        uint256 activationStakeAmount,
+        uint256 maxJoinAmountMultiplier
     ) external override {
         address extension = msg.sender;
         if (_configs[extension].stakeTokenAddress != address(0))
@@ -85,10 +85,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         _configs[extension] = Config({
             stakeTokenAddress: stakeTokenAddress,
             minGovVoteRatioBps: minGovVoteRatioBps,
-            capacityMultiplier: capacityMultiplier,
-            stakingMultiplier: stakingMultiplier,
-            maxJoinAmountMultiplier: maxJoinAmountMultiplier,
-            minJoinAmount: minJoinAmount
+            activationStakeAmount: activationStakeAmount,
+            maxJoinAmountMultiplier: maxJoinAmountMultiplier
         });
 
         emit ConfigSet(extension, stakeTokenAddress);
@@ -104,10 +102,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         returns (
             address stakeTokenAddress,
             uint256 minGovVoteRatioBps,
-            uint256 capacityMultiplier,
-            uint256 stakingMultiplier,
-            uint256 maxJoinAmountMultiplier,
-            uint256 minJoinAmount
+            uint256 activationStakeAmount,
+            uint256 maxJoinAmountMultiplier
         )
     {
         address extension = _center.extension(tokenAddress, actionId);
@@ -115,10 +111,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         return (
             cfg.stakeTokenAddress,
             cfg.minGovVoteRatioBps,
-            cfg.capacityMultiplier,
-            cfg.stakingMultiplier,
-            cfg.maxJoinAmountMultiplier,
-            cfg.minJoinAmount
+            cfg.activationStakeAmount,
+            cfg.maxJoinAmountMultiplier
         );
     }
 
@@ -151,7 +145,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId,
         string memory description,
-        uint256 stakedAmount,
+        uint256 groupMaxCapacity,
         uint256 groupMinJoinAmount,
         uint256 groupMaxJoinAmount,
         uint256 groupMaxAccounts_
@@ -163,121 +157,45 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         GroupInfo storage group = _groupInfo[extension][groupId];
 
         if (group.isActive) revert GroupAlreadyActivated();
-        if (stakedAmount == 0) revert ZeroStakeAmount();
         if (
             groupMaxJoinAmount != 0 && groupMaxJoinAmount < groupMinJoinAmount
         ) {
             revert InvalidMinMaxJoinAmount();
         }
 
-        address owner = msg.sender;
-        _checkCanActivateGroup(
-            tokenAddress,
-            extension,
-            cfg,
-            owner,
-            stakedAmount
-        );
+        _checkCanActivateGroup(tokenAddress, msg.sender, cfg);
 
+        // Transfer stake (all groups stake the same fixed amount)
         IERC20(cfg.stakeTokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
-            stakedAmount
+            cfg.activationStakeAmount
         );
 
-        {
-            uint256 stakedCapacity = stakedAmount * cfg.stakingMultiplier;
-            uint256 maxCapacity = _calculateMaxCapacityByOwner(
-                tokenAddress,
-                cfg,
-                owner
-            );
-            group.capacity = stakedCapacity < maxCapacity
-                ? stakedCapacity
-                : maxCapacity;
-        }
-        uint256 currentRound = _join.currentRound();
-
+        // Set group info
         group.groupId = groupId;
         group.description = description;
-        group.stakedAmount = stakedAmount;
+        group.groupMaxCapacity = groupMaxCapacity;
         group.groupMinJoinAmount = groupMinJoinAmount;
         group.groupMaxJoinAmount = groupMaxJoinAmount;
         group.groupMaxAccounts = groupMaxAccounts_;
-        group.activatedRound = currentRound;
-
+        group.activatedRound = _join.currentRound();
         group.isActive = true;
         group.deactivatedRound = 0;
+
         _activeGroupIds[extension].add(groupId);
-        _totalStaked[extension] += stakedAmount;
+        _totalStaked[extension] += cfg.activationStakeAmount;
 
         emit GroupActivate(
             tokenAddress,
             actionId,
-            currentRound,
+            group.activatedRound,
             groupId,
-            owner,
-            group.stakedAmount,
-            group.capacity,
+            msg.sender,
+            groupMaxCapacity,
             groupMaxAccounts_
         );
         return true;
-    }
-
-    function expandGroup(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId,
-        uint256 additionalStake
-    ) external override returns (uint256 newStakedAmount, uint256 newCapacity) {
-        address extension = _getExtension(tokenAddress, actionId);
-        Config storage cfg = _getConfig(extension);
-        _checkGroupOwner(groupId);
-
-        GroupInfo storage group = _groupInfo[extension][groupId];
-        if (!group.isActive) revert GroupNotActive();
-        if (additionalStake == 0) revert ZeroStakeAmount();
-
-        newStakedAmount = group.stakedAmount + additionalStake;
-        address owner = msg.sender;
-
-        _checkCanExpandGroup(
-            tokenAddress,
-            extension,
-            cfg,
-            owner,
-            groupId,
-            newStakedAmount
-        );
-        IERC20(cfg.stakeTokenAddress).safeTransferFrom(
-            msg.sender,
-            address(this),
-            additionalStake
-        );
-
-        group.stakedAmount = newStakedAmount;
-        uint256 stakedCapacity = newStakedAmount * cfg.stakingMultiplier;
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(
-            tokenAddress,
-            cfg,
-            owner
-        );
-        newCapacity = stakedCapacity < maxCapacity
-            ? stakedCapacity
-            : maxCapacity;
-        group.capacity = newCapacity;
-        _totalStaked[extension] += additionalStake;
-
-        emit GroupExpand(
-            tokenAddress,
-            actionId,
-            _join.currentRound(),
-            groupId,
-            additionalStake,
-            newCapacity
-        );
-
-        return (newStakedAmount, newCapacity);
     }
 
     function deactivateGroup(
@@ -303,7 +221,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         _activeGroupIds[extension].remove(groupId);
 
-        uint256 stakedAmount = group.stakedAmount;
+        // All activated groups stake the same fixed amount from config
+        uint256 stakedAmount = cfg.activationStakeAmount;
         _totalStaked[extension] -= stakedAmount;
         IERC20(cfg.stakeTokenAddress).safeTransfer(msg.sender, stakedAmount);
 
@@ -321,6 +240,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId,
         uint256 groupId,
         string memory newDescription,
+        uint256 newMaxCapacity,
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
@@ -337,6 +257,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         }
 
         group.description = newDescription;
+        group.groupMaxCapacity = newMaxCapacity;
         group.groupMinJoinAmount = newMinJoinAmount;
         group.groupMaxJoinAmount = newMaxJoinAmount;
         group.groupMaxAccounts = newMaxAccounts;
@@ -347,6 +268,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             _join.currentRound(),
             groupId,
             newDescription,
+            newMaxCapacity,
             newMinJoinAmount,
             newMaxJoinAmount,
             newMaxAccounts
@@ -366,8 +288,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         returns (
             uint256 groupId_,
             string memory description,
-            uint256 stakedAmount,
-            uint256 capacity,
+            uint256 groupMaxCapacity,
             uint256 groupMinJoinAmount,
             uint256 groupMaxJoinAmount,
             uint256 groupMaxAccounts,
@@ -381,8 +302,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         return (
             info.groupId,
             info.description,
-            info.stakedAmount,
-            info.capacity,
+            info.groupMaxCapacity,
             info.groupMinJoinAmount,
             info.groupMaxJoinAmount,
             info.groupMaxAccounts,
@@ -475,7 +395,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address extension = _center.extension(tokenAddress, actionId);
         Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
-        return _calculateMaxCapacityByOwner(tokenAddress, cfg, owner);
+        return _calculateMaxCapacityByOwner(tokenAddress, owner);
     }
 
     function totalStakedByOwner(
@@ -497,55 +417,14 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         return _totalStaked[extension];
     }
 
-    function expandableInfo(
-        address tokenAddress,
-        uint256 actionId,
-        address owner
-    )
-        public
-        view
-        override
-        returns (
-            uint256 currentCapacity,
-            uint256 maxCapacity,
-            uint256 currentStake,
-            uint256 maxStake,
-            uint256 additionalStakeAllowed
-        )
-    {
-        address extension = _center.extension(tokenAddress, actionId);
-        Config storage cfg = _configs[extension];
-        if (cfg.stakeTokenAddress == address(0)) return (0, 0, 0, 0, 0);
-
-        (currentCapacity, currentStake) = _totalCapacityAndStakeByOwner(
-            extension,
-            owner
-        );
-        maxCapacity = _calculateMaxCapacityByOwner(tokenAddress, cfg, owner);
-        maxStake = maxCapacity / cfg.stakingMultiplier;
-        if (maxStake > currentStake) {
-            additionalStakeAllowed = maxStake - currentStake;
-        }
-    }
-
     // ============ Internal Functions ============
 
     function _checkCanActivateGroup(
         address tokenAddress,
-        address extension,
-        Config storage cfg,
         address owner,
-        uint256 stakedAmount
+        Config storage cfg
     ) internal view {
-        uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
         uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
-
-        uint256 minCapacity = (totalMinted *
-            cfg.minGovVoteRatioBps *
-            cfg.capacityMultiplier) / 1e4;
-        uint256 minStake = minCapacity / cfg.stakingMultiplier;
-        if (stakedAmount < minStake) revert MinStakeNotMet();
-
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
         if (
             totalGovVotes == 0 ||
@@ -553,76 +432,49 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         ) {
             revert InsufficientGovVotes();
         }
-
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(
-            tokenAddress,
-            cfg,
-            owner
-        );
-        uint256 maxStake = maxCapacity / cfg.stakingMultiplier;
-        uint256 newTotalStake = _totalStakedByOwner(extension, owner) +
-            stakedAmount;
-        if (newTotalStake > maxStake) revert ExceedsMaxStake();
     }
 
-    function _checkCanExpandGroup(
-        address tokenAddress,
-        address extension,
-        Config storage cfg,
-        address owner,
-        uint256 groupId,
-        uint256 newStakedAmount
-    ) internal view {
-        uint256 otherGroupsStake = _totalStakedByOwner(extension, owner) -
-            _groupInfo[extension][groupId].stakedAmount;
-        uint256 maxCapacity = _calculateMaxCapacityByOwner(
-            tokenAddress,
-            cfg,
-            owner
-        );
-        uint256 maxStake = maxCapacity / cfg.stakingMultiplier;
-        if (otherGroupsStake + newStakedAmount > maxStake)
-            revert ExceedsMaxStake();
-    }
-
+    /// @dev Calculate max capacity for owner using new formula:
+    /// maxCapacity = ownerGovVotes / totalGovVotes * (totalMinted - slTokenAmount - stTokenReserve)
     function _calculateMaxCapacityByOwner(
         address tokenAddress,
-        Config storage cfg,
         address owner
     ) internal view returns (uint256) {
-        uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
         uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
         if (totalGovVotes == 0) return 0;
-        return
-            (totalMinted * ownerGovVotes * cfg.capacityMultiplier) /
-            totalGovVotes;
+
+        uint256 totalMinted = ILOVE20Token(tokenAddress).totalSupply();
+
+        // Get SL token amount (liquidity stake)
+        address slAddress = ILOVE20Token(tokenAddress).slAddress();
+        (uint256 tokenAmount, , uint256 feeTokenAmount, ) = ILOVE20SLToken(slAddress)
+            .tokenAmounts();
+
+        // Get ST token reserve (boost stake)
+        address stAddress = ILOVE20Token(tokenAddress).stAddress();
+        uint256 stTokenReserve = ILOVE20STToken(stAddress).reserve();
+
+        // availableForCapacity = totalMinted - slTokenAmount - stTokenReserve
+        uint256 availableForCapacity = totalMinted -
+            tokenAmount -
+            feeTokenAmount -
+            stTokenReserve;
+
+        return (availableForCapacity * ownerGovVotes) / totalGovVotes;
     }
 
     function _totalStakedByOwner(
         address extension,
         address owner
     ) internal view returns (uint256 staked) {
+        Config storage cfg = _configs[extension];
         uint256 nftBalance = _group.balanceOf(owner);
         for (uint256 i = 0; i < nftBalance; i++) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
             if (_groupInfo[extension][gId].isActive) {
-                staked += _groupInfo[extension][gId].stakedAmount;
-            }
-        }
-    }
-
-    function _totalCapacityAndStakeByOwner(
-        address extension,
-        address owner
-    ) internal view returns (uint256 capacity, uint256 staked) {
-        uint256 nftBalance = _group.balanceOf(owner);
-        for (uint256 i = 0; i < nftBalance; i++) {
-            uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
-            GroupInfo storage group = _groupInfo[extension][gId];
-            if (group.isActive) {
-                capacity += group.capacity;
-                staked += group.stakedAmount;
+                // All activated groups stake the same fixed amount
+                staked += cfg.activationStakeAmount;
             }
         }
     }
