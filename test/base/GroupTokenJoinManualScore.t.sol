@@ -23,7 +23,6 @@ contract MockGroupManualScore is GroupTokenJoinManualScore {
         address tokenAddress_,
         address groupManagerAddress_,
         address stakeTokenAddress_,
-        uint256 minGovVoteRatioBps_,
         uint256 groupActivationStakeAmount_,
         uint256 maxJoinAmountMultiplier_
     )
@@ -32,7 +31,6 @@ contract MockGroupManualScore is GroupTokenJoinManualScore {
             tokenAddress_,
             groupManagerAddress_,
             stakeTokenAddress_,
-            minGovVoteRatioBps_,
             groupActivationStakeAmount_,
             maxJoinAmountMultiplier_
         )
@@ -99,7 +97,6 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
             address(token),
             address(groupManager),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -113,8 +110,16 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         prepareExtensionInit(address(scoreContract), address(token), ACTION_ID);
 
-        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
-        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -481,7 +486,11 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         stake.setValidGovVotes(address(token), groupOwner1, 30000e18);
         uint256 groupId3 = group.mint(groupOwner1, "TestGroup3");
 
-        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(

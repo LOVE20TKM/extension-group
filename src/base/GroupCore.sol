@@ -18,7 +18,6 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
     // Config parameters (copied from GroupManager for gas efficiency)
     address public immutable GROUP_ADDRESS;
     address public immutable STAKE_TOKEN_ADDRESS;
-    uint256 public immutable MIN_GOV_VOTE_RATIO_BPS;
     uint256 public immutable GROUP_ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable MAX_JOIN_AMOUNT_MULTIPLIER;
 
@@ -29,7 +28,6 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         address tokenAddress_,
         address groupManagerAddress_,
         address stakeTokenAddress_,
-        uint256 minGovVoteRatioBps_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountMultiplier_
     ) ExtensionReward(factory_, tokenAddress_) {
@@ -39,14 +37,12 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         // Store config locally for gas efficiency (GROUP_ADDRESS from GroupManager)
         GROUP_ADDRESS = _groupManager.GROUP_ADDRESS();
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
-        MIN_GOV_VOTE_RATIO_BPS = minGovVoteRatioBps_;
         GROUP_ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_MULTIPLIER = maxJoinAmountMultiplier_;
 
         // Register config in GroupManager (msg.sender is this extension)
         _groupManager.setConfig(
             stakeTokenAddress_,
-            minGovVoteRatioBps_,
             activationStakeAmount_,
             maxJoinAmountMultiplier_
         );

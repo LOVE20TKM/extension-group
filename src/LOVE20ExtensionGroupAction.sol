@@ -25,7 +25,6 @@ contract LOVE20ExtensionGroupAction is
         address groupManagerAddress_,
         address groupDistrustAddress_,
         address stakeTokenAddress_,
-        uint256 minGovVoteRatioBps_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountMultiplier_
     )
@@ -35,7 +34,6 @@ contract LOVE20ExtensionGroupAction is
             tokenAddress_,
             groupManagerAddress_,
             stakeTokenAddress_,
-            minGovVoteRatioBps_,
             activationStakeAmount_,
             maxJoinAmountMultiplier_
         )

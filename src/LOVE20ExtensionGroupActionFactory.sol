@@ -16,7 +16,6 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupManagerAddress;
         address groupDistrustAddress;
         address stakeTokenAddress;
-        uint256 minGovVoteRatioBps;
         uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
     }
@@ -37,7 +36,6 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupManagerAddress_,
         address groupDistrustAddress_,
         address stakeTokenAddress_,
-        uint256 minGovVoteRatioBps_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountMultiplier_
     ) external returns (address extension) {
@@ -48,7 +46,6 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
                 groupManagerAddress_,
                 groupDistrustAddress_,
                 stakeTokenAddress_,
-                minGovVoteRatioBps_,
                 activationStakeAmount_,
                 maxJoinAmountMultiplier_
             )
@@ -59,7 +56,6 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
             groupManagerAddress: groupManagerAddress_,
             groupDistrustAddress: groupDistrustAddress_,
             stakeTokenAddress: stakeTokenAddress_,
-            minGovVoteRatioBps: minGovVoteRatioBps_,
             activationStakeAmount: activationStakeAmount_,
             maxJoinAmountMultiplier: maxJoinAmountMultiplier_
         });

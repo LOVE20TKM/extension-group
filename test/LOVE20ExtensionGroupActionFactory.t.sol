@@ -49,7 +49,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -66,7 +65,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -88,7 +86,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -106,7 +103,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -134,7 +130,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -144,7 +139,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token2),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -154,7 +148,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token3),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -175,7 +168,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -186,7 +178,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(params.tokenAddress, address(token));
         assertEq(params.groupManagerAddress, address(groupManager));
         assertEq(params.groupDistrustAddress, address(groupDistrust));
-        assertEq(params.minGovVoteRatioBps, MIN_GOV_VOTE_RATIO_BPS);
         assertEq(params.activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
     }
 
@@ -197,7 +188,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(params.tokenAddress, address(0));
         assertEq(params.groupManagerAddress, address(0));
         assertEq(params.groupDistrustAddress, address(0));
-        assertEq(params.minGovVoteRatioBps, 0);
+        assertEq(params.activationStakeAmount, 0);
     }
 
     // ============ Exists Tests ============
@@ -210,7 +201,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );

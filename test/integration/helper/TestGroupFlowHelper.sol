@@ -128,7 +128,6 @@ contract TestGroupFlowHelper is Test {
 
     // ============ Constants ============
 
-    uint256 constant DEFAULT_MIN_GOV_VOTE_RATIO_BPS = 1; // 0.0001%
     uint256 constant DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
     uint256 constant DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER = 100;
     uint256 constant DEFAULT_MAX_RECIPIENTS = 10;
@@ -401,11 +400,11 @@ contract TestGroupFlowHelper is Test {
         uint256 mintAmountOfParentToken
     ) public returns (FlowUserParams memory user) {
         address userAddress = makeAddr(userName);
-        
+
         user.userName = userName;
         user.userAddress = userAddress;
         user.tokenAddress = tokenAddress;
-        
+
         _initUserLaunchParams(user, userAddress);
         _initUserStakeParams(user);
         _initUserSubmitParams(user);
@@ -415,7 +414,10 @@ contract TestGroupFlowHelper is Test {
         _mintParentTokens(tokenAddress, userAddress, mintAmountOfParentToken);
     }
 
-    function _initUserLaunchParams(FlowUserParams memory user, address userAddress) internal pure {
+    function _initUserLaunchParams(
+        FlowUserParams memory user,
+        address userAddress
+    ) internal pure {
         user.launch.contributeParentTokenAmountPercent = 50;
         user.launch.contributeToAddress = userAddress;
     }
@@ -461,7 +463,8 @@ contract TestGroupFlowHelper is Test {
         address userAddress,
         uint256 mintAmount
     ) internal {
-        address parentTokenAddress = ILOVE20Token(tokenAddress).parentTokenAddress();
+        address parentTokenAddress = ILOVE20Token(tokenAddress)
+            .parentTokenAddress();
         if (parentTokenAddress == rootParentTokenAddress) {
             vm.deal(userAddress, mintAmount);
             vm.startPrank(userAddress);
@@ -489,7 +492,9 @@ contract TestGroupFlowHelper is Test {
     ) internal pure {
         user.stakeAmount = DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT;
         user.minJoinAmount = DEFAULT_GROUP_MIN_JOIN_AMOUNT;
-        user.groupDescription = string(abi.encodePacked(groupName, " Description"));
+        user.groupDescription = string(
+            abi.encodePacked(groupName, " Description")
+        );
         user.joinAmount = DEFAULT_GROUP_MIN_JOIN_AMOUNT * 10;
         user.scorePercent = 80;
     }
@@ -501,7 +506,7 @@ contract TestGroupFlowHelper is Test {
     ) internal {
         uint256 mintCost = group.calculateMintCost(groupName);
         address userAddress = user.flow.userAddress;
-        
+
         if (mintCost > IERC20(tokenAddress).balanceOf(userAddress)) {
             forceMint(tokenAddress, userAddress, mintCost);
         }
@@ -742,7 +747,6 @@ contract TestGroupFlowHelper is Test {
             address(groupManager),
             address(groupDistrust),
             user.flow.tokenAddress,
-            DEFAULT_MIN_GOV_VOTE_RATIO_BPS,
             DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT,
             DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER
         );

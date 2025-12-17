@@ -130,7 +130,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token), // stakeTokenAddress
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -148,8 +147,16 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         prepareExtensionInit(address(groupAction), address(token), ACTION_ID);
 
         // Activate groups (through GroupManager directly)
-        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
-        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(

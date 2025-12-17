@@ -13,7 +13,6 @@ interface ILOVE20GroupManager {
     error GroupNotActive();
     error InvalidMinMaxJoinAmount();
     error InvalidMaxAccounts();
-    error InsufficientGovVotes();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
 
@@ -53,7 +52,6 @@ interface ILOVE20GroupManager {
 
     struct Config {
         address stakeTokenAddress;
-        uint256 minGovVoteRatioBps;
         uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
     }
@@ -87,7 +85,6 @@ interface ILOVE20GroupManager {
     /// @notice Set config for extension (msg.sender is the extension)
     function setConfig(
         address stakeTokenAddress,
-        uint256 minGovVoteRatioBps,
         uint256 activationStakeAmount,
         uint256 maxJoinAmountMultiplier
     ) external;
@@ -100,7 +97,6 @@ interface ILOVE20GroupManager {
         view
         returns (
             address stakeTokenAddress,
-            uint256 minGovVoteRatioBps,
             uint256 activationStakeAmount,
             uint256 maxJoinAmountMultiplier
         );

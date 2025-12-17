@@ -18,7 +18,6 @@ contract MockGroupTokenJoin is GroupTokenJoin {
         address tokenAddress_,
         address groupManagerAddress_,
         address stakeTokenAddress_,
-        uint256 minGovVoteRatioBps_,
         uint256 groupActivationStakeAmount_,
         uint256 maxJoinAmountMultiplier_
     )
@@ -27,7 +26,6 @@ contract MockGroupTokenJoin is GroupTokenJoin {
             tokenAddress_,
             groupManagerAddress_,
             stakeTokenAddress_,
-            minGovVoteRatioBps_,
             groupActivationStakeAmount_,
             maxJoinAmountMultiplier_
         )
@@ -81,7 +79,6 @@ contract GroupTokenJoinTest is BaseGroupTest {
             address(token),
             address(groupManager),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -103,8 +100,16 @@ contract GroupTokenJoinTest is BaseGroupTest {
         );
 
         // Activate groups through GroupManager
-        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
-        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -236,8 +241,10 @@ contract GroupTokenJoinTest is BaseGroupTest {
         );
 
         // Use smaller of maxCapacity and maxPerAccount to fill capacity
-        uint256 fillAmount = maxCapacity < maxPerAccount ? maxCapacity : maxPerAccount;
-        
+        uint256 fillAmount = maxCapacity < maxPerAccount
+            ? maxCapacity
+            : maxPerAccount;
+
         // If fillAmount is 0 or too small, skip the fill step
         if (fillAmount >= 1e18) {
             address testUser = address(uint160(0x1000));

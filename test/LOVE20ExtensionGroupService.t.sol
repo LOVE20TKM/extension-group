@@ -65,7 +65,6 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
-            MIN_GOV_VOTE_RATIO_BPS,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER
         );
@@ -101,8 +100,16 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         // Activate groups
-        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
-        setupUser(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
@@ -702,7 +709,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertTrue(groupService.hasActiveGroups(groupOwner1));
     }
 
-    function test_HasActiveGroups_False_NoStake() public {
+    function test_HasActiveGroups_False_NoStake() public view {
         // user3 has no stake in any group
         assertFalse(groupService.hasActiveGroups(user3));
     }

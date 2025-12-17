@@ -74,7 +74,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     function setConfig(
         address stakeTokenAddress,
-        uint256 minGovVoteRatioBps,
         uint256 activationStakeAmount,
         uint256 maxJoinAmountMultiplier
     ) external override {
@@ -84,7 +83,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         _configs[extension] = Config({
             stakeTokenAddress: stakeTokenAddress,
-            minGovVoteRatioBps: minGovVoteRatioBps,
             activationStakeAmount: activationStakeAmount,
             maxJoinAmountMultiplier: maxJoinAmountMultiplier
         });
@@ -101,7 +99,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         override
         returns (
             address stakeTokenAddress,
-            uint256 minGovVoteRatioBps,
             uint256 activationStakeAmount,
             uint256 maxJoinAmountMultiplier
         )
@@ -110,7 +107,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         Config storage cfg = _configs[extension];
         return (
             cfg.stakeTokenAddress,
-            cfg.minGovVoteRatioBps,
             cfg.activationStakeAmount,
             cfg.maxJoinAmountMultiplier
         );
@@ -162,8 +158,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         ) {
             revert InvalidMinMaxJoinAmount();
         }
-
-        _checkCanActivateGroup(tokenAddress, msg.sender, cfg);
 
         // Transfer stake (all groups stake the same fixed amount)
         IERC20(cfg.stakeTokenAddress).safeTransferFrom(
@@ -419,21 +413,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     // ============ Internal Functions ============
 
-    function _checkCanActivateGroup(
-        address tokenAddress,
-        address owner,
-        Config storage cfg
-    ) internal view {
-        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
-        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
-        if (
-            totalGovVotes == 0 ||
-            (ownerGovVotes * 1e4) / totalGovVotes < cfg.minGovVoteRatioBps
-        ) {
-            revert InsufficientGovVotes();
-        }
-    }
-
     /// @dev Calculate max capacity for owner using new formula:
     /// maxCapacity = ownerGovVotes / totalGovVotes * (totalMinted - slTokenAmount - stTokenReserve)
     function _calculateMaxCapacityByOwner(
@@ -448,8 +427,9 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         // Get SL token amount (liquidity stake)
         address slAddress = ILOVE20Token(tokenAddress).slAddress();
-        (uint256 tokenAmount, , uint256 feeTokenAmount, ) = ILOVE20SLToken(slAddress)
-            .tokenAmounts();
+        (uint256 tokenAmount, , uint256 feeTokenAmount, ) = ILOVE20SLToken(
+            slAddress
+        ).tokenAmounts();
 
         // Get ST token reserve (boost stake)
         address stAddress = ILOVE20Token(tokenAddress).stAddress();
