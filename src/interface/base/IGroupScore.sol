@@ -13,14 +13,14 @@ interface IGroupScore {
     error NotVerifier();
     error ScoreExceedsMax();
     error NoRemainingVerifyCapacity();
-    error VerificationAlreadySubmitted();
+    error AlreadyVerified();
     error NoDataForRound();
     error InvalidStartIndex();
     error ScoresExceedAccountCount();
 
     // ============ Events ============
 
-    event ScoreSubmit(
+    event VerifyWithOriginScores(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
@@ -39,7 +39,7 @@ interface IGroupScore {
 
     // ============ Write Functions ============
 
-    /// @notice Submit origin scores (supports both full and batch submission)
+    /// @notice Verify with origin scores (supports both full and batch submission)
     /// @param groupId The group ID
     /// @param startIndex Starting index in the accounts array (0 for first/full submission)
     /// @param originScores Array of scores for accounts starting at startIndex
@@ -87,7 +87,7 @@ interface IGroupScore {
         uint256 groupId
     ) external view returns (bool);
 
-    function submittedCount(
+    function verifiedAccountCount(
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);

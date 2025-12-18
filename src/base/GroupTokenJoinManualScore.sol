@@ -39,8 +39,8 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     /// @dev round => total score of all verified groups
     mapping(uint256 => uint256) internal _score;
 
-    /// @dev round => groupId => whether score has been submitted
-    mapping(uint256 => mapping(uint256 => bool)) internal _scoreSubmitted;
+    /// @dev round => groupId => whether verification is complete
+    mapping(uint256 => mapping(uint256 => bool)) internal _verified;
 
     /// @dev round => list of verified group ids
     mapping(uint256 => uint256[]) internal _verifiedGroupIds;
@@ -55,8 +55,9 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     /// @dev round => list of verifiers
     mapping(uint256 => address[]) internal _verifiers;
 
-    /// @dev round => groupId => submitted account count (for batch submission)
-    mapping(uint256 => mapping(uint256 => uint256)) internal _submittedCount;
+    /// @dev round => groupId => verified account count (for batch verification)
+    mapping(uint256 => mapping(uint256 => uint256))
+        internal _verifiedAccountCount;
 
     /// @dev round => groupId => accumulated total score (for batch submission)
     mapping(uint256 => mapping(uint256 => uint256)) internal _batchTotalScore;
@@ -95,8 +96,8 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
         uint256 currentRound = _verify.currentRound();
         address groupOwner = _checkVerifierAndData(currentRound, groupId);
 
-        // Validate start index matches submitted count (sequential submission)
-        if (startIndex != _submittedCount[currentRound][groupId]) {
+        // Validate start index matches verified count (sequential verification)
+        if (startIndex != _verifiedAccountCount[currentRound][groupId]) {
             revert InvalidStartIndex();
         }
 
@@ -117,13 +118,13 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
             originScores
         );
 
-        _submittedCount[currentRound][groupId] += originScores.length;
+        _verifiedAccountCount[currentRound][groupId] += originScores.length;
         _batchTotalScore[currentRound][groupId] += batchScore;
 
-        bool isComplete = _submittedCount[currentRound][groupId] ==
+        bool isComplete = _verifiedAccountCount[currentRound][groupId] ==
             accountCount;
 
-        emit ScoreSubmit(
+        emit VerifyWithOriginScores(
             tokenAddress,
             currentRound,
             actionId,
@@ -203,11 +204,11 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     }
 
     /// @inheritdoc IGroupScore
-    function submittedCount(
+    function verifiedAccountCount(
         uint256 round,
         uint256 groupId
     ) external view returns (uint256) {
-        return _submittedCount[round][groupId];
+        return _verifiedAccountCount[round][groupId];
     }
 
     /// @inheritdoc IGroupScore
@@ -277,8 +278,8 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
             revert NotVerifier();
         }
 
-        if (_scoreSubmitted[currentRound][groupId]) {
-            revert VerificationAlreadySubmitted();
+        if (_verified[currentRound][groupId]) {
+            revert AlreadyVerified();
         }
 
         // Check if group has members at this round
@@ -339,7 +340,7 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
         _scoreByGroupId[currentRound][groupId] = groupScore;
         _score[currentRound] += groupScore;
 
-        _scoreSubmitted[currentRound][groupId] = true;
+        _verified[currentRound][groupId] = true;
         _verifiedGroupIds[currentRound].push(groupId);
     }
 

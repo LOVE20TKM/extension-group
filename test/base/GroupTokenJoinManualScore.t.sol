@@ -73,7 +73,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
     uint256 public groupId2;
 
     // Re-declare events for testing (must match interface definition exactly)
-    event ScoreSubmit(
+    event VerifyWithOriginScores(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
@@ -256,7 +256,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         vm.startPrank(groupOwner1);
         scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
-        vm.expectRevert(IGroupScore.VerificationAlreadySubmitted.selector);
+        vm.expectRevert(IGroupScore.AlreadyVerified.selector);
         scoreContract.verifyWithOriginScores(groupId1, 0, scores);
         vm.stopPrank();
     }
@@ -552,7 +552,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.expectEmit(true, true, true, true);
-        emit ScoreSubmit(
+        emit VerifyWithOriginScores(
             address(token),
             round,
             ACTION_ID,
@@ -621,15 +621,15 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         // First batch
         scoreContract.verifyWithOriginScores(groupId1, 0, scores1);
-        assertEq(scoreContract.submittedCount(round, groupId1), 1);
+        assertEq(scoreContract.verifiedAccountCount(round, groupId1), 1);
 
         // Second batch
         scoreContract.verifyWithOriginScores(groupId1, 1, scores2);
-        assertEq(scoreContract.submittedCount(round, groupId1), 2);
+        assertEq(scoreContract.verifiedAccountCount(round, groupId1), 2);
 
         // Third batch - should auto-finalize
         scoreContract.verifyWithOriginScores(groupId1, 2, scores3);
-        assertEq(scoreContract.submittedCount(round, groupId1), 3);
+        assertEq(scoreContract.verifiedAccountCount(round, groupId1), 3);
 
         vm.stopPrank();
 
@@ -693,7 +693,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         // After complete submission, _scoreSubmitted is true
-        vm.expectRevert(IGroupScore.VerificationAlreadySubmitted.selector);
+        vm.expectRevert(IGroupScore.AlreadyVerified.selector);
         scoreContract.verifyWithOriginScores(groupId1, 0, scores);
         vm.stopPrank();
     }
@@ -739,7 +739,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.expectEmit(true, true, true, true);
-        emit ScoreSubmit(
+        emit VerifyWithOriginScores(
             address(token),
             round,
             ACTION_ID,
