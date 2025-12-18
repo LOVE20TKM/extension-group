@@ -183,7 +183,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         }
 
         vm.prank(owner);
-        rewardContract.submitOriginScore(groupId, 0, scores);
+        rewardContract.verifyWithOriginScores(groupId, 0, scores);
     }
 
     // ============ generatedRewardByGroupId Tests ============
@@ -226,12 +226,12 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         uint256[] memory scores1 = new uint256[](1);
         scores1[0] = 80;
         vm.prank(groupOwner1);
-        rewardContract.submitOriginScore(groupId1, 0, scores1);
+        rewardContract.verifyWithOriginScores(groupId1, 0, scores1);
 
         uint256[] memory scores2 = new uint256[](1);
         scores2[0] = 80;
         vm.prank(groupOwner2);
-        rewardContract.submitOriginScore(groupId2, 0, scores2);
+        rewardContract.verifyWithOriginScores(groupId2, 0, scores2);
 
         uint256 round = verify.currentRound();
         uint256 totalReward = 1000e18;
@@ -380,7 +380,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         // Total score: 2500e18
 
         vm.prank(groupOwner1);
-        rewardContract.submitOriginScore(groupId1, 0, scores);
+        rewardContract.verifyWithOriginScores(groupId1, 0, scores);
 
         uint256 round = verify.currentRound();
         uint256 totalReward = 1000e18;
@@ -411,7 +411,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         scores[0] = 0; // Zero score
 
         vm.prank(groupOwner1);
-        rewardContract.submitOriginScore(groupId1, 0, scores);
+        rewardContract.verifyWithOriginScores(groupId1, 0, scores);
 
         uint256 round = verify.currentRound();
         uint256 totalReward = 1000e18;
@@ -540,10 +540,10 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
         vm.prank(groupOwner1);
-        rewardContract.submitOriginScore(groupId1, 0, scores);
+        rewardContract.verifyWithOriginScores(groupId1, 0, scores);
 
         vm.prank(groupOwner2);
-        rewardContract.submitOriginScore(groupId2, 0, scores);
+        rewardContract.verifyWithOriginScores(groupId2, 0, scores);
 
         uint256 round = verify.currentRound();
         uint256 totalReward = 1000e18;

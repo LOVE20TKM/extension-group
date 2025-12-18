@@ -192,7 +192,7 @@ contract GroupTokenJoinManualScoreDistrustTest is BaseGroupTest {
         }
 
         vm.prank(owner);
-        distrustContract.submitOriginScore(groupId, 0, scores);
+        distrustContract.verifyWithOriginScores(groupId, 0, scores);
     }
 
     // ============ distrustVote Tests ============
@@ -439,7 +439,7 @@ contract GroupTokenJoinManualScoreDistrustTest is BaseGroupTest {
         uint256[] memory scores3 = new uint256[](1);
         scores3[0] = 80;
         vm.prank(groupOwner1);
-        distrustContract.submitOriginScore(groupId3, 0, scores3);
+        distrustContract.verifyWithOriginScores(groupId3, 0, scores3);
 
         uint256 round = verify.currentRound();
 

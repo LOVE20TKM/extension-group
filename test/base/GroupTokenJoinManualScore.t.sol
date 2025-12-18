@@ -185,9 +185,9 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         );
     }
 
-    // ============ submitOriginScore Tests ============
+    // ============ verifyWithOriginScores Tests ============
 
-    function test_SubmitOriginScore_ByOwner() public {
+    function test_verifyWithOriginScores_ByOwner() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -200,12 +200,12 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80; // 80%
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         assertEq(scoreContract.originScoreByAccount(round, user1), 80);
     }
 
-    function test_SubmitOriginScore_ByDelegatedVerifier() public {
+    function test_verifyWithOriginScores_ByDelegatedVerifier() public {
         address delegatedVerifier = address(0x123);
 
         vm.prank(groupOwner1);
@@ -223,12 +223,12 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 90;
 
         vm.prank(delegatedVerifier);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         assertEq(scoreContract.originScoreByAccount(round, user1), 90);
     }
 
-    function test_SubmitOriginScore_RevertNotVerifier() public {
+    function test_verifyWithOriginScores_RevertNotVerifier() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -240,10 +240,10 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.prank(user2);
         vm.expectRevert(IGroupScore.NotVerifier.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 
-    function test_SubmitOriginScore_RevertAlreadySubmitted() public {
+    function test_verifyWithOriginScores_RevertAlreadySubmitted() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -254,23 +254,23 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.startPrank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         vm.expectRevert(IGroupScore.VerificationAlreadySubmitted.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
         vm.stopPrank();
     }
 
-    function test_SubmitOriginScore_RevertNoData() public {
+    function test_verifyWithOriginScores_RevertNoData() public {
         // No one joined this group, so there's no data
         uint256[] memory scores = new uint256[](0);
 
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupScore.NoDataForRound.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 
-    function test_SubmitOriginScore_RevertTooManyScores() public {
+    function test_verifyWithOriginScores_RevertTooManyScores() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -284,10 +284,10 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupScore.ScoresExceedAccountCount.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 
-    function test_SubmitOriginScore_RevertScoreExceedsMax() public {
+    function test_verifyWithOriginScores_RevertScoreExceedsMax() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -299,7 +299,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupScore.ScoreExceedsMax.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 
     // ============ Score Calculation Tests ============
@@ -317,7 +317,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         // score = originScore * amount = 80 * 10e18 = 800e18
         uint256 expectedScore = 80 * joinAmount;
@@ -343,7 +343,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[1] = 90;
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         // Group score = total amount (without distrust applied)
         assertEq(
@@ -373,10 +373,10 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores2[0] = 90;
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores1);
 
         vm.prank(groupOwner2);
-        scoreContract.submitOriginScore(groupId2, 0, scores2);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores2);
 
         assertEq(scoreContract.score(round), joinAmount1 + joinAmount2);
     }
@@ -428,11 +428,11 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.prank(delegatedVerifier);
         vm.expectRevert(IGroupScore.NotVerifier.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         // New owner can submit
         vm.prank(groupOwner2);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         assertEq(scoreContract.originScoreByAccount(round, user1), 90);
     }
@@ -456,10 +456,10 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         vm.prank(groupOwner2);
-        scoreContract.submitOriginScore(groupId2, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores);
 
         address[] memory verifiers = scoreContract.verifiers(round);
         assertEq(verifiers.length, 2);
@@ -479,7 +479,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         assertEq(scoreContract.verifierByGroupId(round, groupId1), groupOwner1);
     }
@@ -523,8 +523,8 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.startPrank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
-        scoreContract.submitOriginScore(groupId3, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId3, 0, scores);
         vm.stopPrank();
 
         uint256[] memory groupIds = scoreContract.groupIdsByVerifier(
@@ -537,7 +537,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
     // ============ Event Tests ============
 
-    function test_SubmitOriginScore_EmitsEvent() public {
+    function test_verifyWithOriginScores_EmitsEvent() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -563,7 +563,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         );
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 
     function test_SetGroupDelegatedVerifier_EmitsEvent() public {
@@ -592,7 +592,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
     // ============ Batch Submission Tests ============
 
-    function test_SubmitOriginScore_BatchSubmission() public {
+    function test_verifyWithOriginScores_BatchSubmission() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
         setupUser(user2, joinAmount, address(scoreContract));
@@ -620,15 +620,15 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         vm.startPrank(groupOwner1);
 
         // First batch
-        scoreContract.submitOriginScore(groupId1, 0, scores1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores1);
         assertEq(scoreContract.submittedCount(round, groupId1), 1);
 
         // Second batch
-        scoreContract.submitOriginScore(groupId1, 1, scores2);
+        scoreContract.verifyWithOriginScores(groupId1, 1, scores2);
         assertEq(scoreContract.submittedCount(round, groupId1), 2);
 
         // Third batch - should auto-finalize
-        scoreContract.submitOriginScore(groupId1, 2, scores3);
+        scoreContract.verifyWithOriginScores(groupId1, 2, scores3);
         assertEq(scoreContract.submittedCount(round, groupId1), 3);
 
         vm.stopPrank();
@@ -643,7 +643,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         assertEq(scoreContract.scoreByGroupId(round, groupId1), joinAmount * 3);
     }
 
-    function test_SubmitOriginScore_RevertInvalidStartIndex() public {
+    function test_verifyWithOriginScores_RevertInvalidStartIndex() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
         setupUser(user2, joinAmount, address(scoreContract));
@@ -658,10 +658,12 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupScore.InvalidStartIndex.selector);
-        scoreContract.submitOriginScore(groupId1, 1, scores); // Should start at 0
+        scoreContract.verifyWithOriginScores(groupId1, 1, scores); // Should start at 0
     }
 
-    function test_SubmitOriginScore_RevertScoresExceedAccountCount() public {
+    function test_verifyWithOriginScores_RevertScoresExceedAccountCount()
+        public
+    {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -674,10 +676,10 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupScore.ScoresExceedAccountCount.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 
-    function test_SubmitOriginScore_RevertAfterComplete() public {
+    function test_verifyWithOriginScores_RevertAfterComplete() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -688,15 +690,15 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.startPrank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
 
         // After complete submission, _scoreSubmitted is true
         vm.expectRevert(IGroupScore.VerificationAlreadySubmitted.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
         vm.stopPrank();
     }
 
-    function test_SubmitOriginScore_RevertFullAfterBatchStarted() public {
+    function test_verifyWithOriginScores_RevertFullAfterBatchStarted() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
         setupUser(user2, joinAmount, address(scoreContract));
@@ -715,15 +717,15 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
 
         vm.startPrank(groupOwner1);
         // First batch
-        scoreContract.submitOriginScore(groupId1, 0, scores1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores1);
 
         // Trying to submit all from start fails (startIndex mismatch)
         vm.expectRevert(IGroupScore.InvalidStartIndex.selector);
-        scoreContract.submitOriginScore(groupId1, 0, scoresAll);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scoresAll);
         vm.stopPrank();
     }
 
-    function test_SubmitOriginScore_EmitsEventWithDetails() public {
+    function test_verifyWithOriginScores_EmitsEventWithDetails() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
 
@@ -748,6 +750,6 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         );
 
         vm.prank(groupOwner1);
-        scoreContract.submitOriginScore(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 }

@@ -836,7 +836,7 @@ contract TestGroupFlowHelper is Test {
         );
 
         vm.prank(groupOwner.flow.userAddress);
-        groupAction.submitOriginScore(groupOwner.groupId, 0, scores);
+        groupAction.verifyWithOriginScores(groupOwner.groupId, 0, scores);
     }
 
     function group_exit(

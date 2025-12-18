@@ -87,7 +87,7 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     }
 
     /// @inheritdoc IGroupScore
-    function submitOriginScore(
+    function verifyWithOriginScores(
         uint256 groupId,
         uint256 startIndex,
         uint256[] calldata originScores

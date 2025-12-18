@@ -158,7 +158,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         scores[0] = score;
 
         vm.prank(owner);
-        groupAction.submitOriginScore(groupId, 0, scores);
+        groupAction.verifyWithOriginScores(groupId, 0, scores);
     }
 
     /**
@@ -226,7 +226,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[1] = 2000; // 20%
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         uint256 round = verify.currentRound();
         (address[] memory addrs, uint256[] memory points) = groupService
@@ -248,7 +253,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(IJoin.NotJoined.selector);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertNotGroupOwner() public {
@@ -271,7 +281,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         // groupOwner2 tries to set recipients for groupId1 (owned by groupOwner1)
         vm.prank(groupOwner2);
         vm.expectRevert(ILOVE20ExtensionGroupService.NotGroupOwner.selector);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertArrayLengthMismatch() public {
@@ -291,7 +306,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         vm.expectRevert(
             ILOVE20ExtensionGroupService.ArrayLengthMismatch.selector
         );
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertTooManyRecipients() public {
@@ -312,7 +332,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         vm.expectRevert(
             ILOVE20ExtensionGroupService.TooManyRecipients.selector
         );
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertZeroAddress() public {
@@ -329,7 +354,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(ILOVE20ExtensionGroupService.ZeroAddress.selector);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertZeroBasisPoints() public {
@@ -346,7 +376,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(ILOVE20ExtensionGroupService.ZeroBasisPoints.selector);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertInvalidBasisPoints() public {
@@ -367,7 +402,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         vm.expectRevert(
             ILOVE20ExtensionGroupService.InvalidBasisPoints.selector
         );
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     function test_SetRecipients_RevertRecipientCannotBeSelf() public {
@@ -387,7 +427,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         vm.expectRevert(
             ILOVE20ExtensionGroupService.RecipientCannotBeSelf.selector
         );
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     // ============ recipients Tests ============
@@ -405,7 +450,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints1[0] = 3000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients1, basisPoints1);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients1,
+            basisPoints1
+        );
 
         uint256 round1 = verify.currentRound();
 
@@ -421,7 +471,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints2[0] = 4000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients2, basisPoints2);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients2,
+            basisPoints2
+        );
 
         // Check round 1 recipients
         (address[] memory addrs1, uint256[] memory points1) = groupService
@@ -448,7 +503,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 3000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         (address[] memory addrs, uint256[] memory points) = groupService
             .recipientsLatest(groupOwner1, ACTION_ID, groupId1);
@@ -473,7 +533,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 3000; // 30%
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         // Simulate reward (this would normally be set by the reward system)
         // For testing, we check the calculation logic
@@ -505,7 +570,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 3000; // 30%
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         uint256 round = verify.currentRound();
 
@@ -537,7 +607,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[1] = 2000; // 20%
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         uint256 round = verify.currentRound();
 
@@ -546,7 +621,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             uint256[] memory points,
             uint256[] memory amounts,
             uint256 ownerAmount
-        ) = groupService.rewardDistribution(round, groupOwner1, ACTION_ID, groupId1);
+        ) = groupService.rewardDistribution(
+                round,
+                groupOwner1,
+                ACTION_ID,
+                groupId1
+            );
 
         assertEq(addrs.length, 2);
         assertEq(points.length, 2);
@@ -572,7 +652,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 3000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         uint256 round = verify.currentRound();
 
@@ -657,7 +742,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
     }
 
     // ============ Multiple Group Owners Tests ============
@@ -681,7 +771,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints1[0] = 3000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients1, basisPoints1);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients1,
+            basisPoints1
+        );
 
         address[] memory recipients2 = new address[](1);
         recipients2[0] = address(0x200);
@@ -689,7 +784,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints2[0] = 4000;
 
         vm.prank(groupOwner2);
-        groupService.setRecipients(ACTION_ID, groupId2, recipients2, basisPoints2);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId2,
+            recipients2,
+            basisPoints2
+        );
 
         // Verify independent recipients
         uint256 round = verify.currentRound();
@@ -724,7 +824,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256[] memory basisPoints = new uint256[](0);
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         uint256 round = verify.currentRound();
         (address[] memory addrs, uint256[] memory points) = groupService
@@ -747,7 +852,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints1[0] = 3000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients1, basisPoints1);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients1,
+            basisPoints1
+        );
 
         // Update in same round
         address[] memory recipients2 = new address[](1);
@@ -756,7 +866,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints2[0] = 5000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients2, basisPoints2);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients2,
+            basisPoints2
+        );
 
         uint256 round = verify.currentRound();
         (address[] memory addrs, uint256[] memory points) = groupService
@@ -779,7 +894,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 10000; // 100%
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, basisPoints);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients,
+            basisPoints
+        );
 
         uint256 round = verify.currentRound();
         (address[] memory addrs, uint256[] memory points) = groupService
@@ -920,10 +1040,20 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints3[0] = 5000;
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients1, basisPoints1);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId1,
+            recipients1,
+            basisPoints1
+        );
 
         vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId3, recipients3, basisPoints3);
+        groupService.setRecipients(
+            ACTION_ID,
+            groupId3,
+            recipients3,
+            basisPoints3
+        );
 
         uint256 round = verify.currentRound();
 

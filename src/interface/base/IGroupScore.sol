@@ -43,7 +43,7 @@ interface IGroupScore {
     /// @param groupId The group ID
     /// @param startIndex Starting index in the accounts array (0 for first/full submission)
     /// @param originScores Array of scores for accounts starting at startIndex
-    function submitOriginScore(
+    function verifyWithOriginScores(
         uint256 groupId,
         uint256 startIndex,
         uint256[] calldata originScores
