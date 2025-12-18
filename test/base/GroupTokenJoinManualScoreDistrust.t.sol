@@ -30,7 +30,7 @@ contract MockGroupDistrustContract is GroupTokenJoinManualScoreDistrust {
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
-        uint256 capacityFactor_
+        uint256 verifyCapacityMultiplier_
     )
         GroupTokenJoinManualScoreDistrust(groupDistrustAddress_)
         GroupCore(
@@ -40,7 +40,7 @@ contract MockGroupDistrustContract is GroupTokenJoinManualScoreDistrust {
             stakeTokenAddress_,
             groupActivationStakeAmount_,
             maxJoinAmountMultiplier_,
-            capacityFactor_
+            verifyCapacityMultiplier_
         )
         GroupTokenJoin(tokenAddress_)
     {}

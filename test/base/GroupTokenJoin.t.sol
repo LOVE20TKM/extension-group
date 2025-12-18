@@ -20,7 +20,7 @@ contract MockGroupTokenJoin is GroupTokenJoin {
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
-        uint256 capacityFactor_
+        uint256 verifyCapacityMultiplier_
     )
         GroupCore(
             factory_,
@@ -29,7 +29,7 @@ contract MockGroupTokenJoin is GroupTokenJoin {
             stakeTokenAddress_,
             groupActivationStakeAmount_,
             maxJoinAmountMultiplier_,
-            capacityFactor_
+            verifyCapacityMultiplier_
         )
         GroupTokenJoin(tokenAddress_)
     {}
@@ -232,8 +232,8 @@ contract GroupTokenJoinTest is BaseGroupTest {
     }
 
     function test_Join_RevertOwnerCapacityExceeded() public {
-        // Get owner's max capacity
-        uint256 maxCapacity = groupManager.maxCapacityByOwner(
+        // Get owner's max verify capacity
+        uint256 maxCapacity = groupManager.maxVerifyCapacityByOwner(
             address(token),
             ACTION_ID,
             groupOwner1

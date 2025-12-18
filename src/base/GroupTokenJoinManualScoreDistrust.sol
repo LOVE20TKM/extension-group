@@ -77,10 +77,22 @@ abstract contract GroupTokenJoinManualScoreDistrust is
                 groupId,
                 round
             );
+            uint256 capacityReduction = _capacityReductionByGroupId[round][
+                groupId
+            ];
 
-            uint256 newScore = total == 0
-                ? groupAmount
-                : (groupAmount * (total - distrustVotes)) / total;
+            // Apply both distrust ratio and capacity reduction
+            uint256 newScore;
+            if (total == 0) {
+                newScore = (groupAmount * capacityReduction) / 1e18;
+            } else {
+                newScore =
+                    (groupAmount *
+                        (total - distrustVotes) *
+                        capacityReduction) /
+                    total /
+                    1e18;
+            }
 
             _scoreByGroupId[round][groupId] = newScore;
             _score[round] = _score[round] - oldScore + newScore;
@@ -99,7 +111,7 @@ abstract contract GroupTokenJoinManualScoreDistrust is
 
     // ============ Override Functions ============
 
-    /// @dev Override to apply distrust ratio to group score
+    /// @dev Override to apply distrust ratio and capacity reduction to group score
     function _calculateGroupScore(
         uint256 round,
         uint256 groupId
@@ -108,10 +120,15 @@ abstract contract GroupTokenJoinManualScoreDistrust is
         uint256 groupAmount = totalJoinedAmountByGroupIdByRound(groupId, round);
         uint256 distrustVotes = _getDistrustVotes(round, groupOwner);
         uint256 total = _totalVerifyVotes(round);
+        uint256 capacityReduction = _capacityReductionByGroupId[round][groupId];
 
+        // Apply both distrust ratio and capacity reduction
+        if (total == 0) {
+            return (groupAmount * capacityReduction) / 1e18;
+        }
         return
-            total == 0
-                ? groupAmount
-                : (groupAmount * (total - distrustVotes)) / total;
+            (groupAmount * (total - distrustVotes) * capacityReduction) /
+            total /
+            1e18;
     }
 }

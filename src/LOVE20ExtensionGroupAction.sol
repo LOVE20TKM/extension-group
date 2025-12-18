@@ -27,7 +27,7 @@ contract LOVE20ExtensionGroupAction is
         address stakeTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
-        uint256 capacityFactor_
+        uint256 verifyCapacityMultiplier_
     )
         GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
@@ -37,7 +37,7 @@ contract LOVE20ExtensionGroupAction is
             stakeTokenAddress_,
             activationStakeAmount_,
             maxJoinAmountMultiplier_,
-            capacityFactor_
+            verifyCapacityMultiplier_
         )
         GroupTokenJoin(tokenAddress_) // joinTokenAddress = tokenAddress
     {}

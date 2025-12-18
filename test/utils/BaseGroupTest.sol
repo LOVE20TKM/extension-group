@@ -143,7 +143,7 @@ abstract contract BaseGroupTest is Test {
                 stakeTokenAddress: address(token),
                 activationStakeAmount: GROUP_ACTIVATION_STAKE_AMOUNT,
                 maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER,
-                capacityFactor: CAPACITY_FACTOR
+                verifyCapacityMultiplier: CAPACITY_FACTOR
             });
     }
 

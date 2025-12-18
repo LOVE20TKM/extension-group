@@ -187,7 +187,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(params.groupManagerAddress, address(groupManager));
         assertEq(params.groupDistrustAddress, address(groupDistrust));
         assertEq(params.activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
-        assertEq(params.capacityFactor, CAPACITY_FACTOR);
+        assertEq(params.verifyCapacityMultiplier, CAPACITY_FACTOR);
     }
 
     function test_ExtensionParams_ZeroForNonExistent() public view {

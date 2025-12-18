@@ -461,8 +461,8 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     function test_VerifierCapacityLimit() public {
         // Test that verifier capacity is limited by governance votes
 
-        // Get max capacity for owner
-        uint256 maxCapacity = groupManager.maxCapacityByOwner(
+        // Get max verify capacity for owner
+        uint256 maxCapacity = groupManager.maxVerifyCapacityByOwner(
             address(token),
             ACTION_ID,
             groupOwner1

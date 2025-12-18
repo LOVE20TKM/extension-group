@@ -188,12 +188,12 @@ abstract contract GroupTokenJoin is
     ) internal view {
         address groupOwner = ILOVE20Group(GROUP_ADDRESS).ownerOf(groupId);
         uint256 ownerTotalJoined = _totalJoinedAmountByOwner(groupOwner);
-        uint256 ownerMaxCapacity = _groupManager.maxCapacityByOwner(
+        uint256 ownerMaxVerifyCapacity = _groupManager.maxVerifyCapacityByOwner(
             tokenAddress,
             actionId,
             groupOwner
         );
-        if (ownerTotalJoined + amount > ownerMaxCapacity) {
+        if (ownerTotalJoined + amount > ownerMaxVerifyCapacity) {
             revert OwnerCapacityExceeded();
         }
     }

@@ -20,7 +20,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
     address public immutable STAKE_TOKEN_ADDRESS;
     uint256 public immutable GROUP_ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable MAX_JOIN_AMOUNT_MULTIPLIER;
-    uint256 public immutable CAPACITY_FACTOR;
+    uint256 public immutable VERIFY_CAPACITY_MULTIPLIER;
 
     // ============ Constructor ============
 
@@ -31,7 +31,7 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         address stakeTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
-        uint256 capacityFactor_
+        uint256 verifyCapacityMultiplier_
     ) ExtensionReward(factory_, tokenAddress_) {
         GROUP_MANAGER_ADDRESS = groupManagerAddress_;
         _groupManager = ILOVE20GroupManager(groupManagerAddress_);
@@ -41,14 +41,14 @@ abstract contract GroupCore is ExtensionReward, IGroupCore {
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         GROUP_ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_MULTIPLIER = maxJoinAmountMultiplier_;
-        CAPACITY_FACTOR = capacityFactor_;
+        VERIFY_CAPACITY_MULTIPLIER = verifyCapacityMultiplier_;
 
         // Register config in GroupManager (msg.sender is this extension)
         _groupManager.setConfig(
             stakeTokenAddress_,
             activationStakeAmount_,
             maxJoinAmountMultiplier_,
-            capacityFactor_
+            verifyCapacityMultiplier_
         );
     }
 }

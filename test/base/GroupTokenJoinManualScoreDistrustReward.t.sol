@@ -33,7 +33,7 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
-        uint256 capacityFactor_
+        uint256 verifyCapacityMultiplier_
     )
         GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
@@ -43,7 +43,7 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
             stakeTokenAddress_,
             groupActivationStakeAmount_,
             maxJoinAmountMultiplier_,
-            capacityFactor_
+            verifyCapacityMultiplier_
         )
         GroupTokenJoin(tokenAddress_)
     {}

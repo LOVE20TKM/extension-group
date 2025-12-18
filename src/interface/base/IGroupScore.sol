@@ -12,7 +12,7 @@ interface IGroupScore {
 
     error NotVerifier();
     error ScoreExceedsMax();
-    error VerifierCapacityExceeded();
+    error NoRemainingVerifyCapacity();
     error VerificationAlreadySubmitted();
     error NoDataForRound();
     error InvalidStartIndex();
@@ -67,6 +67,11 @@ interface IGroupScore {
     ) external view returns (uint256);
 
     function scoreByGroupId(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function capacityReductionByGroupId(
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);

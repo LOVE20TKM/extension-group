@@ -21,7 +21,7 @@ contract MockGroupCore is GroupCore {
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
-        uint256 capacityFactor_
+        uint256 verifyCapacityMultiplier_
     )
         GroupCore(
             factory_,
@@ -30,7 +30,7 @@ contract MockGroupCore is GroupCore {
             stakeTokenAddress_,
             groupActivationStakeAmount_,
             maxJoinAmountMultiplier_,
-            capacityFactor_
+            verifyCapacityMultiplier_
         )
     {}
 

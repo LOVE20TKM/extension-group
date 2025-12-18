@@ -61,6 +61,10 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     /// @dev round => groupId => accumulated total score (for batch submission)
     mapping(uint256 => mapping(uint256 => uint256)) internal _batchTotalScore;
 
+    /// @dev round => groupId => capacity reduction factor (1e18 = 100%, no reduction)
+    mapping(uint256 => mapping(uint256 => uint256))
+        internal _capacityReductionByGroupId;
+
     // ============ IGroupScore Implementation ============
 
     /// @inheritdoc IGroupScore
@@ -161,6 +165,14 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
         uint256 groupId
     ) external view returns (uint256) {
         return _scoreByGroupId[round][groupId];
+    }
+
+    /// @inheritdoc IGroupScore
+    function capacityReductionByGroupId(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _capacityReductionByGroupId[round][groupId];
     }
 
     /// @inheritdoc IGroupScore
@@ -296,14 +308,20 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
         }
     }
 
-    /// @dev Finalize verification: check capacity, record verifier, update scores
+    /// @dev Finalize verification: calculate capacity reduction, record verifier, update scores
     function _finalizeVerification(
         uint256 currentRound,
         uint256 groupId,
         address groupOwner,
         uint256 totalScore
     ) internal {
-        _checkVerifierCapacity(currentRound, groupOwner, groupId);
+        // Calculate and store capacity reduction factor
+        uint256 capacityReduction = _calculateCapacityReduction(
+            currentRound,
+            groupOwner,
+            groupId
+        );
+        _capacityReductionByGroupId[currentRound][groupId] = capacityReduction;
 
         // Record verifier (NFT owner, not delegated verifier)
         _verifierByGroupId[currentRound][groupId] = groupOwner;
@@ -316,7 +334,7 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
 
         _totalScoreByGroupId[currentRound][groupId] = totalScore;
 
-        // Calculate group score (distrust applied by subclass)
+        // Calculate group score (distrust and capacity reduction applied by subclass)
         uint256 groupScore = _calculateGroupScore(currentRound, groupId);
         _scoreByGroupId[currentRound][groupId] = groupScore;
         _score[currentRound] += groupScore;
@@ -336,11 +354,13 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
         return originScoreVal * amount;
     }
 
-    function _checkVerifierCapacity(
+    /// @dev Calculate capacity reduction factor (1e18 = 100%, no reduction)
+    /// @return reduction factor, reverts if no remaining capacity
+    function _calculateCapacityReduction(
         uint256 round,
         address groupOwner,
         uint256 currentGroupId
-    ) internal view {
+    ) internal view returns (uint256) {
         // Sum capacity from already verified groups by this verifier
         uint256 verifiedCapacity = 0;
         uint256[] storage verifiedGroupIds = _groupIdsByVerifier[round][
@@ -353,27 +373,43 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
             );
         }
 
-        // Add current group's capacity
-        verifiedCapacity += totalJoinedAmountByGroupIdByRound(
-            currentGroupId,
-            round
-        );
-
-        uint256 maxCapacity = _groupManager.maxCapacityByOwner(
+        uint256 maxVerifyCapacity = _groupManager.maxVerifyCapacityByOwner(
             tokenAddress,
             actionId,
             groupOwner
         );
-        if (verifiedCapacity > maxCapacity) {
-            revert VerifierCapacityExceeded();
+
+        // Calculate remaining capacity
+        uint256 remainingCapacity = maxVerifyCapacity > verifiedCapacity
+            ? maxVerifyCapacity - verifiedCapacity
+            : 0;
+
+        // No remaining capacity - verification fails
+        if (remainingCapacity == 0) {
+            revert NoRemainingVerifyCapacity();
         }
+
+        uint256 currentGroupCapacity = totalJoinedAmountByGroupIdByRound(
+            currentGroupId,
+            round
+        );
+
+        // Within capacity - no reduction (factor = 1e18)
+        if (remainingCapacity >= currentGroupCapacity) {
+            return 1e18;
+        }
+
+        // Exceeds capacity - apply reduction
+        return (remainingCapacity * 1e18) / currentGroupCapacity;
     }
 
-    /// @dev Calculate group score - to be overridden by distrust logic
+    /// @dev Calculate group score with capacity reduction - to be overridden by distrust logic
     function _calculateGroupScore(
         uint256 round,
         uint256 groupId
     ) internal view virtual returns (uint256) {
-        return totalJoinedAmountByGroupIdByRound(groupId, round);
+        uint256 groupAmount = totalJoinedAmountByGroupIdByRound(groupId, round);
+        uint256 capacityReduction = _capacityReductionByGroupId[round][groupId];
+        return (groupAmount * capacityReduction) / 1e18;
     }
 }
