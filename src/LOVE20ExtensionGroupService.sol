@@ -13,9 +13,6 @@ import {
     ILOVE20ExtensionGroupService
 } from "./interface/ILOVE20ExtensionGroupService.sol";
 import {ILOVE20GroupManager} from "./interface/ILOVE20GroupManager.sol";
-import {
-    EnumerableSet
-} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -47,7 +44,6 @@ contract LOVE20ExtensionGroupService is
     LOVE20ExtensionBaseJoin,
     ILOVE20ExtensionGroupService
 {
-    using EnumerableSet for EnumerableSet.AddressSet;
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
@@ -89,20 +85,17 @@ contract LOVE20ExtensionGroupService is
         address groupActionFactoryAddress_,
         uint256 maxRecipients_
     ) LOVE20ExtensionBaseJoin(factory_, tokenAddress_) {
-        // Validate groupActionTokenAddress: must be tokenAddress or its child token
         if (groupActionTokenAddress_ != tokenAddress_) {
-            ILOVE20Launch launch = ILOVE20Launch(_center.launchAddress());
-            if (!launch.isLOVE20Token(groupActionTokenAddress_)) {
-                revert InvalidGroupActionTokenAddress();
-            }
             if (
+                !ILOVE20Launch(_center.launchAddress()).isLOVE20Token(
+                    groupActionTokenAddress_
+                ) ||
                 ILOVE20Token(groupActionTokenAddress_).parentTokenAddress() !=
                 tokenAddress_
             ) {
                 revert InvalidGroupActionTokenAddress();
             }
         }
-
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
         MAX_RECIPIENTS = maxRecipients_;
@@ -120,23 +113,19 @@ contract LOVE20ExtensionGroupService is
 
     /// @notice Check if account has staked in any valid group action
     function hasActiveGroups(address account) public view returns (bool) {
-        uint256 round = _join.currentRound();
-        (
-            address[] memory extensions,
-            uint256[] memory actionIds_
-        ) = _getValidGroupActions(round);
-
-        uint256 len = extensions.length;
-        for (uint256 i; i < len; ) {
-            uint256 staked = ILOVE20GroupManager(
-                ILOVE20ExtensionGroupAction(extensions[i])
-                    .GROUP_MANAGER_ADDRESS()
-            ).totalStakedByOwner(
-                    GROUP_ACTION_TOKEN_ADDRESS,
-                    actionIds_[i],
-                    account
-                );
-            if (staked > 0) return true;
+        (address[] memory exts, uint256[] memory aids) = _getValidGroupActions(
+            _join.currentRound()
+        );
+        for (uint256 i; i < exts.length; ) {
+            if (
+                ILOVE20GroupManager(
+                    ILOVE20ExtensionGroupAction(exts[i]).GROUP_MANAGER_ADDRESS()
+                ).totalStakedByOwner(
+                        GROUP_ACTION_TOKEN_ADDRESS,
+                        aids[i],
+                        account
+                    ) > 0
+            ) return true;
             unchecked {
                 ++i;
             }
@@ -157,18 +146,17 @@ contract LOVE20ExtensionGroupService is
             GROUP_ACTION_FACTORY_ADDRESS
         );
 
-        uint256 actionCount = vote.votedActionIdsCount(
+        uint256 count = vote.votedActionIdsCount(
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
-        if (actionCount == 0) return (extensions, actionIds_);
+        if (count == 0) return (extensions, actionIds_);
 
-        // Temp arrays (max size = actionCount)
-        address[] memory tempExt = new address[](actionCount);
-        uint256[] memory tempIds = new uint256[](actionCount);
-        uint256 validCount;
+        address[] memory tempExt = new address[](count);
+        uint256[] memory tempIds = new uint256[](count);
+        uint256 valid;
 
-        for (uint256 i; i < actionCount; ) {
+        for (uint256 i; i < count; ) {
             uint256 aid = vote.votedActionIdsAtIndex(
                 GROUP_ACTION_TOKEN_ADDRESS,
                 round,
@@ -176,21 +164,17 @@ contract LOVE20ExtensionGroupService is
             );
             address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, aid);
             if (ext != address(0) && factory.exists(ext)) {
-                tempExt[validCount] = ext;
-                tempIds[validCount] = aid;
-                unchecked {
-                    ++validCount;
-                }
+                tempExt[valid] = ext;
+                tempIds[valid++] = aid;
             }
             unchecked {
                 ++i;
             }
         }
 
-        // Copy to correctly sized arrays
-        extensions = new address[](validCount);
-        actionIds_ = new uint256[](validCount);
-        for (uint256 i; i < validCount; ) {
+        extensions = new address[](valid);
+        actionIds_ = new uint256[](valid);
+        for (uint256 i; i < valid; ) {
             extensions[i] = tempExt[i];
             actionIds_[i] = tempIds[i];
             unchecked {
@@ -206,15 +190,13 @@ contract LOVE20ExtensionGroupService is
         address[] calldata addrs,
         uint256[] calldata basisPoints
     ) external {
-        if (!_center.isAccountJoined(tokenAddress, actionId, msg.sender)) {
+        if (!_center.isAccountJoined(tokenAddress, actionId, msg.sender))
             revert NotJoined();
-        }
-        // Verify caller is the group owner
+
+        address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
         ILOVE20Group group = ILOVE20Group(
             ILOVE20GroupManager(
-                ILOVE20ExtensionGroupAction(
-                    _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_)
-                ).GROUP_MANAGER_ADDRESS()
+                ILOVE20ExtensionGroupAction(ext).GROUP_MANAGER_ADDRESS()
             ).GROUP_ADDRESS()
         );
         if (group.ownerOf(groupId) != msg.sender) revert NotGroupOwner();
@@ -233,70 +215,44 @@ contract LOVE20ExtensionGroupService is
         if (len != basisPoints.length) revert ArrayLengthMismatch();
         if (len > MAX_RECIPIENTS) revert TooManyRecipients();
 
-        // Validate and calculate total basis points
-        uint256 totalBasisPoints;
+        uint256 totalBps;
         for (uint256 i; i < len; ) {
             if (addrs[i] == address(0)) revert ZeroAddress();
             if (addrs[i] == account) revert RecipientCannotBeSelf();
             if (basisPoints[i] == 0) revert ZeroBasisPoints();
-            totalBasisPoints += basisPoints[i];
+            totalBps += basisPoints[i];
             unchecked {
                 ++i;
             }
         }
-        if (totalBasisPoints > BASIS_POINTS_BASE) revert InvalidBasisPoints();
-
-        // Check for duplicate addresses
+        if (totalBps > BASIS_POINTS_BASE) revert InvalidBasisPoints();
         _checkNoDuplicates(addrs);
 
-        uint256 currentRound = _verify.currentRound();
-        _recipientsHistory[account][actionId_][groupId].record(
-            currentRound,
-            addrs
-        );
+        uint256 round = _verify.currentRound();
+        _recipientsHistory[account][actionId_][groupId].record(round, addrs);
         _basisPointsHistory[account][actionId_][groupId].record(
-            currentRound,
+            round,
             basisPoints
         );
 
-        // Maintain indexes
         if (len > 0) {
-            _addToIndex(
-                _actionIdsWithRecipients[account],
-                actionId_,
-                currentRound
-            );
-            _addToIndex(
-                _groupIdsWithRecipients[account][actionId_],
-                groupId,
-                currentRound
-            );
-        } else {
-            // Remove groupId, and if no groups left, remove actionId
+            _actionIdsWithRecipients[account].add(round, actionId_);
+            _groupIdsWithRecipients[account][actionId_].add(round, groupId);
+        } else if (
+            _groupIdsWithRecipients[account][actionId_].remove(round, groupId)
+        ) {
             if (
-                _removeFromIndex(
-                    _groupIdsWithRecipients[account][actionId_],
-                    groupId,
-                    currentRound
-                )
+                _groupIdsWithRecipients[account][actionId_]
+                    .values(round)
+                    .length == 0
             ) {
-                if (
-                    _groupIdsWithRecipients[account][actionId_]
-                        .values(currentRound)
-                        .length == 0
-                ) {
-                    _removeFromIndex(
-                        _actionIdsWithRecipients[account],
-                        actionId_,
-                        currentRound
-                    );
-                }
+                _actionIdsWithRecipients[account].remove(round, actionId_);
             }
         }
 
         emit RecipientsUpdate(
             tokenAddress,
-            currentRound,
+            round,
             actionId_,
             groupId,
             account,
@@ -305,75 +261,12 @@ contract LOVE20ExtensionGroupService is
         );
     }
 
-    /// @dev Add value to index if not exists
-    function _addToIndex(
-        RoundHistoryUint256Array.History storage history,
-        uint256 value,
-        uint256 round
-    ) internal {
-        uint256[] memory existing = history.values(round);
-        uint256 len = existing.length;
-        for (uint256 i; i < len; ) {
-            if (existing[i] == value) return; // Already exists
-            unchecked {
-                ++i;
-            }
-        }
-        uint256[] memory updated = new uint256[](len + 1);
-        for (uint256 i; i < len; ) {
-            updated[i] = existing[i];
-            unchecked {
-                ++i;
-            }
-        }
-        updated[len] = value;
-        history.record(round, updated);
-    }
-
-    /// @dev Remove value from index, returns true if removed
-    function _removeFromIndex(
-        RoundHistoryUint256Array.History storage history,
-        uint256 value,
-        uint256 round
-    ) internal returns (bool removed) {
-        uint256[] memory existing = history.values(round);
-        uint256 len = existing.length;
-        uint256 idx = type(uint256).max;
-        for (uint256 i; i < len; ) {
-            if (existing[i] == value) {
-                idx = i;
-                break;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        if (idx == type(uint256).max) return false;
-
-        uint256[] memory updated = new uint256[](len - 1);
-        for (uint256 i; i < idx; ) {
-            updated[i] = existing[i];
-            unchecked {
-                ++i;
-            }
-        }
-        for (uint256 i = idx + 1; i < len; ) {
-            updated[i - 1] = existing[i];
-            unchecked {
-                ++i;
-            }
-        }
-        history.record(round, updated);
-        return true;
-    }
-
     /// @dev Check that address array has no duplicates
     function _checkNoDuplicates(address[] memory addrs) internal pure {
         uint256 len = addrs.length;
         for (uint256 i = 1; i < len; ) {
-            address addr = addrs[i];
             for (uint256 j; j < i; ) {
-                if (addrs[j] == addr) revert DuplicateAddress();
+                if (addrs[j] == addrs[i]) revert DuplicateAddress();
                 unchecked {
                     ++j;
                 }
@@ -462,8 +355,7 @@ contract LOVE20ExtensionGroupService is
 
         uint256 totalBps;
         uint256 recipientBps;
-        uint256 len = addrs.length;
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < addrs.length; ) {
             totalBps += bps[i];
             if (addrs[i] == recipient) recipientBps = bps[i];
             unchecked {
@@ -471,10 +363,8 @@ contract LOVE20ExtensionGroupService is
             }
         }
 
-        // If recipient is the groupOwner, return remaining after distribution
-        if (recipient == groupOwner) {
+        if (recipient == groupOwner)
             return groupReward - (groupReward * totalBps) / BASIS_POINTS_BASE;
-        }
         return (groupReward * recipientBps) / BASIS_POINTS_BASE;
     }
 
@@ -494,29 +384,18 @@ contract LOVE20ExtensionGroupService is
             uint256 ownerAmount
         )
     {
-        uint256 groupReward = _calculateGroupServiceReward(
+        GroupDistribution memory dist = _buildGroupDistribution(
             round,
             groupOwner,
             actionId_,
             groupId
         );
-        addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
-            round
+        return (
+            dist.recipients,
+            dist.basisPoints,
+            dist.amounts,
+            dist.ownerAmount
         );
-        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
-            .values(round);
-
-        uint256 len = addrs.length;
-        amounts = new uint256[](len);
-        uint256 distributed;
-        for (uint256 i; i < len; ) {
-            amounts[i] = (groupReward * basisPoints[i]) / BASIS_POINTS_BASE;
-            distributed += amounts[i];
-            unchecked {
-                ++i;
-            }
-        }
-        ownerAmount = groupReward - distributed;
     }
 
     /// @notice Get all group distributions for a group owner at a round
@@ -524,38 +403,33 @@ contract LOVE20ExtensionGroupService is
         uint256 round,
         address groupOwner
     ) external view returns (GroupDistribution[] memory distributions) {
-        uint256[] memory ownerActionIds = _actionIdsWithRecipients[groupOwner]
-            .values(round);
-        uint256 actionLen = ownerActionIds.length;
+        uint256[] memory aids = _actionIdsWithRecipients[groupOwner].values(
+            round
+        );
 
-        // Count total groups
-        uint256 totalGroups;
-        for (uint256 i; i < actionLen; ) {
-            totalGroups += _groupIdsWithRecipients[groupOwner][
-                ownerActionIds[i]
-            ].values(round).length;
+        uint256 total;
+        for (uint256 i; i < aids.length; ) {
+            total += _groupIdsWithRecipients[groupOwner][aids[i]]
+                .values(round)
+                .length;
             unchecked {
                 ++i;
             }
         }
 
-        // Build distributions
-        distributions = new GroupDistribution[](totalGroups);
+        distributions = new GroupDistribution[](total);
         uint256 idx;
-        for (uint256 i; i < actionLen; ) {
-            uint256[] memory gids = _groupIdsWithRecipients[groupOwner][
-                ownerActionIds[i]
-            ].values(round);
-            uint256 gidLen = gids.length;
-            for (uint256 j; j < gidLen; ) {
-                distributions[idx] = _buildGroupDistribution(
+        for (uint256 i; i < aids.length; ) {
+            uint256[] memory gids = _groupIdsWithRecipients[groupOwner][aids[i]]
+                .values(round);
+            for (uint256 j; j < gids.length; ) {
+                distributions[idx++] = _buildGroupDistribution(
                     round,
                     groupOwner,
-                    ownerActionIds[i],
+                    aids[i],
                     gids[j]
                 );
                 unchecked {
-                    ++idx;
                     ++j;
                 }
             }
@@ -571,7 +445,7 @@ contract LOVE20ExtensionGroupService is
         address groupOwner,
         uint256 actionId_,
         uint256 groupId
-    ) internal view returns (GroupDistribution memory dist) {
+    ) internal view returns (GroupDistribution memory) {
         uint256 groupReward = _calculateGroupServiceReward(
             round,
             groupOwner,
@@ -585,10 +459,9 @@ contract LOVE20ExtensionGroupService is
             groupId
         ].values(round);
 
-        uint256 len = addrs.length;
-        uint256[] memory amounts = new uint256[](len);
+        uint256[] memory amounts = new uint256[](addrs.length);
         uint256 distributed;
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < addrs.length; ) {
             amounts[i] = (groupReward * bps[i]) / BASIS_POINTS_BASE;
             distributed += amounts[i];
             unchecked {
@@ -596,15 +469,16 @@ contract LOVE20ExtensionGroupService is
             }
         }
 
-        dist = GroupDistribution({
-            actionId: actionId_,
-            groupId: groupId,
-            groupReward: groupReward,
-            recipients: addrs,
-            basisPoints: bps,
-            amounts: amounts,
-            ownerAmount: groupReward - distributed
-        });
+        return
+            GroupDistribution(
+                actionId_,
+                groupId,
+                groupReward,
+                addrs,
+                bps,
+                amounts,
+                groupReward - distributed
+            );
     }
 
     // ============ IExtensionJoinedValue Implementation ============
@@ -628,68 +502,41 @@ contract LOVE20ExtensionGroupService is
     function _convertToParentTokenValue(
         uint256 amount
     ) internal view returns (uint256) {
-        if (amount == 0 || GROUP_ACTION_TOKEN_ADDRESS == tokenAddress) {
+        if (amount == 0 || GROUP_ACTION_TOKEN_ADDRESS == tokenAddress)
             return amount;
-        }
 
-        // Get Uniswap V2 pair
-        IUniswapV2Factory uniswapFactory = IUniswapV2Factory(
-            _center.uniswapV2FactoryAddress()
-        );
-        address pairAddress = uniswapFactory.getPair(
-            tokenAddress,
-            GROUP_ACTION_TOKEN_ADDRESS
-        );
-        if (pairAddress == address(0)) return 0;
+        address pairAddr = IUniswapV2Factory(_center.uniswapV2FactoryAddress())
+            .getPair(tokenAddress, GROUP_ACTION_TOKEN_ADDRESS);
+        if (pairAddr == address(0)) return 0;
 
-        // Get reserves and calculate price
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);
-        (uint112 reserve0, uint112 reserve1, ) = pair.getReserves();
-        if (reserve0 == 0 || reserve1 == 0) return 0;
+        IUniswapV2Pair pair = IUniswapV2Pair(pairAddr);
+        (uint112 r0, uint112 r1, ) = pair.getReserves();
+        if (r0 == 0 || r1 == 0) return 0;
 
-        // Determine which reserve is which token
-        address token0 = pair.token0();
-        uint256 parentReserve;
-        uint256 childReserve;
-        if (token0 == tokenAddress) {
-            parentReserve = reserve0;
-            childReserve = reserve1;
-        } else {
-            parentReserve = reserve1;
-            childReserve = reserve0;
-        }
-
-        // Convert: parentValue = childAmount * parentReserve / childReserve
-        return (amount * parentReserve) / childReserve;
+        (uint256 parentR, uint256 childR) = pair.token0() == tokenAddress
+            ? (uint256(r0), uint256(r1))
+            : (uint256(r1), uint256(r0));
+        return (amount * parentR) / childR;
     }
 
     /// @dev Get total staked from all valid group actions (account=address(0) for total)
     function _getTotalStaked(
         address account
-    ) internal view returns (uint256 totalStaked) {
-        (
-            address[] memory extensions,
-            uint256[] memory actionIds_
-        ) = _getValidGroupActions(_verify.currentRound());
-
-        uint256 len = extensions.length;
-        for (uint256 i; i < len; ) {
-            ILOVE20GroupManager manager = ILOVE20GroupManager(
-                ILOVE20ExtensionGroupAction(extensions[i])
-                    .GROUP_MANAGER_ADDRESS()
+    ) internal view returns (uint256 total) {
+        (address[] memory exts, uint256[] memory aids) = _getValidGroupActions(
+            _verify.currentRound()
+        );
+        for (uint256 i; i < exts.length; ) {
+            ILOVE20GroupManager mgr = ILOVE20GroupManager(
+                ILOVE20ExtensionGroupAction(exts[i]).GROUP_MANAGER_ADDRESS()
             );
-            if (account == address(0)) {
-                totalStaked += manager.totalStaked(
+            total += account == address(0)
+                ? mgr.totalStaked(GROUP_ACTION_TOKEN_ADDRESS, aids[i])
+                : mgr.totalStakedByOwner(
                     GROUP_ACTION_TOKEN_ADDRESS,
-                    actionIds_[i]
-                );
-            } else {
-                totalStaked += manager.totalStakedByOwner(
-                    GROUP_ACTION_TOKEN_ADDRESS,
-                    actionIds_[i],
+                    aids[i],
                     account
                 );
-            }
             unchecked {
                 ++i;
             }
@@ -704,18 +551,16 @@ contract LOVE20ExtensionGroupService is
     ) internal view override returns (uint256) {
         if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
 
-        // Get total reward (from storage or expected from mint)
-        uint256 totalReward = reward(round);
-        if (totalReward == 0) return 0;
+        uint256 total = reward(round);
+        if (total == 0) return 0;
 
-        (
-            uint256 accountTotalReward,
-            uint256 allActionsTotalReward
-        ) = generatedRewardByVerifier(round, account);
+        (uint256 accountR, uint256 allR) = generatedRewardByVerifier(
+            round,
+            account
+        );
+        if (accountR == 0 || allR == 0) return 0;
 
-        if (accountTotalReward == 0 || allActionsTotalReward == 0) return 0;
-
-        return (totalReward * accountTotalReward) / allActionsTotalReward;
+        return (total * accountR) / allR;
     }
 
     /// @notice Get verifier reward and total reward from all valid group actions
@@ -723,18 +568,13 @@ contract LOVE20ExtensionGroupService is
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (address[] memory extensions, ) = _getValidGroupActions(round);
-
-        uint256 len = extensions.length;
-        for (uint256 i; i < len; ) {
-            ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
-                    extensions[i]
-                );
-            accountReward += groupAction.generatedRewardByVerifier(
-                round,
-                verifier
+        (address[] memory exts, ) = _getValidGroupActions(round);
+        for (uint256 i; i < exts.length; ) {
+            ILOVE20ExtensionGroupAction ga = ILOVE20ExtensionGroupAction(
+                exts[i]
             );
-            totalReward += groupAction.reward(round);
+            accountReward += ga.generatedRewardByVerifier(round, verifier);
+            totalReward += ga.reward(round);
             unchecked {
                 ++i;
             }
@@ -748,33 +588,20 @@ contract LOVE20ExtensionGroupService is
         uint256 actionId_,
         uint256 groupId
     ) internal view returns (uint256) {
-        (uint256 totalOwnerReward, ) = rewardByAccount(round, groupOwner);
-        if (totalOwnerReward == 0) return 0;
+        (uint256 ownerReward, ) = rewardByAccount(round, groupOwner);
+        if (ownerReward == 0) return 0;
 
-        (uint256 accountTotalReward, ) = generatedRewardByVerifier(
-            round,
-            groupOwner
-        );
-        if (accountTotalReward == 0) return 0;
+        (uint256 totalReward, ) = generatedRewardByVerifier(round, groupOwner);
+        if (totalReward == 0) return 0;
 
-        // Get this group's reward from the group action
-        address extensionAddr = _center.extension(
-            GROUP_ACTION_TOKEN_ADDRESS,
-            actionId_
-        );
-        if (extensionAddr == address(0)) return 0;
+        address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
+        if (ext == address(0)) return 0;
 
-        ILOVE20ExtensionGroupAction groupAction = ILOVE20ExtensionGroupAction(
-            extensionAddr
-        );
-        uint256 groupReward = groupAction.generatedRewardByGroupId(
-            round,
-            groupId
-        );
+        uint256 groupReward = ILOVE20ExtensionGroupAction(ext)
+            .generatedRewardByGroupId(round, groupId);
         if (groupReward == 0) return 0;
 
-        // Calculate this group's share of service reward
-        return (totalOwnerReward * groupReward) / accountTotalReward;
+        return (ownerReward * groupReward) / totalReward;
     }
 
     /// @dev Override to distribute reward to recipients by group
@@ -788,13 +615,9 @@ contract LOVE20ExtensionGroupService is
         _claimedReward[round][msg.sender] = amount;
 
         if (amount > 0) {
-            uint256 totalDistributed = _distributeToRecipients(round, amount);
-
-            // Remaining to the original account
-            uint256 remaining = amount - totalDistributed;
-            if (remaining > 0) {
+            uint256 remaining = amount - _distributeToRecipients(round);
+            if (remaining > 0)
                 IERC20(tokenAddress).safeTransfer(msg.sender, remaining);
-            }
         }
 
         emit ClaimReward(tokenAddress, round, actionId, msg.sender, amount);
@@ -802,23 +625,16 @@ contract LOVE20ExtensionGroupService is
 
     /// @dev Distribute reward to recipients and return total distributed amount
     function _distributeToRecipients(
-        uint256 round,
-        uint256 /* totalAmount */
-    ) internal returns (uint256 totalDistributed) {
-        address sender = msg.sender;
-        uint256[] memory aids = _actionIdsWithRecipients[sender].values(round);
-        uint256 aidLen = aids.length;
-
-        for (uint256 i; i < aidLen; ) {
-            uint256[] memory gids = _groupIdsWithRecipients[sender][aids[i]]
+        uint256 round
+    ) internal returns (uint256 distributed) {
+        uint256[] memory aids = _actionIdsWithRecipients[msg.sender].values(
+            round
+        );
+        for (uint256 i; i < aids.length; ) {
+            uint256[] memory gids = _groupIdsWithRecipients[msg.sender][aids[i]]
                 .values(round);
-            uint256 gidLen = gids.length;
-            for (uint256 j; j < gidLen; ) {
-                totalDistributed += _distributeForGroup(
-                    round,
-                    aids[i],
-                    gids[j]
-                );
+            for (uint256 j; j < gids.length; ) {
+                distributed += _distributeForGroup(round, aids[i], gids[j]);
                 unchecked {
                     ++j;
                 }
@@ -835,30 +651,30 @@ contract LOVE20ExtensionGroupService is
         uint256 actionId_,
         uint256 groupId
     ) internal returns (uint256 distributed) {
-        address sender = msg.sender;
         uint256 groupReward = _calculateGroupServiceReward(
             round,
-            sender,
+            msg.sender,
             actionId_,
             groupId
         );
         if (groupReward == 0) return 0;
 
-        address[] memory addrs = _recipientsHistory[sender][actionId_][groupId]
-            .values(round);
-        uint256[] memory bps = _basisPointsHistory[sender][actionId_][groupId]
-            .values(round);
+        address[] memory addrs = _recipientsHistory[msg.sender][actionId_][
+            groupId
+        ].values(round);
+        uint256[] memory bps = _basisPointsHistory[msg.sender][actionId_][
+            groupId
+        ].values(round);
 
         IERC20 token = IERC20(tokenAddress);
-        uint256 len = addrs.length;
-        for (uint256 k; k < len; ) {
-            uint256 amt = (groupReward * bps[k]) / BASIS_POINTS_BASE;
+        for (uint256 i; i < addrs.length; ) {
+            uint256 amt = (groupReward * bps[i]) / BASIS_POINTS_BASE;
             if (amt > 0) {
-                token.safeTransfer(addrs[k], amt);
+                token.safeTransfer(addrs[i], amt);
                 distributed += amt;
             }
             unchecked {
-                ++k;
+                ++i;
             }
         }
     }
