@@ -32,7 +32,8 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
         address groupDistrustAddress_,
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 capacityFactor_
     )
         GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
@@ -41,7 +42,8 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
             groupManagerAddress_,
             stakeTokenAddress_,
             groupActivationStakeAmount_,
-            maxJoinAmountMultiplier_
+            maxJoinAmountMultiplier_,
+            capacityFactor_
         )
         GroupTokenJoin(tokenAddress_)
     {}
@@ -111,7 +113,8 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         token.mint(address(this), 1e18);

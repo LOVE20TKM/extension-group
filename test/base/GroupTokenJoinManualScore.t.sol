@@ -24,7 +24,8 @@ contract MockGroupManualScore is GroupTokenJoinManualScore {
         address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 capacityFactor_
     )
         GroupCore(
             factory_,
@@ -32,7 +33,8 @@ contract MockGroupManualScore is GroupTokenJoinManualScore {
             groupManagerAddress_,
             stakeTokenAddress_,
             groupActivationStakeAmount_,
-            maxJoinAmountMultiplier_
+            maxJoinAmountMultiplier_,
+            capacityFactor_
         )
         GroupTokenJoin(tokenAddress_)
     {}
@@ -98,7 +100,8 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
             address(groupManager),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         token.mint(address(this), 1e18);

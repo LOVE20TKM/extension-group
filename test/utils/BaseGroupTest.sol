@@ -77,6 +77,7 @@ abstract contract BaseGroupTest is Test {
     // Group configuration constants
     uint256 constant GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
     uint256 constant MAX_JOIN_AMOUNT_MULTIPLIER = 100;
+    uint256 constant CAPACITY_FACTOR = 1e18; // 100%
 
     // ============ Setup Functions ============
 
@@ -141,7 +142,8 @@ abstract contract BaseGroupTest is Test {
             ILOVE20GroupManager.Config({
                 stakeTokenAddress: address(token),
                 activationStakeAmount: GROUP_ACTIVATION_STAKE_AMOUNT,
-                maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER
+                maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER,
+                capacityFactor: CAPACITY_FACTOR
             });
     }
 

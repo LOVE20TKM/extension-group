@@ -20,7 +20,8 @@ contract MockGroupCore is GroupCore {
         address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 capacityFactor_
     )
         GroupCore(
             factory_,
@@ -28,7 +29,8 @@ contract MockGroupCore is GroupCore {
             groupManagerAddress_,
             stakeTokenAddress_,
             groupActivationStakeAmount_,
-            maxJoinAmountMultiplier_
+            maxJoinAmountMultiplier_,
+            capacityFactor_
         )
     {}
 
@@ -69,7 +71,8 @@ contract GroupCoreTest is BaseGroupTest {
             address(groupManager),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         // Register extension

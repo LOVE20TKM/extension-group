@@ -75,7 +75,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     function setConfig(
         address stakeTokenAddress,
         uint256 activationStakeAmount,
-        uint256 maxJoinAmountMultiplier
+        uint256 maxJoinAmountMultiplier,
+        uint256 capacityFactor
     ) external override {
         address extension = msg.sender;
         if (_configs[extension].stakeTokenAddress != address(0))
@@ -84,7 +85,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         _configs[extension] = Config({
             stakeTokenAddress: stakeTokenAddress,
             activationStakeAmount: activationStakeAmount,
-            maxJoinAmountMultiplier: maxJoinAmountMultiplier
+            maxJoinAmountMultiplier: maxJoinAmountMultiplier,
+            capacityFactor: capacityFactor
         });
 
         emit ConfigSet(extension, stakeTokenAddress);
@@ -100,7 +102,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         returns (
             address stakeTokenAddress,
             uint256 activationStakeAmount,
-            uint256 maxJoinAmountMultiplier
+            uint256 maxJoinAmountMultiplier,
+            uint256 capacityFactor
         )
     {
         address extension = _center.extension(tokenAddress, actionId);
@@ -108,7 +111,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         return (
             cfg.stakeTokenAddress,
             cfg.activationStakeAmount,
-            cfg.maxJoinAmountMultiplier
+            cfg.maxJoinAmountMultiplier,
+            cfg.capacityFactor
         );
     }
 
@@ -387,7 +391,12 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address extension = _center.extension(tokenAddress, actionId);
         Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
-        return _calculateMaxCapacityByOwner(tokenAddress, owner);
+        return
+            _calculateMaxCapacityByOwner(
+                tokenAddress,
+                owner,
+                cfg.capacityFactor
+            );
     }
 
     function totalStakedByOwner(
@@ -411,11 +420,12 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     // ============ Internal Functions ============
 
-    /// @dev Calculate max capacity for owner using new formula:
-    /// maxCapacity = ownerGovVotes / totalGovVotes * (totalMinted - slTokenAmount - stTokenReserve)
+    /// @dev Calculate max capacity for owner using formula:
+    /// maxCapacity = ownerGovVotes / totalGovVotes * (totalMinted - slTokenAmount - stTokenReserve) * capacityFactor / 1e18
     function _calculateMaxCapacityByOwner(
         address tokenAddress,
-        address owner
+        address owner,
+        uint256 capacityFactor
     ) internal view returns (uint256) {
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
         uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
@@ -439,7 +449,9 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             feeTokenAmount -
             stTokenReserve;
 
-        return (availableForCapacity * ownerGovVotes) / totalGovVotes;
+        uint256 baseCapacity = (availableForCapacity * ownerGovVotes) /
+            totalGovVotes;
+        return (baseCapacity * capacityFactor) / 1e18;
     }
 
     function _totalStakedByOwner(

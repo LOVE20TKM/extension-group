@@ -50,7 +50,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         assertTrue(extension != address(0));
@@ -66,7 +67,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         assertEq(factory.extensionsCount(), 1);
@@ -87,7 +89,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -104,7 +107,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
@@ -131,7 +135,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         address ext2 = factory.createExtension(
@@ -140,7 +145,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token2),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         address ext3 = factory.createExtension(
@@ -149,7 +155,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token3),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         assertEq(factory.extensionsCount(), 3);
@@ -169,7 +176,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         LOVE20ExtensionGroupActionFactory.ExtensionParams
@@ -179,6 +187,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(params.groupManagerAddress, address(groupManager));
         assertEq(params.groupDistrustAddress, address(groupDistrust));
         assertEq(params.activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
+        assertEq(params.capacityFactor, CAPACITY_FACTOR);
     }
 
     function test_ExtensionParams_ZeroForNonExistent() public view {
@@ -202,7 +211,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         assertTrue(factory.exists(extension));

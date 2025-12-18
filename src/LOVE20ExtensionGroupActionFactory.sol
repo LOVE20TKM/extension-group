@@ -18,6 +18,7 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address stakeTokenAddress;
         uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
+        uint256 capacityFactor;
     }
 
     // ============ Storage ============
@@ -37,7 +38,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupDistrustAddress_,
         address stakeTokenAddress_,
         uint256 activationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_
+        uint256 maxJoinAmountMultiplier_,
+        uint256 capacityFactor_
     ) external returns (address extension) {
         extension = address(
             new LOVE20ExtensionGroupAction(
@@ -47,7 +49,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
                 groupDistrustAddress_,
                 stakeTokenAddress_,
                 activationStakeAmount_,
-                maxJoinAmountMultiplier_
+                maxJoinAmountMultiplier_,
+                capacityFactor_
             )
         );
 
@@ -57,7 +60,8 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
             groupDistrustAddress: groupDistrustAddress_,
             stakeTokenAddress: stakeTokenAddress_,
             activationStakeAmount: activationStakeAmount_,
-            maxJoinAmountMultiplier: maxJoinAmountMultiplier_
+            maxJoinAmountMultiplier: maxJoinAmountMultiplier_,
+            capacityFactor: capacityFactor_
         });
 
         _registerExtension(extension, tokenAddress_);

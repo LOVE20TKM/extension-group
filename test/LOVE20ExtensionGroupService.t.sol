@@ -67,7 +67,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
         );
 
         // Deploy GroupService (use actionFactory as GROUP_ACTION_FACTORY_ADDRESS)

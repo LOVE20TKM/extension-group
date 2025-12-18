@@ -54,6 +54,7 @@ interface ILOVE20GroupManager {
         address stakeTokenAddress;
         uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
+        uint256 capacityFactor; // 1e18 = 100%
     }
 
     struct GroupInfo {
@@ -86,7 +87,8 @@ interface ILOVE20GroupManager {
     function setConfig(
         address stakeTokenAddress,
         uint256 activationStakeAmount,
-        uint256 maxJoinAmountMultiplier
+        uint256 maxJoinAmountMultiplier,
+        uint256 capacityFactor
     ) external;
 
     function config(
@@ -98,7 +100,8 @@ interface ILOVE20GroupManager {
         returns (
             address stakeTokenAddress,
             uint256 activationStakeAmount,
-            uint256 maxJoinAmountMultiplier
+            uint256 maxJoinAmountMultiplier,
+            uint256 capacityFactor
         );
 
     // ============ Write Functions ============
