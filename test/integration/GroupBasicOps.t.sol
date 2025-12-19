@@ -209,7 +209,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         assertFalse(
             groupAction.isJoinedValueCalculated(),
-            "Should not be calculated"
+            "Should not be calculated when joinToken == tokenAddress"
         );
     }
 }

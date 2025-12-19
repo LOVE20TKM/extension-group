@@ -748,6 +748,7 @@ contract TestGroupFlowHelper is Test {
             address(groupManager),
             address(groupDistrust),
             user.flow.tokenAddress,
+            user.flow.tokenAddress, // joinTokenAddress
             DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT,
             DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER,
             DEFAULT_CAPACITY_FACTOR

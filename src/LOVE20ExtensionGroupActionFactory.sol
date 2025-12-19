@@ -16,6 +16,7 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupManagerAddress;
         address groupDistrustAddress;
         address stakeTokenAddress;
+        address joinTokenAddress;
         uint256 activationStakeAmount;
         uint256 maxJoinAmountMultiplier;
         uint256 verifyCapacityMultiplier;
@@ -37,6 +38,7 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
         address groupManagerAddress_,
         address groupDistrustAddress_,
         address stakeTokenAddress_,
+        address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountMultiplier_,
         uint256 verifyCapacityMultiplier_
@@ -48,6 +50,7 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
                 groupManagerAddress_,
                 groupDistrustAddress_,
                 stakeTokenAddress_,
+                joinTokenAddress_,
                 activationStakeAmount_,
                 maxJoinAmountMultiplier_,
                 verifyCapacityMultiplier_
@@ -59,6 +62,7 @@ contract LOVE20ExtensionGroupActionFactory is LOVE20ExtensionFactoryBase {
             groupManagerAddress: groupManagerAddress_,
             groupDistrustAddress: groupDistrustAddress_,
             stakeTokenAddress: stakeTokenAddress_,
+            joinTokenAddress: joinTokenAddress_,
             activationStakeAmount: activationStakeAmount_,
             maxJoinAmountMultiplier: maxJoinAmountMultiplier_,
             verifyCapacityMultiplier: verifyCapacityMultiplier_

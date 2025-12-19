@@ -49,6 +49,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -66,6 +67,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -88,6 +90,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -106,6 +109,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -134,6 +138,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -144,6 +149,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token2),
+            address(token2), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -154,6 +160,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token3),
+            address(token3), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -175,6 +182,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -186,6 +194,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(params.tokenAddress, address(token));
         assertEq(params.groupManagerAddress, address(groupManager));
         assertEq(params.groupDistrustAddress, address(groupDistrust));
+        assertEq(params.stakeTokenAddress, address(token));
+        assertEq(params.joinTokenAddress, address(token));
         assertEq(params.activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
         assertEq(params.verifyCapacityMultiplier, CAPACITY_FACTOR);
     }
@@ -210,6 +220,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token),
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR

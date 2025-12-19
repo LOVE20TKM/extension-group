@@ -73,7 +73,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(token),
             address(groupManager),
             address(groupDistrust),
-            address(token),
+            address(token), // stakeTokenAddress
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -1145,6 +1146,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             stakeTokenAddress,
+            address(token), // joinTokenAddress
             stakeAmount,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR

@@ -17,6 +17,7 @@ import {
 import {IGroupDistrust} from "../src/interface/base/IGroupDistrust.sol";
 import {IGroupReward} from "../src/interface/base/IGroupReward.sol";
 import {IGroupManualScore} from "../src/interface/base/IGroupManualScore.sol";
+import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 
 /**
  * @title LOVE20ExtensionGroupActionTest
@@ -126,6 +127,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             address(groupManager),
             address(groupDistrust),
             address(token), // stakeTokenAddress
+            address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
@@ -330,6 +332,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     // ============ IExtensionJoinedValue Tests ============
 
     function test_IsJoinedValueCalculated() public view {
+        // joinToken == tokenAddress, so no conversion needed
         assertFalse(groupAction.isJoinedValueCalculated());
     }
 
@@ -541,5 +544,179 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         groupAction.verifyWithOriginScores(groupId1, 0, scores2);
 
         assertEq(groupAction.originScoreByAccount(round2, user1), 90);
+    }
+}
+
+/**
+ * @title LOVE20ExtensionGroupActionJoinTokenTest
+ * @notice Tests for joinTokenAddress validation and LP token conversion
+ */
+contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
+    LOVE20GroupDistrust public groupDistrust;
+    MockUniswapV2Pair public lpToken;
+
+    function setUp() public {
+        setUpBase();
+
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
+        // Create LP token containing token
+        lpToken = new MockUniswapV2Pair(address(token), address(0x999));
+        lpToken.setReserves(1000e18, 500e18); // 1000 token, 500 other
+        lpToken.mint(address(this), 100e18); // LP total supply
+    }
+
+    function test_InvalidJoinToken_NotLPToken() public {
+        // Using random address that's not an LP token
+        address invalidToken = address(0x123);
+
+        vm.expectRevert(); // Low-level call to non-contract returns no data
+        new LOVE20ExtensionGroupAction(
+            address(mockFactory),
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            address(token), // stakeToken
+            invalidToken, // invalid joinToken
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+    }
+
+    function test_InvalidJoinToken_LPNotContainingToken() public {
+        // Create LP with neither token being tokenAddress
+        MockUniswapV2Pair badLp = new MockUniswapV2Pair(
+            address(0x111),
+            address(0x222)
+        );
+
+        vm.expectRevert(IGroupTokenJoin.InvalidJoinTokenAddress.selector);
+        new LOVE20ExtensionGroupAction(
+            address(mockFactory),
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
+            address(badLp), // LP doesn't contain token
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+    }
+
+    function test_ValidJoinToken_TokenItself() public {
+        // Should not revert
+        LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
+            address(mockFactory),
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
+            address(token), // joinToken = token
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+
+        assertEq(action.JOIN_TOKEN_ADDRESS(), address(token));
+        assertEq(
+            action.tokenAddress(),
+            address(token),
+            "tokenAddress mismatch"
+        );
+        assertFalse(action.isJoinedValueCalculated());
+    }
+
+    function test_ValidJoinToken_LPContainingToken() public {
+        // Should not revert
+        LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
+            address(mockFactory),
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
+            address(lpToken), // LP containing token
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+
+        assertEq(action.JOIN_TOKEN_ADDRESS(), address(lpToken));
+        assertTrue(action.isJoinedValueCalculated());
+    }
+
+    function test_JoinedValue_WithLPToken() public {
+        // Deploy action with LP as joinToken
+        LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
+            address(mockFactory),
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
+            address(lpToken),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+
+        // Register extension
+        token.mint(address(this), 1e18);
+        token.approve(address(mockFactory), type(uint256).max);
+        mockFactory.registerExtension(address(action), address(token));
+
+        // Setup group owner
+        uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "TestGroup");
+        prepareExtensionInit(address(action), address(token), ACTION_ID);
+
+        // Activate group
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId,
+            "Group",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User joins with LP tokens
+        uint256 lpAmount = 10e18;
+        lpToken.mint(user1, lpAmount);
+        vm.prank(user1);
+        lpToken.approve(address(action), type(uint256).max);
+
+        vm.prank(user1);
+        action.join(groupId, lpAmount, new string[](0));
+
+        // Calculate expected value:
+        // LP total supply = 100e18 + 10e18 (minted to user) = 110e18
+        // tokenReserve = 1000e18 (token is token0)
+        // joinedValue = tokenReserve * lpAmount * 2 / totalSupply
+        //             = 1000e18 * 10e18 * 2 / 110e18
+        uint256 totalSupply = lpToken.totalSupply();
+        uint256 expectedValue = (1000e18 * lpAmount * 2) / totalSupply;
+
+        assertEq(
+            action.joinedValue(),
+            expectedValue,
+            "Total joinedValue should be LP converted value"
+        );
+        assertEq(
+            action.joinedValueByAccount(user1),
+            expectedValue,
+            "Account joinedValue should be LP converted value"
+        );
     }
 }
