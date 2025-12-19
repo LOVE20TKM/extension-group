@@ -483,43 +483,22 @@ contract LOVE20ExtensionGroupService is
 
     // ============ IExtensionJoinedValue Implementation ============
 
-    function isJoinedValueCalculated() external view returns (bool) {
-        return GROUP_ACTION_TOKEN_ADDRESS != tokenAddress;
+    function isJoinedValueCalculated() external pure returns (bool) {
+        return true;
     }
 
     function joinedValue() external view returns (uint256) {
-        return _convertToParentTokenValue(_getTotalStaked(address(0)));
+        return _getTotalStaked(address(0));
     }
 
     function joinedValueByAccount(
         address account
     ) external view returns (uint256) {
         if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
-        return _convertToParentTokenValue(_getTotalStaked(account));
+        return _getTotalStaked(account);
     }
 
-    /// @dev Convert child token amount to parent token value using Uniswap V2 price
-    function _convertToParentTokenValue(
-        uint256 amount
-    ) internal view returns (uint256) {
-        if (amount == 0 || GROUP_ACTION_TOKEN_ADDRESS == tokenAddress)
-            return amount;
-
-        address pairAddr = IUniswapV2Factory(_center.uniswapV2FactoryAddress())
-            .getPair(tokenAddress, GROUP_ACTION_TOKEN_ADDRESS);
-        if (pairAddr == address(0)) return 0;
-
-        IUniswapV2Pair pair = IUniswapV2Pair(pairAddr);
-        (uint112 r0, uint112 r1, ) = pair.getReserves();
-        if (r0 == 0 || r1 == 0) return 0;
-
-        (uint256 parentR, uint256 childR) = pair.token0() == tokenAddress
-            ? (uint256(r0), uint256(r1))
-            : (uint256(r1), uint256(r0));
-        return (amount * parentR) / childR;
-    }
-
-    /// @dev Get total staked from all valid group actions (account=address(0) for total)
+    /// @dev Get total staked from all valid group actions, converted to tokenAddress value
     function _getTotalStaked(
         address account
     ) internal view returns (uint256 total) {
@@ -527,20 +506,105 @@ contract LOVE20ExtensionGroupService is
             _verify.currentRound()
         );
         for (uint256 i; i < exts.length; ) {
-            ILOVE20GroupManager mgr = ILOVE20GroupManager(
-                ILOVE20ExtensionGroupAction(exts[i]).GROUP_MANAGER_ADDRESS()
+            ILOVE20ExtensionGroupAction ext = ILOVE20ExtensionGroupAction(
+                exts[i]
             );
-            total += account == address(0)
+            address stakeToken = ext.STAKE_TOKEN_ADDRESS();
+            ILOVE20GroupManager mgr = ILOVE20GroupManager(
+                ext.GROUP_MANAGER_ADDRESS()
+            );
+
+            uint256 staked = account == address(0)
                 ? mgr.totalStaked(GROUP_ACTION_TOKEN_ADDRESS, aids[i])
                 : mgr.totalStakedByOwner(
                     GROUP_ACTION_TOKEN_ADDRESS,
                     aids[i],
                     account
                 );
+
+            total += _convertToTokenValue(stakeToken, staked);
             unchecked {
                 ++i;
             }
         }
+    }
+
+    /// @dev Convert stakeToken amount to tokenAddress value
+    /// Supports: 1) tokenAddress itself, 2) child token, 3) token with pair, 4) LP token
+    function _convertToTokenValue(
+        address stakeToken,
+        uint256 amount
+    ) internal view returns (uint256) {
+        if (amount == 0) return 0;
+
+        // Case 1: stakeToken is tokenAddress itself
+        if (stakeToken == tokenAddress) return amount;
+
+        // Case 2: LP token containing tokenAddress (check first, LP also has pair interface)
+        if (_isLPTokenContainingTarget(stakeToken)) {
+            return _convertLPToTokenValue(stakeToken, amount);
+        }
+
+        // Case 3 & 4: Child token or any token with direct Uniswap pair to tokenAddress
+        return _convertViaUniswap(stakeToken, tokenAddress, amount);
+    }
+
+    /// @dev Check if token is a Uniswap V2 LP token containing tokenAddress
+    function _isLPTokenContainingTarget(
+        address token
+    ) internal view returns (bool) {
+        try IUniswapV2Pair(token).token0() returns (address t0) {
+            try IUniswapV2Pair(token).token1() returns (address t1) {
+                return t0 == tokenAddress || t1 == tokenAddress;
+            } catch {
+                return false;
+            }
+        } catch {
+            return false;
+        }
+    }
+
+    /// @dev Convert LP token amount to tokenAddress value
+    /// LP must contain tokenAddress; both sides have equal value in AMM
+    function _convertLPToTokenValue(
+        address lpToken,
+        uint256 lpAmount
+    ) internal view returns (uint256) {
+        IUniswapV2Pair pair = IUniswapV2Pair(lpToken);
+        uint256 totalSupply = pair.totalSupply();
+        if (totalSupply == 0) return 0;
+
+        (uint112 r0, uint112 r1, ) = pair.getReserves();
+
+        // Get tokenAddress reserve (LP must contain tokenAddress)
+        uint256 tokenReserve = pair.token0() == tokenAddress
+            ? uint256(r0)
+            : uint256(r1);
+
+        // LP value = tokenAddress side * 2 (AMM ensures equal value on both sides)
+        return (tokenReserve * lpAmount * 2) / totalSupply;
+    }
+
+    /// @dev Convert amount via Uniswap pair, returns 0 if no pair or no liquidity
+    function _convertViaUniswap(
+        address fromToken,
+        address toToken,
+        uint256 amount
+    ) internal view returns (uint256) {
+        if (amount == 0) return 0;
+
+        address pairAddr = IUniswapV2Factory(_center.uniswapV2FactoryAddress())
+            .getPair(fromToken, toToken);
+        if (pairAddr == address(0)) return 0;
+
+        IUniswapV2Pair pair = IUniswapV2Pair(pairAddr);
+        (uint112 r0, uint112 r1, ) = pair.getReserves();
+        if (r0 == 0 || r1 == 0) return 0;
+
+        (uint256 toR, uint256 fromR) = pair.token0() == fromToken
+            ? (uint256(r1), uint256(r0))
+            : (uint256(r0), uint256(r1));
+        return (amount * toR) / fromR;
     }
 
     // ============ Internal Functions ============

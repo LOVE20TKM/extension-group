@@ -441,4 +441,91 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         emit log_named_uint("Bob's groups reward %", bobPercent);
         emit log_named_uint("Alice's group reward %", alicePercent);
     }
+
+    /// @notice Test that capacity reduction coefficient is 1e18 when within capacity
+    function test_capacityReduction_NoReductionInNormalFlow() public {
+        // Setup: Create extension and action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        // Both bob groups use same extension
+        bobGroup2.groupActionAddress = extensionAddr;
+        bobGroup2.flow.actionId = actionId;
+        bobGroup2.groupActionId = actionId;
+
+        // Vote
+        h.vote(bobGroup1.flow);
+
+        // Join phase
+        h.next_phase();
+        h.group_activate(bobGroup1);
+        h.group_activate(bobGroup2);
+
+        // Members join both groups
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = extensionAddr;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 15e18;
+        m2.groupActionAddress = extensionAddr;
+        h.group_join(m2, bobGroup2);
+
+        // Verify phase
+        h.next_phase();
+        uint256 verifyRound = h.verifyContract().currentRound();
+
+        // Submit scores for both groups
+        uint256[] memory scores1 = new uint256[](1);
+        scores1[0] = 100;
+        h.group_submit_score(bobGroup1, scores1);
+
+        uint256[] memory scores2 = new uint256[](1);
+        scores2[0] = 100;
+        h.group_submit_score(bobGroup2, scores2);
+
+        // Verify capacity reduction coefficients
+        LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
+            extensionAddr
+        );
+
+        // Both groups should have no reduction (1e18) since join amounts are small
+        uint256 reduction1 = ga.capacityReductionByGroupId(
+            verifyRound,
+            bobGroup1.groupId
+        );
+        uint256 reduction2 = ga.capacityReductionByGroupId(
+            verifyRound,
+            bobGroup2.groupId
+        );
+
+        assertEq(
+            reduction1,
+            1e18,
+            "Group1 should have no capacity reduction"
+        );
+        assertEq(
+            reduction2,
+            1e18,
+            "Group2 should have no capacity reduction"
+        );
+
+        // Verify group scores match joined amounts (no reduction applied)
+        assertEq(
+            ga.scoreByGroupId(verifyRound, bobGroup1.groupId),
+            10e18,
+            "Group1 score should equal joined amount"
+        );
+        assertEq(
+            ga.scoreByGroupId(verifyRound, bobGroup2.groupId),
+            15e18,
+            "Group2 score should equal joined amount"
+        );
+    }
 }

@@ -17,6 +17,14 @@ import {IJoin} from "@extension/src/interface/base/IJoin.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
+import {MockERC20} from "@extension/test/mocks/MockERC20.sol";
+import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
+import {
+    RoundHistoryAddressArray
+} from "@extension/src/lib/RoundHistoryAddressArray.sol";
+import {
+    RoundHistoryUint256Array
+} from "@extension/src/lib/RoundHistoryUint256Array.sol";
 
 /**
  * @title LOVE20ExtensionGroupServiceTest
@@ -679,7 +687,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     // ============ IExtensionJoinedValue Tests ============
 
     function test_IsJoinedValueCalculated() public view {
-        assertFalse(groupService.isJoinedValueCalculated());
+        assertTrue(groupService.isJoinedValueCalculated());
     }
 
     function test_JoinedValue() public {
@@ -1067,5 +1075,382 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(points1[0], 3000);
         assertEq(addrs3[0], address(0x300));
         assertEq(points3[0], 5000);
+    }
+}
+
+/**
+ * @title LOVE20ExtensionGroupServiceStakeTokenTest
+ * @notice Test suite for stakeToken conversion in LOVE20ExtensionGroupService
+ */
+contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
+    LOVE20GroupDistrust public groupDistrust;
+    MockExtensionFactory public actionFactory;
+    MockExtensionFactory public serviceFactory;
+
+    MockERC20 public otherToken;
+
+    uint256 public groupId1;
+
+    uint256 constant MAX_RECIPIENTS = 10;
+
+    function setUp() public {
+        setUpBase();
+
+        // Deploy additional token for testing
+        otherToken = new MockERC20();
+
+        // Deploy separate factories
+        actionFactory = new MockExtensionFactory(address(center));
+        serviceFactory = new MockExtensionFactory(address(center));
+
+        // Deploy GroupDistrust singleton
+        groupDistrust = new LOVE20GroupDistrust(
+            address(center),
+            address(verify),
+            address(group)
+        );
+
+        // Setup group owner
+        groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
+
+        // Prepare token approvals
+        token.mint(address(this), 100e18);
+        token.approve(address(actionFactory), type(uint256).max);
+        token.approve(address(serviceFactory), type(uint256).max);
+    }
+
+    // ============ Helper Functions ============
+
+    function _setupGroupActionAndService(
+        address stakeTokenAddress,
+        uint256 stakeAmount,
+        uint256 actionId,
+        uint256 serviceActionId,
+        uint256 testRound
+    )
+        internal
+        returns (
+            LOVE20ExtensionGroupAction groupAction,
+            LOVE20ExtensionGroupService groupService
+        )
+    {
+        // Set unique round for this test to avoid action conflicts
+        verify.setCurrentRound(testRound);
+        join.setCurrentRound(testRound);
+
+        // Deploy GroupAction with specified stakeToken
+        groupAction = new LOVE20ExtensionGroupAction(
+            address(actionFactory),
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            stakeTokenAddress,
+            stakeAmount,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+
+        // Deploy GroupService
+        groupService = new LOVE20ExtensionGroupService(
+            address(serviceFactory),
+            address(token),
+            address(token),
+            address(actionFactory),
+            MAX_RECIPIENTS
+        );
+
+        // Register extensions
+        actionFactory.registerExtension(address(groupAction), address(token));
+        serviceFactory.registerExtension(address(groupService), address(token));
+
+        // Prepare extension init
+        submit.setActionInfo(address(token), actionId, address(groupAction));
+        submit.setActionInfo(
+            address(token),
+            serviceActionId,
+            address(groupService)
+        );
+
+        // Set voted actionIds for this round
+        vote.setVotedActionIds(address(token), testRound, actionId);
+        vote.setVotedActionIds(address(token), testRound, serviceActionId);
+
+        token.mint(address(groupAction), 1e18);
+        token.mint(address(groupService), 1e18);
+    }
+
+    // ============ StakeToken Conversion Tests ============
+
+    /// @notice Test joinedValue when stakeToken equals tokenAddress (no conversion needed)
+    function test_JoinedValue_StakeTokenEqualsTokenAddress() public {
+        uint256 stakeAmount = 1000e18;
+
+        (
+            LOVE20ExtensionGroupAction groupAction,
+            LOVE20ExtensionGroupService groupService
+        ) = _setupGroupActionAndService(
+                address(token),
+                stakeAmount,
+                100,
+                101,
+                10
+            );
+
+        // Setup user and activate group
+        setupUser(groupOwner1, stakeAmount, address(groupManager));
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            100,
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User joins group
+        setupUser(user1, 100e18, address(groupAction));
+        vm.prank(user1);
+        groupAction.join(groupId1, 50e18, new string[](0));
+
+        // Owner joins service
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Verify joinedValue equals total staked (no conversion)
+        uint256 totalStaked = groupManager.totalStaked(address(token), 100);
+        uint256 joinedVal = groupService.joinedValue();
+        assertEq(
+            joinedVal,
+            totalStaked,
+            "JoinedValue should equal totalStaked"
+        );
+    }
+
+    /// @notice Test joinedValue with LP token as stakeToken
+    function test_JoinedValue_WithLPToken() public {
+        // Create LP pair for token/otherToken
+        address lpToken = uniswapFactory.createPair(
+            address(token),
+            address(otherToken)
+        );
+
+        // Set LP reserves: 1000 token (token0), 2000 otherToken (token1)
+        MockUniswapV2Pair(lpToken).setReserves(1000e18, 2000e18);
+
+        // Mint LP tokens to simulate totalSupply (100 LP total)
+        MockUniswapV2Pair(lpToken).mint(address(this), 100e18);
+
+        uint256 lpStakeAmount = 10e18;
+
+        (
+            ,
+            LOVE20ExtensionGroupService groupService
+        ) = _setupGroupActionAndService(lpToken, lpStakeAmount, 200, 201, 20);
+
+        // Setup: mint and approve LP tokens for groupManager
+        MockUniswapV2Pair(lpToken).mint(groupOwner1, 20e18);
+        vm.prank(groupOwner1);
+        MockUniswapV2Pair(lpToken).approve(
+            address(groupManager),
+            type(uint256).max
+        );
+
+        // Activate group with LP token stake
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            200,
+            groupId1,
+            "LPGroup",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // Owner joins service
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Calculate expected value:
+        // LP staked = 10e18
+        // LP totalSupply = 120e18 (100 minted to test contract + 20 to groupOwner1)
+        // token reserve = 1000e18 (token is token0)
+        // LP value = (tokenReserve * lpAmount * 2) / totalSupply
+        //          = (1000e18 * 10e18 * 2) / 120e18 = 166.67e18
+        uint256 lpStaked = groupManager.totalStaked(address(token), 200);
+        assertEq(lpStaked, lpStakeAmount, "LP staked should be 10e18");
+
+        uint256 joinedVal = groupService.joinedValue();
+        uint256 lpTotalSupply = 120e18; // 100 + 20 minted
+        uint256 expectedValue = (1000e18 * lpStakeAmount * 2) / lpTotalSupply;
+        assertEq(
+            joinedVal,
+            expectedValue,
+            "JoinedValue should be LP converted value"
+        );
+    }
+
+    /// @notice Test joinedValue with token that has Uniswap pair to tokenAddress
+    function test_JoinedValue_WithUniswapPair() public {
+        // Create pair for token/otherToken
+        address pairAddr = uniswapFactory.createPair(
+            address(token),
+            address(otherToken)
+        );
+
+        // Set reserves: 1000 token, 500 otherToken (1:0.5 ratio)
+        // price: 1 otherToken = 2 token
+        MockUniswapV2Pair(pairAddr).setReserves(1000e18, 500e18);
+
+        uint256 stakeAmount = 100e18;
+
+        (
+            ,
+            LOVE20ExtensionGroupService groupService
+        ) = _setupGroupActionAndService(
+                address(otherToken),
+                stakeAmount,
+                300,
+                301,
+                30
+            );
+
+        // Setup: mint and approve otherToken for groupManager
+        otherToken.mint(groupOwner1, 200e18);
+        vm.prank(groupOwner1);
+        otherToken.approve(address(groupManager), type(uint256).max);
+
+        // Activate group with otherToken stake
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            300,
+            groupId1,
+            "OtherTokenGroup",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // Owner joins service
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Calculate expected value:
+        // otherToken staked = 100e18
+        // reserves: 1000 token, 500 otherToken
+        // converted value = (100e18 * 1000e18) / 500e18 = 200e18
+        uint256 staked = groupManager.totalStaked(address(token), 300);
+        assertEq(staked, stakeAmount, "OtherToken staked should be 100e18");
+
+        uint256 joinedVal = groupService.joinedValue();
+        uint256 expectedValue = (stakeAmount * 1000e18) / 500e18;
+        assertEq(
+            joinedVal,
+            expectedValue,
+            "JoinedValue should be converted via Uniswap"
+        );
+    }
+
+    /// @notice Test joinedValue returns 0 when no Uniswap pair exists
+    function test_JoinedValue_NoPairReturnsZero() public {
+        uint256 stakeAmount = 100e18;
+
+        // Deploy without creating Uniswap pair
+        (
+            ,
+            LOVE20ExtensionGroupService groupService
+        ) = _setupGroupActionAndService(
+                address(otherToken),
+                stakeAmount,
+                400,
+                401,
+                40
+            );
+
+        // Setup: mint and approve otherToken for groupManager
+        otherToken.mint(groupOwner1, 200e18);
+        vm.prank(groupOwner1);
+        otherToken.approve(address(groupManager), type(uint256).max);
+
+        // Activate group with otherToken stake
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            400,
+            groupId1,
+            "NoPairGroup",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // Owner joins service
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // joinedValue should return 0 (no pair exists)
+        uint256 joinedVal = groupService.joinedValue();
+        assertEq(joinedVal, 0, "JoinedValue should be 0 when no pair exists");
+    }
+
+    /// @notice Test LP token detection - non-LP token should use Uniswap conversion
+    function test_LPTokenDetection_NonLPToken() public {
+        // Create pair for conversion
+        address pairAddr = uniswapFactory.createPair(
+            address(token),
+            address(otherToken)
+        );
+        MockUniswapV2Pair(pairAddr).setReserves(1000e18, 500e18);
+
+        uint256 stakeAmount = 100e18;
+
+        (
+            ,
+            LOVE20ExtensionGroupService groupService
+        ) = _setupGroupActionAndService(
+                address(otherToken),
+                stakeAmount,
+                500,
+                501,
+                50
+            );
+
+        otherToken.mint(groupOwner1, 200e18);
+        vm.prank(groupOwner1);
+        otherToken.approve(address(groupManager), type(uint256).max);
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            500,
+            groupId1,
+            "NonLPGroup",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Verify it uses Uniswap conversion (not LP conversion)
+        // Uniswap conversion: (amount * tokenReserve) / otherReserve
+        uint256 expectedUniswap = (stakeAmount * 1000e18) / 500e18; // 200e18
+
+        uint256 joinedVal = groupService.joinedValue();
+        assertEq(
+            joinedVal,
+            expectedUniswap,
+            "Should use Uniswap conversion for non-LP token"
+        );
     }
 }

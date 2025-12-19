@@ -753,3 +753,424 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         scoreContract.verifyWithOriginScores(groupId1, 0, scores);
     }
 }
+
+/**
+ * @title CapacityReductionTest
+ * @notice Test suite for capacity reduction coefficient calculation
+ * @dev Key insight: maxVerifyCapacity is dynamic (depends on govVotes).
+ *      By reducing govVotes after join but before verify, we can trigger reduction.
+ */
+contract CapacityReductionTest is BaseGroupTest {
+    MockGroupManualScore public scoreContract;
+
+    uint256 public groupId1;
+    uint256 public groupId2;
+    uint256 public groupId3;
+
+    // Use verifyCapacityMultiplier = 1 to make maxVerifyCapacity = baseCapacity
+    uint256 constant SMALL_CAPACITY_MULTIPLIER = 1;
+
+    function setUp() public {
+        setUpBase();
+
+        // Create contract with small capacity multiplier
+        scoreContract = new MockGroupManualScore(
+            address(mockFactory),
+            address(token),
+            address(groupManager),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            SMALL_CAPACITY_MULTIPLIER
+        );
+
+        token.mint(address(this), 1e18);
+        token.approve(address(mockFactory), type(uint256).max);
+        mockFactory.registerExtension(address(scoreContract), address(token));
+
+        // Setup single owner with 3 groups for capacity testing
+        // Initial: govVotes = 10,000e18, totalGovVotes = 100,000e18
+        // baseCapacity = 1_000_000e18 * 10,000e18 / 100,000e18 = 100,000e18
+        stake.setValidGovVotes(address(token), groupOwner1, 10000e18);
+        groupId1 = group.mint(groupOwner1, "TestGroup1");
+        groupId2 = group.mint(groupOwner1, "TestGroup2");
+        groupId3 = group.mint(groupOwner1, "TestGroup3");
+
+        prepareExtensionInit(address(scoreContract), address(token), ACTION_ID);
+
+        // Setup groupOwner1 with enough stake for 3 groups
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT * 3,
+            address(groupManager)
+        );
+
+        // Activate all 3 groups
+        vm.startPrank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+        groupManager.activateGroup(
+            address(token),
+            ACTION_ID,
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+        vm.stopPrank();
+    }
+
+    /// @dev Helper to get max join amount per account
+    function getMaxJoinAmount() internal view returns (uint256) {
+        return groupManager.calculateJoinMaxAmount(address(token), ACTION_ID);
+    }
+
+    // ============ Capacity Reduction Tests ============
+
+    /// @notice Test single group verification with sufficient capacity - no reduction
+    function test_CapacityReduction_NoReduction() public {
+        uint256 maxPerAccount = getMaxJoinAmount();
+        uint256 joinAmount = maxPerAccount;
+
+        setupUser(user1, joinAmount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 100;
+
+        vm.prank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+
+        // Capacity reduction should be 1e18 (no reduction)
+        uint256 reduction = scoreContract.capacityReductionByGroupId(
+            round,
+            groupId1
+        );
+        assertEq(
+            reduction,
+            1e18,
+            "Should have no reduction when within capacity"
+        );
+
+        // Group score should equal joined amount
+        uint256 groupScore = scoreContract.scoreByGroupId(round, groupId1);
+        assertEq(groupScore, joinAmount, "Group score should equal joined amount");
+    }
+
+    /// @notice Test multi-group verification, both within capacity - no reduction
+    function test_CapacityReduction_MultiGroup_NoReduction() public {
+        uint256 maxPerAccount = getMaxJoinAmount();
+
+        setupUser(user1, maxPerAccount, address(scoreContract));
+        setupUser(user2, maxPerAccount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, maxPerAccount, new string[](0));
+
+        vm.prank(user2);
+        scoreContract.join(groupId2, maxPerAccount, new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 100;
+
+        vm.startPrank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores);
+        vm.stopPrank();
+
+        // Both groups should have no reduction
+        assertEq(
+            scoreContract.capacityReductionByGroupId(round, groupId1),
+            1e18,
+            "Group1 should have no reduction"
+        );
+        assertEq(
+            scoreContract.capacityReductionByGroupId(round, groupId2),
+            1e18,
+            "Group2 should have no reduction"
+        );
+    }
+
+    /// @notice Test partial capacity reduction by reducing govVotes after join
+    function test_CapacityReduction_PartialReduction() public {
+        // Join with maxPerAccount for both groups
+        uint256 maxPerAccount = getMaxJoinAmount();
+        uint256 joinAmount1 = maxPerAccount;
+        uint256 joinAmount2 = maxPerAccount;
+
+        setupUser(user1, joinAmount1, address(scoreContract));
+        setupUser(user2, joinAmount2, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount1, new string[](0));
+
+        vm.prank(user2);
+        scoreContract.join(groupId2, joinAmount2, new string[](0));
+
+        // CRITICAL: Reduce govVotes to trigger capacity reduction
+        // Original capacity = 100,000e18, reduce to make it smaller than group1 + group2
+        // New govVotes = 1,500e18 -> newCapacity = 1,000,000e18 * 1,500e18 / 100,000e18 = 15,000e18
+        // joinAmount1 + joinAmount2 ≈ 20,000e18 > 15,000e18
+        stake.setValidGovVotes(address(token), groupOwner1, 1500e18);
+
+        uint256 newMaxCapacity = groupManager.maxVerifyCapacityByOwner(
+            address(token),
+            ACTION_ID,
+            groupOwner1
+        );
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 100;
+
+        vm.startPrank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores);
+        vm.stopPrank();
+
+        // Group1 should have no reduction (first group)
+        assertEq(
+            scoreContract.capacityReductionByGroupId(round, groupId1),
+            1e18,
+            "Group1 should have no reduction"
+        );
+
+        // Group2 should have partial reduction
+        uint256 remainingCapacity = newMaxCapacity > joinAmount1
+            ? newMaxCapacity - joinAmount1
+            : 0;
+
+        if (remainingCapacity > 0 && remainingCapacity < joinAmount2) {
+            uint256 expectedReduction = (remainingCapacity * 1e18) / joinAmount2;
+            assertEq(
+                scoreContract.capacityReductionByGroupId(round, groupId2),
+                expectedReduction,
+                "Group2 should have partial reduction"
+            );
+
+            // Verify score calculation
+            uint256 expectedScore2 = (joinAmount2 * expectedReduction) / 1e18;
+            assertEq(
+                scoreContract.scoreByGroupId(round, groupId2),
+                expectedScore2,
+                "Group2 score should be reduced"
+            );
+        }
+    }
+
+    /// @notice Test revert when remaining capacity is zero
+    function test_CapacityReduction_RevertNoCapacity() public {
+        // Join group1
+        uint256 maxPerAccount = getMaxJoinAmount();
+        setupUser(user1, maxPerAccount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, maxPerAccount, new string[](0));
+
+        // Join group2
+        setupUser(user2, 1e18, address(scoreContract));
+        vm.prank(user2);
+        scoreContract.join(groupId2, 1e18, new string[](0));
+
+        // Reduce govVotes to make capacity = group1 joined amount
+        // This leaves 0 remaining for group2
+        // Set govVotes so that maxCapacity ≈ maxPerAccount
+        // maxCapacity = totalSupply * govVotes / totalGovVotes * multiplier
+        // We need: maxCapacity = maxPerAccount
+        // govVotes = maxPerAccount * totalGovVotes / totalSupply
+        uint256 totalSupply = token.totalSupply();
+        uint256 totalGovVotes = 100000e18;
+        uint256 targetCapacity = maxPerAccount; // exactly equal to group1
+        uint256 newGovVotes = (targetCapacity * totalGovVotes) / totalSupply;
+        stake.setValidGovVotes(address(token), groupOwner1, newGovVotes);
+
+        uint256[] memory scores1 = new uint256[](1);
+        scores1[0] = 100;
+        uint256[] memory scores2 = new uint256[](1);
+        scores2[0] = 100;
+
+        vm.startPrank(groupOwner1);
+        // First verification succeeds
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores1);
+
+        // Second verification should revert (no remaining capacity)
+        vm.expectRevert(IGroupScore.NoRemainingVerifyCapacity.selector);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores2);
+        vm.stopPrank();
+    }
+
+    /// @notice Test capacity reduction affects scoreByGroupId correctly
+    function test_CapacityReduction_AffectsGroupScore() public {
+        uint256 maxPerAccount = getMaxJoinAmount();
+        uint256 joinAmount1 = maxPerAccount;
+        uint256 joinAmount2 = maxPerAccount;
+
+        setupUser(user1, joinAmount1, address(scoreContract));
+        setupUser(user2, joinAmount2, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount1, new string[](0));
+
+        vm.prank(user2);
+        scoreContract.join(groupId2, joinAmount2, new string[](0));
+
+        // Reduce govVotes to 1,200e18
+        // newCapacity = 1,000,000e18 * 1,200e18 / 100,000e18 = 12,000e18
+        // After verifying group1 (~10,000e18), remaining ≈ 2,000e18
+        // reduction for group2 = 2,000 / 10,000 = 0.2
+        stake.setValidGovVotes(address(token), groupOwner1, 1200e18);
+
+        uint256 newMaxCapacity = groupManager.maxVerifyCapacityByOwner(
+            address(token),
+            ACTION_ID,
+            groupOwner1
+        );
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 100;
+
+        vm.startPrank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores);
+        vm.stopPrank();
+
+        // Verify reduction calculation
+        uint256 remainingCapacity = newMaxCapacity > joinAmount1
+            ? newMaxCapacity - joinAmount1
+            : 0;
+        uint256 expectedReduction = (remainingCapacity * 1e18) / joinAmount2;
+
+        assertEq(
+            scoreContract.capacityReductionByGroupId(round, groupId2),
+            expectedReduction,
+            "Reduction coefficient mismatch"
+        );
+
+        // Verify score calculation: score = joinedAmount * reduction / 1e18
+        uint256 expectedScore = (joinAmount2 * expectedReduction) / 1e18;
+        assertEq(
+            scoreContract.scoreByGroupId(round, groupId2),
+            expectedScore,
+            "Group score should equal joinedAmount * reduction"
+        );
+
+        // Verify total score
+        uint256 totalScore = scoreContract.score(round);
+        assertEq(
+            totalScore,
+            joinAmount1 + expectedScore,
+            "Total score mismatch"
+        );
+    }
+
+    /// @notice Test three groups with progressive capacity reduction
+    function test_CapacityReduction_ThreeGroups_Progressive() public {
+        uint256 maxPerAccount = getMaxJoinAmount();
+
+        setupUser(user1, maxPerAccount, address(scoreContract));
+        setupUser(user2, maxPerAccount, address(scoreContract));
+        setupUser(user3, maxPerAccount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, maxPerAccount, new string[](0));
+
+        vm.prank(user2);
+        scoreContract.join(groupId2, maxPerAccount, new string[](0));
+
+        vm.prank(user3);
+        scoreContract.join(groupId3, maxPerAccount, new string[](0));
+
+        // Reduce govVotes to create progressive reduction
+        // newCapacity = 20,000e18 (approx 2x maxPerAccount)
+        // group1 = maxPerAccount -> remaining = 10,000e18 (no reduction)
+        // group2 = maxPerAccount -> remaining = 0 or negative (reduction or revert)
+        uint256 totalSupply = token.totalSupply();
+        uint256 totalGovVotes = 100000e18;
+        uint256 targetCapacity = maxPerAccount * 2; // 2x group capacity
+        uint256 newGovVotes = (targetCapacity * totalGovVotes) / totalSupply;
+        stake.setValidGovVotes(address(token), groupOwner1, newGovVotes);
+
+        uint256 newMaxCapacity = groupManager.maxVerifyCapacityByOwner(
+            address(token),
+            ACTION_ID,
+            groupOwner1
+        );
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 100;
+
+        vm.startPrank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores);
+
+        // Group3 should revert or have severe reduction
+        uint256 remainingAfterG2 = newMaxCapacity > maxPerAccount * 2
+            ? newMaxCapacity - maxPerAccount * 2
+            : 0;
+
+        if (remainingAfterG2 == 0) {
+            vm.expectRevert(IGroupScore.NoRemainingVerifyCapacity.selector);
+            scoreContract.verifyWithOriginScores(groupId3, 0, scores);
+        } else {
+            scoreContract.verifyWithOriginScores(groupId3, 0, scores);
+        }
+        vm.stopPrank();
+
+        // Group1: no reduction
+        assertEq(
+            scoreContract.capacityReductionByGroupId(round, groupId1),
+            1e18,
+            "Group1 no reduction"
+        );
+
+        // Group2: check reduction
+        uint256 remainingAfterG1 = newMaxCapacity > maxPerAccount
+            ? newMaxCapacity - maxPerAccount
+            : 0;
+        if (remainingAfterG1 >= maxPerAccount) {
+            assertEq(
+                scoreContract.capacityReductionByGroupId(round, groupId2),
+                1e18,
+                "Group2 no reduction when remaining >= capacity"
+            );
+        } else if (remainingAfterG1 > 0) {
+            uint256 expectedReduction = (remainingAfterG1 * 1e18) / maxPerAccount;
+            assertEq(
+                scoreContract.capacityReductionByGroupId(round, groupId2),
+                expectedReduction,
+                "Group2 should have reduction"
+            );
+        }
+    }
+}
