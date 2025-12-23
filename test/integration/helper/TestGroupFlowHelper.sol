@@ -516,7 +516,7 @@ contract TestGroupFlowHelper is Test {
         if (mintCost > 0) {
             IERC20(tokenAddress).approve(address(group), mintCost);
         }
-        user.groupId = group.mint(groupName);
+        (user.groupId, ) = group.mint(groupName);
         vm.stopPrank();
     }
 
@@ -539,7 +539,7 @@ contract TestGroupFlowHelper is Test {
         if (mintCost > 0) {
             token.approve(address(group), mintCost);
         }
-        groupId = group.mint(groupName);
+        (groupId, ) = group.mint(groupName);
         vm.stopPrank();
     }
 
