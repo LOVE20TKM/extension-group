@@ -503,7 +503,7 @@ contract LOVE20ExtensionGroupService is
         address account
     ) internal view returns (uint256 total) {
         (address[] memory exts, uint256[] memory aids) = _getValidGroupActions(
-            _verify.currentRound()
+            _join.currentRound()
         );
         for (uint256 i; i < exts.length; ) {
             ILOVE20ExtensionGroupAction ext = ILOVE20ExtensionGroupAction(
