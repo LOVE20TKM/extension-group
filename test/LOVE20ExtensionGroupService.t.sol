@@ -952,6 +952,152 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertTrue(groupService.hasActiveGroups(groupOwner2));
     }
 
+    // ============ validGroupActions Tests ============
+
+    function test_ValidGroupActions_Empty() public view {
+        // Use a round that has no voted actionIds
+        uint256 emptyRound = 999;
+        (address[] memory exts, uint256[] memory aids) = groupService
+            .validGroupActions(emptyRound);
+
+        assertEq(exts.length, 0);
+        assertEq(aids.length, 0);
+    }
+
+    function test_ValidGroupActions_SingleValid() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        uint256 round = verify.currentRound();
+        (address[] memory exts, uint256[] memory aids) = groupService
+            .validGroupActions(round);
+
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], address(groupAction));
+        assertEq(aids[0], ACTION_ID);
+    }
+
+    function test_ValidGroupActions_MultipleValid() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 90);
+
+        // Create another group action with different actionId
+        LOVE20ExtensionGroupAction groupAction2 = new LOVE20ExtensionGroupAction(
+                address(actionFactory),
+                address(token),
+                address(groupManager),
+                address(groupDistrust),
+                address(token),
+                address(token),
+                GROUP_ACTIVATION_STAKE_AMOUNT,
+                MAX_JOIN_AMOUNT_MULTIPLIER,
+                CAPACITY_FACTOR
+            );
+
+        uint256 actionId2 = 100;
+        actionFactory.registerExtension(address(groupAction2), address(token));
+        submit.setActionInfo(address(token), actionId2, address(groupAction2));
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            actionId2
+        );
+
+        uint256 round = verify.currentRound();
+        (address[] memory exts, uint256[] memory aids) = groupService
+            .validGroupActions(round);
+
+        assertEq(exts.length, 2);
+        assertEq(aids.length, 2);
+        // Both should be valid
+        assertTrue(
+            (exts[0] == address(groupAction) && aids[0] == ACTION_ID) ||
+                (exts[0] == address(groupAction2) && aids[0] == actionId2)
+        );
+        assertTrue(
+            (exts[1] == address(groupAction) && aids[1] == ACTION_ID) ||
+                (exts[1] == address(groupAction2) && aids[1] == actionId2)
+        );
+        assertTrue(exts[0] != exts[1]);
+    }
+
+    function test_ValidGroupActions_FiltersInvalidExtension() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Add an actionId with extension not registered in factory
+        uint256 invalidActionId = 200;
+        address invalidExtension = address(0x999);
+        submit.setActionInfo(address(token), invalidActionId, invalidExtension);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            invalidActionId
+        );
+
+        uint256 round = verify.currentRound();
+        (address[] memory exts, uint256[] memory aids) = groupService
+            .validGroupActions(round);
+
+        // Should only return the valid one
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], address(groupAction));
+        assertEq(aids[0], ACTION_ID);
+    }
+
+    function test_ValidGroupActions_FiltersZeroExtension() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Add an actionId with zero extension address
+        uint256 zeroActionId = 300;
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            zeroActionId
+        );
+        // Don't set extension, so it will be address(0)
+
+        uint256 round = verify.currentRound();
+        (address[] memory exts, uint256[] memory aids) = groupService
+            .validGroupActions(round);
+
+        // Should only return the valid one
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], address(groupAction));
+        assertEq(aids[0], ACTION_ID);
+    }
+
+    function test_ValidGroupActions_DifferentRounds() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        uint256 round1 = verify.currentRound();
+        (address[] memory exts1, uint256[] memory aids1) = groupService
+            .validGroupActions(round1);
+
+        assertEq(exts1.length, 1);
+        assertEq(aids1.length, 1);
+
+        // Advance to next round but don't setup actionIds for this round
+        advanceRound();
+
+        uint256 round2 = verify.currentRound();
+        (address[] memory exts2, uint256[] memory aids2) = groupService
+            .validGroupActions(round2);
+
+        // Round2 should have no valid actions (no voted actionIds in round2)
+        assertEq(exts2.length, 0);
+        assertEq(aids2.length, 0);
+
+        // Round1 should still return the same result
+        (
+            address[] memory exts1Again,
+            uint256[] memory aids1Again
+        ) = groupService.validGroupActions(round1);
+        assertEq(exts1Again.length, 1);
+        assertEq(aids1Again.length, 1);
+    }
+
     // ============ generatedRewardByVerifier Tests ============
 
     function test_GeneratedRewardByVerifier_NoReward() public {

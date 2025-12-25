@@ -113,7 +113,7 @@ contract LOVE20ExtensionGroupService is
 
     /// @notice Check if account has staked in any valid group action
     function hasActiveGroups(address account) public view returns (bool) {
-        (address[] memory exts, uint256[] memory aids) = _getValidGroupActions(
+        (address[] memory exts, uint256[] memory aids) = _validGroupActions(
             _join.currentRound()
         );
         for (uint256 i; i < exts.length; ) {
@@ -133,8 +133,18 @@ contract LOVE20ExtensionGroupService is
         return false;
     }
 
+    function validGroupActions(
+        uint256 round
+    )
+        external
+        view
+        returns (address[] memory extensions, uint256[] memory actionIds)
+    {
+        (extensions, actionIds) = _validGroupActions(round);
+    }
+
     /// @dev Get all valid group action extensions and their actionIds for a round
-    function _getValidGroupActions(
+    function _validGroupActions(
         uint256 round
     )
         internal
@@ -502,7 +512,7 @@ contract LOVE20ExtensionGroupService is
     function _getTotalStaked(
         address account
     ) internal view returns (uint256 total) {
-        (address[] memory exts, uint256[] memory aids) = _getValidGroupActions(
+        (address[] memory exts, uint256[] memory aids) = _validGroupActions(
             _join.currentRound()
         );
         for (uint256 i; i < exts.length; ) {
@@ -632,7 +642,7 @@ contract LOVE20ExtensionGroupService is
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (address[] memory exts, ) = _getValidGroupActions(round);
+        (address[] memory exts, ) = _validGroupActions(round);
         for (uint256 i; i < exts.length; ) {
             ILOVE20ExtensionGroupAction ga = ILOVE20ExtensionGroupAction(
                 exts[i]

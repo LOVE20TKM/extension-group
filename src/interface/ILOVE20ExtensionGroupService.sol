@@ -57,6 +57,13 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
 
     // ============ View Functions ============
 
+    function validGroupActions(
+        uint256 round
+    )
+        external
+        view
+        returns (address[] memory extensions, uint256[] memory actionIds);
+
     function actionIdsWithRecipients(
         address account,
         uint256 round
