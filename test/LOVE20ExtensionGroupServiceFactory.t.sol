@@ -5,6 +5,7 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     LOVE20ExtensionGroupServiceFactory
 } from "../src/LOVE20ExtensionGroupServiceFactory.sol";
+import {ILOVE20ExtensionGroupServiceFactory} from "../src/interface/ILOVE20ExtensionGroupServiceFactory.sol";
 import {
     LOVE20ExtensionGroupService
 } from "../src/LOVE20ExtensionGroupService.sol";
@@ -24,6 +25,15 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     LOVE20GroupDistrust public groupDistrust;
 
     uint256 constant MAX_RECIPIENTS = 10;
+
+    // Event declaration for testing
+    event ExtensionCreate(
+        address indexed extension,
+        address indexed tokenAddress,
+        address groupActionTokenAddress,
+        address groupActionFactoryAddress,
+        uint256 maxRecipients
+    );
 
     function setUp() public {
         setUpBase();
@@ -223,5 +233,36 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     function test_Exists_ReturnsFalseForNonExistent() public view {
         assertFalse(factory.exists(address(0x123)));
         assertFalse(factory.exists(address(0)));
+    }
+
+    // ============ ExtensionCreate Event Tests ============
+
+    function test_CreateExtension_EmitsExtensionCreate() public {
+        token.approve(address(factory), 1e18);
+
+        // Calculate expected extension address
+        uint256 nonce = vm.getNonce(address(factory));
+        address expectedExtension = vm.computeCreateAddress(
+            address(factory),
+            nonce
+        );
+
+        vm.expectEmit(true, true, false, false);
+        emit ExtensionCreate({
+            extension: expectedExtension,
+            tokenAddress: address(token),
+            groupActionTokenAddress: address(token),
+            groupActionFactoryAddress: address(actionFactory),
+            maxRecipients: MAX_RECIPIENTS
+        });
+
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            address(actionFactory),
+            MAX_RECIPIENTS
+        );
+
+        assertEq(extension, expectedExtension);
     }
 }

@@ -5,19 +5,16 @@ import {
     LOVE20ExtensionFactoryBase
 } from "@extension/src/LOVE20ExtensionFactoryBase.sol";
 import {LOVE20ExtensionGroupService} from "./LOVE20ExtensionGroupService.sol";
+import {
+    ILOVE20ExtensionGroupServiceFactory
+} from "./interface/ILOVE20ExtensionGroupServiceFactory.sol";
 
 /// @title LOVE20ExtensionGroupServiceFactory
 /// @notice Factory contract for creating LOVE20ExtensionGroupService instances
-contract LOVE20ExtensionGroupServiceFactory is LOVE20ExtensionFactoryBase {
-    // ============ Structs ============
-
-    struct ExtensionParams {
-        address tokenAddress;
-        address groupActionTokenAddress;
-        address groupActionFactoryAddress;
-        uint256 maxRecipients;
-    }
-
+contract LOVE20ExtensionGroupServiceFactory is
+    LOVE20ExtensionFactoryBase,
+    ILOVE20ExtensionGroupServiceFactory
+{
     // ============ Storage ============
 
     mapping(address => ExtensionParams) private _extensionParams;
@@ -58,6 +55,14 @@ contract LOVE20ExtensionGroupServiceFactory is LOVE20ExtensionFactoryBase {
         });
 
         _registerExtension(extension, tokenAddress_);
+
+        emit ExtensionCreate({
+            extension: extension,
+            tokenAddress: tokenAddress_,
+            groupActionTokenAddress: groupActionTokenAddress_,
+            groupActionFactoryAddress: groupActionFactoryAddress_,
+            maxRecipients: maxRecipients_
+        });
     }
 
     // ============ View Functions ============

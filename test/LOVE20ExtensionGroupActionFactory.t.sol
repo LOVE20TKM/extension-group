@@ -6,6 +6,9 @@ import {
     LOVE20ExtensionGroupActionFactory
 } from "../src/LOVE20ExtensionGroupActionFactory.sol";
 import {
+    ILOVE20ExtensionGroupActionFactory
+} from "../src/interface/ILOVE20ExtensionGroupActionFactory.sol";
+import {
     LOVE20ExtensionGroupAction
 } from "../src/LOVE20ExtensionGroupAction.sol";
 import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
@@ -18,6 +21,19 @@ import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
     LOVE20ExtensionGroupActionFactory public factory;
     LOVE20GroupDistrust public groupDistrust;
+
+    // Event declaration for testing
+    event ExtensionCreate(
+        address indexed extension,
+        address indexed tokenAddress,
+        address groupManagerAddress,
+        address groupDistrustAddress,
+        address stakeTokenAddress,
+        address joinTokenAddress,
+        uint256 activationStakeAmount,
+        uint256 maxJoinAmountMultiplier,
+        uint256 verifyCapacityMultiplier
+    );
 
     function setUp() public {
         setUpBase();
@@ -188,26 +204,47 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        LOVE20ExtensionGroupActionFactory.ExtensionParams
-            memory params = factory.extensionParams(extension);
+        (
+            address tokenAddress,
+            address groupManagerAddress,
+            address groupDistrustAddress,
+            address stakeTokenAddress,
+            address joinTokenAddress,
+            uint256 activationStakeAmount,
+            uint256 maxJoinAmountMultiplier,
+            uint256 verifyCapacityMultiplier
+        ) = factory.extensionParams(extension);
 
-        assertEq(params.tokenAddress, address(token));
-        assertEq(params.groupManagerAddress, address(groupManager));
-        assertEq(params.groupDistrustAddress, address(groupDistrust));
-        assertEq(params.stakeTokenAddress, address(token));
-        assertEq(params.joinTokenAddress, address(token));
-        assertEq(params.activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
-        assertEq(params.verifyCapacityMultiplier, CAPACITY_FACTOR);
+        assertEq(tokenAddress, address(token));
+        assertEq(groupManagerAddress, address(groupManager));
+        assertEq(groupDistrustAddress, address(groupDistrust));
+        assertEq(stakeTokenAddress, address(token));
+        assertEq(joinTokenAddress, address(token));
+        assertEq(activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
+        assertEq(maxJoinAmountMultiplier, MAX_JOIN_AMOUNT_MULTIPLIER);
+        assertEq(verifyCapacityMultiplier, CAPACITY_FACTOR);
     }
 
     function test_ExtensionParams_ZeroForNonExistent() public view {
-        LOVE20ExtensionGroupActionFactory.ExtensionParams
-            memory params = factory.extensionParams(address(0x123));
+        (
+            address tokenAddress,
+            address groupManagerAddress,
+            address groupDistrustAddress,
+            address stakeTokenAddress,
+            address joinTokenAddress,
+            uint256 activationStakeAmount,
+            uint256 maxJoinAmountMultiplier,
+            uint256 verifyCapacityMultiplier
+        ) = factory.extensionParams(address(0x123));
 
-        assertEq(params.tokenAddress, address(0));
-        assertEq(params.groupManagerAddress, address(0));
-        assertEq(params.groupDistrustAddress, address(0));
-        assertEq(params.activationStakeAmount, 0);
+        assertEq(tokenAddress, address(0));
+        assertEq(groupManagerAddress, address(0));
+        assertEq(groupDistrustAddress, address(0));
+        assertEq(stakeTokenAddress, address(0));
+        assertEq(joinTokenAddress, address(0));
+        assertEq(activationStakeAmount, 0);
+        assertEq(maxJoinAmountMultiplier, 0);
+        assertEq(verifyCapacityMultiplier, 0);
     }
 
     // ============ Exists Tests ============
@@ -232,5 +269,44 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
     function test_Exists_ReturnsFalseForNonExistent() public view {
         assertFalse(factory.exists(address(0x123)));
         assertFalse(factory.exists(address(0)));
+    }
+
+    // ============ ExtensionCreate Event Tests ============
+
+    function test_CreateExtension_EmitsExtensionCreate() public {
+        token.approve(address(factory), 1e18);
+
+        // Calculate expected extension address
+        uint256 nonce = vm.getNonce(address(factory));
+        address expectedExtension = vm.computeCreateAddress(
+            address(factory),
+            nonce
+        );
+
+        vm.expectEmit(true, true, false, false);
+        emit ExtensionCreate({
+            extension: expectedExtension,
+            tokenAddress: address(token),
+            groupManagerAddress: address(groupManager),
+            groupDistrustAddress: address(groupDistrust),
+            stakeTokenAddress: address(token),
+            joinTokenAddress: address(token),
+            activationStakeAmount: GROUP_ACTIVATION_STAKE_AMOUNT,
+            maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER,
+            verifyCapacityMultiplier: CAPACITY_FACTOR
+        });
+
+        address extension = factory.createExtension(
+            address(token),
+            address(groupManager),
+            address(groupDistrust),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+
+        assertEq(extension, expectedExtension);
     }
 }
