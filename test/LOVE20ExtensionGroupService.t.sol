@@ -180,6 +180,20 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 currentRound = verify.currentRound();
         vote.setVotedActionIds(address(token), currentRound, ACTION_ID);
         vote.setVotedActionIds(address(token), currentRound, SERVICE_ACTION_ID);
+        // Set votes for this round
+        vote.setVotesNum(address(token), currentRound, 10000e18);
+        vote.setVotesNumByActionId(
+            address(token),
+            currentRound,
+            ACTION_ID,
+            10000e18
+        );
+        vote.setVotesNumByActionId(
+            address(token),
+            currentRound,
+            SERVICE_ACTION_ID,
+            10000e18
+        );
     }
 
     // ============ Constructor Tests ============
@@ -1345,6 +1359,20 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         // Set voted actionIds for this round
         vote.setVotedActionIds(address(token), testRound, actionId);
         vote.setVotedActionIds(address(token), testRound, serviceActionId);
+        // Set votes for this round
+        vote.setVotesNum(address(token), testRound, 10000e18);
+        vote.setVotesNumByActionId(
+            address(token),
+            testRound,
+            actionId,
+            10000e18
+        );
+        vote.setVotesNumByActionId(
+            address(token),
+            testRound,
+            serviceActionId,
+            10000e18
+        );
 
         token.mint(address(groupAction), 1e18);
         token.mint(address(groupService), 1e18);

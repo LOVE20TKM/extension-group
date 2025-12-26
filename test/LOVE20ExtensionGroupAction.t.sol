@@ -229,11 +229,11 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         advanceRound();
         // Setup actionIds for new round
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
+        uint256 round = verify.currentRound();
+        vote.setVotedActionIds(address(token), round, ACTION_ID);
+        // Set votes for this round
+        vote.setVotesNum(address(token), round, 10000e18);
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
@@ -491,11 +491,11 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         // Capacity check is done during verifyWithOriginScores, so let's test that path
         advanceRound();
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
+        uint256 round = verify.currentRound();
+        vote.setVotedActionIds(address(token), round, ACTION_ID);
+        // Set votes for this round
+        vote.setVotesNum(address(token), round, 10000e18);
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -504,7 +504,6 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(groupOwner1);
         groupAction.verifyWithOriginScores(groupId1, 0, scores);
 
-        uint256 round = verify.currentRound();
         assertEq(groupAction.verifiersCount(round), 1);
     }
 

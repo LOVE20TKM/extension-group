@@ -204,11 +204,11 @@ contract GroupTokenJoinTest is BaseGroupTest {
     function test_Join_RevertCannotJoinDeactivatedGroup() public {
         advanceRound();
         // Setup actionIds for new round
-        vote.setVotedActionIds(
-            address(token),
-            verify.currentRound(),
-            ACTION_ID
-        );
+        uint256 round = verify.currentRound();
+        vote.setVotedActionIds(address(token), round, ACTION_ID);
+        // Set votes for this round
+        vote.setVotesNum(address(token), round, 10000e18);
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
@@ -524,5 +524,57 @@ contract GroupTokenJoinTest is BaseGroupTest {
         address account1 = groupTokenJoin.accountsByGroupIdAtIndex(groupId1, 1);
         assertTrue(account0 == user1 || account1 == user1);
         assertTrue(account0 == user3 || account1 == user3);
+    }
+
+    // ============ CalculateJoinMaxAmount Tests ============
+
+    function test_CalculateJoinMaxAmount_WithVoteRate() public {
+        uint256 totalSupply = token.totalSupply();
+        uint256 baseMaxAmount = totalSupply / MAX_JOIN_AMOUNT_MULTIPLIER;
+
+        // Test with 100% vote rate (default from prepareExtensionInit)
+        uint256 maxAmount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
+        assertEq(
+            maxAmount,
+            baseMaxAmount,
+            "Should return base amount with 100% vote rate"
+        );
+
+        // Test with 50% vote rate
+        uint256 round = join.currentRound();
+        vote.setVotesNum(address(token), round, 10000e18);
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 5000e18);
+        maxAmount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
+        assertEq(
+            maxAmount,
+            (baseMaxAmount * 5000e18) / 10000e18,
+            "Should return 50% of base amount with 50% vote rate"
+        );
+
+        // Test with 0% vote rate (action has no votes)
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 0);
+        maxAmount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
+        assertEq(maxAmount, 0, "Should return 0 when action has no votes");
+    }
+
+    function test_CalculateJoinMaxAmount_NoVotes() public {
+        // Create a new round without votes
+        advanceRound();
+
+        // Don't set any votes
+        uint256 maxAmount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
+        assertEq(maxAmount, 0, "Should return 0 when no votes exist");
     }
 }

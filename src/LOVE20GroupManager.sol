@@ -42,6 +42,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     ILOVE20ExtensionCenter internal immutable _center;
     ILOVE20Group internal immutable _group;
     ILOVE20Stake internal immutable _stake;
+    ILOVE20Vote internal immutable _vote;
     ILOVE20Join internal immutable _join;
 
     // ============ State ============
@@ -84,6 +85,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         _center = ILOVE20ExtensionCenter(centerAddress_);
         _group = ILOVE20Group(groupAddress_);
         _stake = ILOVE20Stake(stakeAddress_);
+        _vote = ILOVE20Vote(_center.voteAddress());
         _join = ILOVE20Join(joinAddress_);
     }
 
@@ -462,9 +464,31 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address extension = _center.extension(tokenAddress, actionId);
         Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
-        return
-            ILOVE20Token(tokenAddress).totalSupply() /
+
+        // Get current round
+        uint256 round = _join.currentRound();
+
+        // Get total votes for this round
+        uint256 totalVotes = _vote.votesNum(tokenAddress, round);
+        if (totalVotes == 0) return 0;
+
+        // Get votes for this action
+        uint256 actionVotes = _vote.votesNumByActionId(
+            tokenAddress,
+            round,
+            actionId
+        );
+        if (actionVotes == 0) return 0;
+
+        // Calculate vote rate (using 1e18 for precision)
+        uint256 voteRate = (actionVotes * 1e18) / totalVotes;
+
+        // Calculate base max amount
+        uint256 baseMaxAmount = ILOVE20Token(tokenAddress).totalSupply() /
             cfg.maxJoinAmountMultiplier;
+
+        // Apply vote rate multiplier
+        return (baseMaxAmount * voteRate) / 1e18;
     }
 
     function maxVerifyCapacityByOwner(

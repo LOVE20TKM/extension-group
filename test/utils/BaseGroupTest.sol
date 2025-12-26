@@ -182,7 +182,11 @@ abstract contract BaseGroupTest is Test {
         uint256 actionId
     ) internal {
         submit.setActionInfo(tokenAddr, actionId, extensionAddress);
-        vote.setVotedActionIds(tokenAddr, join.currentRound(), actionId);
+        uint256 round = join.currentRound();
+        vote.setVotedActionIds(tokenAddr, round, actionId);
+        // Set default votes: 10000e18 total votes, 10000e18 for this action (100% vote rate)
+        vote.setVotesNum(tokenAddr, round, 10000e18);
+        vote.setVotesNumByActionId(tokenAddr, round, actionId, 10000e18);
         token.mint(extensionAddress, 1e18);
     }
 

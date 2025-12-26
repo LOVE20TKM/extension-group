@@ -547,6 +547,9 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         // Setup actionIds for this round
         uint256 round = verify.currentRound();
         vote.setVotedActionIds(address(token), round, ACTION_ID);
+        // Set votes for this round
+        vote.setVotesNum(address(token), round, 10000e18);
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
@@ -878,7 +881,11 @@ contract CapacityReductionTest is BaseGroupTest {
 
         // Group score should equal joined amount
         uint256 groupScore = scoreContract.scoreByGroupId(round, groupId1);
-        assertEq(groupScore, joinAmount, "Group score should equal joined amount");
+        assertEq(
+            groupScore,
+            joinAmount,
+            "Group score should equal joined amount"
+        );
     }
 
     /// @notice Test multi-group verification, both within capacity - no reduction
@@ -968,7 +975,8 @@ contract CapacityReductionTest is BaseGroupTest {
             : 0;
 
         if (remainingCapacity > 0 && remainingCapacity < joinAmount2) {
-            uint256 expectedReduction = (remainingCapacity * 1e18) / joinAmount2;
+            uint256 expectedReduction = (remainingCapacity * 1e18) /
+                joinAmount2;
             assertEq(
                 scoreContract.capacityReductionByGroupId(round, groupId2),
                 expectedReduction,
@@ -1165,7 +1173,8 @@ contract CapacityReductionTest is BaseGroupTest {
                 "Group2 no reduction when remaining >= capacity"
             );
         } else if (remainingAfterG1 > 0) {
-            uint256 expectedReduction = (remainingAfterG1 * 1e18) / maxPerAccount;
+            uint256 expectedReduction = (remainingAfterG1 * 1e18) /
+                maxPerAccount;
             assertEq(
                 scoreContract.capacityReductionByGroupId(round, groupId2),
                 expectedReduction,
