@@ -67,6 +67,8 @@ echo "-------------------- GroupActionFactory check --------------------"
 if [ -n "$groupActionFactoryAddress" ]; then
     echo "  groupActionFactoryAddress: $groupActionFactoryAddress"
     check_equal "GroupActionFactory: center" $centerAddress $(cast_call $groupActionFactoryAddress "center()(address)")
+    check_equal "GroupActionFactory: GROUP_MANAGER_ADDRESS" $groupManagerAddress $(cast_call $groupActionFactoryAddress "GROUP_MANAGER_ADDRESS()(address)")
+    check_equal "GroupActionFactory: GROUP_DISTRUST_ADDRESS" $groupDistrustAddress $(cast_call $groupActionFactoryAddress "GROUP_DISTRUST_ADDRESS()(address)")
 else
     echo "(warning) GroupActionFactory not deployed"
 fi

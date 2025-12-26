@@ -386,7 +386,9 @@ contract TestGroupFlowHelper is Test {
 
         // Deploy factories
         groupActionFactory = new LOVE20ExtensionGroupActionFactory(
-            address(extensionCenter)
+            address(extensionCenter),
+            address(groupManager),
+            address(groupDistrust)
         );
         groupServiceFactory = new LOVE20ExtensionGroupServiceFactory(
             address(extensionCenter)
@@ -745,8 +747,6 @@ contract TestGroupFlowHelper is Test {
         token.approve(address(groupActionFactory), DEFAULT_JOIN_AMOUNT);
         address extensionAddr = groupActionFactory.createExtension(
             user.flow.tokenAddress,
-            address(groupManager),
-            address(groupDistrust),
             user.flow.tokenAddress,
             user.flow.tokenAddress, // joinTokenAddress
             DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT,

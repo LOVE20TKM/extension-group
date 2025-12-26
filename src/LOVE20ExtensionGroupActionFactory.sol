@@ -17,19 +17,40 @@ contract LOVE20ExtensionGroupActionFactory is
 {
     // ============ Storage ============
 
+    /// @notice The group manager address configured in the factory
+    address public immutable GROUP_MANAGER_ADDRESS;
+
+    /// @notice The group distrust address configured in the factory
+    address public immutable GROUP_DISTRUST_ADDRESS;
+
     mapping(address => ExtensionParams) private _extensionParams;
 
     // ============ Constructor ============
 
-    constructor(address center_) LOVE20ExtensionFactoryBase(center_) {}
+    /// @param center_ The extension center address
+    /// @param groupManagerAddress_ The group manager address
+    /// @param groupDistrustAddress_ The group distrust address
+    constructor(
+        address center_,
+        address groupManagerAddress_,
+        address groupDistrustAddress_
+    ) LOVE20ExtensionFactoryBase(center_) {
+        GROUP_MANAGER_ADDRESS = groupManagerAddress_;
+        GROUP_DISTRUST_ADDRESS = groupDistrustAddress_;
+    }
 
     // ============ Factory Functions ============
 
     /// @notice Create a new LOVE20ExtensionGroupAction extension
+    /// @param tokenAddress_ The token address
+    /// @param stakeTokenAddress_ The stake token address
+    /// @param joinTokenAddress_ The join token address
+    /// @param activationStakeAmount_ The activation stake amount
+    /// @param maxJoinAmountMultiplier_ The max join amount multiplier
+    /// @param verifyCapacityMultiplier_ The verify capacity multiplier
+    /// @return extension The address of the created extension
     function createExtension(
         address tokenAddress_,
-        address groupManagerAddress_,
-        address groupDistrustAddress_,
         address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
@@ -40,8 +61,8 @@ contract LOVE20ExtensionGroupActionFactory is
             new LOVE20ExtensionGroupAction(
                 address(this),
                 tokenAddress_,
-                groupManagerAddress_,
-                groupDistrustAddress_,
+                GROUP_MANAGER_ADDRESS,
+                GROUP_DISTRUST_ADDRESS,
                 stakeTokenAddress_,
                 joinTokenAddress_,
                 activationStakeAmount_,
@@ -52,8 +73,8 @@ contract LOVE20ExtensionGroupActionFactory is
 
         _extensionParams[extension] = ExtensionParams({
             tokenAddress: tokenAddress_,
-            groupManagerAddress: groupManagerAddress_,
-            groupDistrustAddress: groupDistrustAddress_,
+            groupManagerAddress: GROUP_MANAGER_ADDRESS,
+            groupDistrustAddress: GROUP_DISTRUST_ADDRESS,
             stakeTokenAddress: stakeTokenAddress_,
             joinTokenAddress: joinTokenAddress_,
             activationStakeAmount: activationStakeAmount_,
@@ -66,8 +87,8 @@ contract LOVE20ExtensionGroupActionFactory is
         emit ExtensionCreate({
             extension: extension,
             tokenAddress: tokenAddress_,
-            groupManagerAddress: groupManagerAddress_,
-            groupDistrustAddress: groupDistrustAddress_,
+            groupManagerAddress: GROUP_MANAGER_ADDRESS,
+            groupDistrustAddress: GROUP_DISTRUST_ADDRESS,
             stakeTokenAddress: stakeTokenAddress_,
             joinTokenAddress: joinTokenAddress_,
             activationStakeAmount: activationStakeAmount_,

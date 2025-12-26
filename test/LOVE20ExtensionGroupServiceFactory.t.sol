@@ -5,7 +5,9 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     LOVE20ExtensionGroupServiceFactory
 } from "../src/LOVE20ExtensionGroupServiceFactory.sol";
-import {ILOVE20ExtensionGroupServiceFactory} from "../src/interface/ILOVE20ExtensionGroupServiceFactory.sol";
+import {
+    ILOVE20ExtensionGroupServiceFactory
+} from "../src/interface/ILOVE20ExtensionGroupServiceFactory.sol";
 import {
     LOVE20ExtensionGroupService
 } from "../src/LOVE20ExtensionGroupService.sol";
@@ -46,7 +48,11 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         // Deploy GroupAction factory
-        actionFactory = new LOVE20ExtensionGroupActionFactory(address(center));
+        actionFactory = new LOVE20ExtensionGroupActionFactory(
+            address(center),
+            address(groupManager),
+            address(groupDistrust)
+        );
 
         // Deploy GroupService factory
         factory = new LOVE20ExtensionGroupServiceFactory(address(center));

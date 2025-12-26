@@ -45,13 +45,25 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(group)
         );
 
-        factory = new LOVE20ExtensionGroupActionFactory(address(center));
+        factory = new LOVE20ExtensionGroupActionFactory(
+            address(center),
+            address(groupManager),
+            address(groupDistrust)
+        );
     }
 
     // ============ Constructor Tests ============
 
     function test_Constructor_StoresCenter() public view {
         assertEq(factory.center(), address(center));
+    }
+
+    function test_Constructor_StoresGroupManagerAddress() public view {
+        assertEq(factory.GROUP_MANAGER_ADDRESS(), address(groupManager));
+    }
+
+    function test_Constructor_StoresGroupDistrustAddress() public view {
+        assertEq(factory.GROUP_DISTRUST_ADDRESS(), address(groupDistrust));
     }
 
     // ============ CreateExtension Tests ============
@@ -62,8 +74,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -80,8 +90,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -103,8 +111,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -122,8 +128,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -151,8 +155,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address ext1 = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -162,8 +164,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address ext2 = factory.createExtension(
             address(token2),
-            address(groupManager),
-            address(groupDistrust),
             address(token2),
             address(token2), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -173,8 +173,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address ext3 = factory.createExtension(
             address(token3),
-            address(groupManager),
-            address(groupDistrust),
             address(token3),
             address(token3), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -195,8 +193,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -254,8 +250,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -298,8 +292,6 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
