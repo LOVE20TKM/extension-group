@@ -11,6 +11,9 @@ import {
 import {
     LOVE20ExtensionGroupAction
 } from "../src/LOVE20ExtensionGroupAction.sol";
+import {
+    ILOVE20ExtensionGroupAction
+} from "../src/interface/ILOVE20ExtensionGroupAction.sol";
 import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
 import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 
@@ -25,14 +28,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
     // Event declaration for testing
     event ExtensionCreate(
         address indexed extension,
-        address indexed tokenAddress,
-        address groupManagerAddress,
-        address groupDistrustAddress,
-        address stakeTokenAddress,
-        address joinTokenAddress,
-        uint256 activationStakeAmount,
-        uint256 maxJoinAmountMultiplier,
-        uint256 verifyCapacityMultiplier
+        address indexed tokenAddress
     );
 
     function setUp() public {
@@ -200,47 +196,20 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        (
-            address tokenAddress,
-            address groupManagerAddress,
-            address groupDistrustAddress,
-            address stakeTokenAddress,
-            address joinTokenAddress,
-            uint256 activationStakeAmount,
-            uint256 maxJoinAmountMultiplier,
-            uint256 verifyCapacityMultiplier
-        ) = factory.extensionParams(extension);
+        LOVE20ExtensionGroupAction ext = LOVE20ExtensionGroupAction(extension);
 
-        assertEq(tokenAddress, address(token));
-        assertEq(groupManagerAddress, address(groupManager));
-        assertEq(groupDistrustAddress, address(groupDistrust));
-        assertEq(stakeTokenAddress, address(token));
-        assertEq(joinTokenAddress, address(token));
-        assertEq(activationStakeAmount, GROUP_ACTIVATION_STAKE_AMOUNT);
-        assertEq(maxJoinAmountMultiplier, MAX_JOIN_AMOUNT_MULTIPLIER);
-        assertEq(verifyCapacityMultiplier, CAPACITY_FACTOR);
-    }
-
-    function test_ExtensionParams_ZeroForNonExistent() public view {
-        (
-            address tokenAddress,
-            address groupManagerAddress,
-            address groupDistrustAddress,
-            address stakeTokenAddress,
-            address joinTokenAddress,
-            uint256 activationStakeAmount,
-            uint256 maxJoinAmountMultiplier,
-            uint256 verifyCapacityMultiplier
-        ) = factory.extensionParams(address(0x123));
-
-        assertEq(tokenAddress, address(0));
-        assertEq(groupManagerAddress, address(0));
-        assertEq(groupDistrustAddress, address(0));
-        assertEq(stakeTokenAddress, address(0));
-        assertEq(joinTokenAddress, address(0));
-        assertEq(activationStakeAmount, 0);
-        assertEq(maxJoinAmountMultiplier, 0);
-        assertEq(verifyCapacityMultiplier, 0);
+        // All parameters are public immutable, can be accessed directly
+        assertEq(ext.tokenAddress(), address(token));
+        assertEq(ext.GROUP_MANAGER_ADDRESS(), address(groupManager));
+        assertEq(ext.GROUP_DISTRUST_ADDRESS(), address(groupDistrust));
+        assertEq(ext.STAKE_TOKEN_ADDRESS(), address(token));
+        assertEq(ext.JOIN_TOKEN_ADDRESS(), address(token));
+        assertEq(
+            ext.GROUP_ACTIVATION_STAKE_AMOUNT(),
+            GROUP_ACTIVATION_STAKE_AMOUNT
+        );
+        assertEq(ext.MAX_JOIN_AMOUNT_MULTIPLIER(), MAX_JOIN_AMOUNT_MULTIPLIER);
+        assertEq(ext.VERIFY_CAPACITY_MULTIPLIER(), CAPACITY_FACTOR);
     }
 
     // ============ Exists Tests ============
@@ -278,17 +247,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
 
         vm.expectEmit(true, true, false, false);
-        emit ExtensionCreate({
-            extension: expectedExtension,
-            tokenAddress: address(token),
-            groupManagerAddress: address(groupManager),
-            groupDistrustAddress: address(groupDistrust),
-            stakeTokenAddress: address(token),
-            joinTokenAddress: address(token),
-            activationStakeAmount: GROUP_ACTIVATION_STAKE_AMOUNT,
-            maxJoinAmountMultiplier: MAX_JOIN_AMOUNT_MULTIPLIER,
-            verifyCapacityMultiplier: CAPACITY_FACTOR
-        });
+        emit ExtensionCreate(expectedExtension, address(token));
 
         address extension = factory.createExtension(
             address(token),

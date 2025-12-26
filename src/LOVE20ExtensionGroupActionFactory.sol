@@ -23,8 +23,6 @@ contract LOVE20ExtensionGroupActionFactory is
     /// @notice The group distrust address configured in the factory
     address public immutable GROUP_DISTRUST_ADDRESS;
 
-    mapping(address => ExtensionParams) private _extensionParams;
-
     // ============ Constructor ============
 
     /// @param center_ The extension center address
@@ -71,61 +69,8 @@ contract LOVE20ExtensionGroupActionFactory is
             )
         );
 
-        _extensionParams[extension] = ExtensionParams({
-            tokenAddress: tokenAddress_,
-            groupManagerAddress: GROUP_MANAGER_ADDRESS,
-            groupDistrustAddress: GROUP_DISTRUST_ADDRESS,
-            stakeTokenAddress: stakeTokenAddress_,
-            joinTokenAddress: joinTokenAddress_,
-            activationStakeAmount: activationStakeAmount_,
-            maxJoinAmountMultiplier: maxJoinAmountMultiplier_,
-            verifyCapacityMultiplier: verifyCapacityMultiplier_
-        });
-
         _registerExtension(extension, tokenAddress_);
 
-        emit ExtensionCreate({
-            extension: extension,
-            tokenAddress: tokenAddress_,
-            groupManagerAddress: GROUP_MANAGER_ADDRESS,
-            groupDistrustAddress: GROUP_DISTRUST_ADDRESS,
-            stakeTokenAddress: stakeTokenAddress_,
-            joinTokenAddress: joinTokenAddress_,
-            activationStakeAmount: activationStakeAmount_,
-            maxJoinAmountMultiplier: maxJoinAmountMultiplier_,
-            verifyCapacityMultiplier: verifyCapacityMultiplier_
-        });
-    }
-
-    // ============ View Functions ============
-
-    /// @notice Get the parameters of an extension
-    function extensionParams(
-        address extension_
-    )
-        external
-        view
-        returns (
-            address tokenAddress,
-            address groupManagerAddress,
-            address groupDistrustAddress,
-            address stakeTokenAddress,
-            address joinTokenAddress,
-            uint256 activationStakeAmount,
-            uint256 maxJoinAmountMultiplier,
-            uint256 verifyCapacityMultiplier
-        )
-    {
-        ExtensionParams memory params = _extensionParams[extension_];
-        return (
-            params.tokenAddress,
-            params.groupManagerAddress,
-            params.groupDistrustAddress,
-            params.stakeTokenAddress,
-            params.joinTokenAddress,
-            params.activationStakeAmount,
-            params.maxJoinAmountMultiplier,
-            params.verifyCapacityMultiplier
-        );
+        emit ExtensionCreate(extension, tokenAddress_);
     }
 }

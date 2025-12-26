@@ -27,10 +27,6 @@ import {
 import {
     RoundHistoryUint256Array
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
-import {
-    ILOVE20ExtensionFactory
-} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
-import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
 import {
     IUniswapV2Factory
@@ -60,6 +56,12 @@ contract LOVE20ExtensionGroupService is
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
     uint256 public immutable MAX_RECIPIENTS;
+
+    // ============ Cached Interfaces ============
+
+    ILOVE20GroupManager internal immutable _groupManager;
+    ILOVE20Group internal immutable _group;
+    ILOVE20ExtensionGroupActionFactory internal immutable _actionFactory;
 
     // ============ Storage ============
 
@@ -102,6 +104,15 @@ contract LOVE20ExtensionGroupService is
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
         MAX_RECIPIENTS = maxRecipients_;
+
+        // Cache frequently used interfaces
+        _actionFactory = ILOVE20ExtensionGroupActionFactory(
+            groupActionFactoryAddress_
+        );
+        _groupManager = ILOVE20GroupManager(
+            _actionFactory.GROUP_MANAGER_ADDRESS()
+        );
+        _group = ILOVE20Group(_groupManager.GROUP_ADDRESS());
     }
 
     // ============ Write Functions ============
@@ -116,19 +127,12 @@ contract LOVE20ExtensionGroupService is
 
     /// @notice Check if account has staked in any valid group action
     function hasActiveGroups(address account) public view returns (bool) {
-        ILOVE20GroupManager groupManager = ILOVE20GroupManager(
-            ILOVE20ExtensionGroupActionFactory(GROUP_ACTION_FACTORY_ADDRESS)
-                .GROUP_MANAGER_ADDRESS()
-        );
-
-        ILOVE20Group group = ILOVE20Group(groupManager.GROUP_ADDRESS());
-
-        uint256 balance = group.balanceOf(account);
+        uint256 balance = _group.balanceOf(account);
 
         for (uint256 i = 0; i < balance; i++) {
-            uint256 groupId = group.tokenOfOwnerByIndex(account, i);
+            uint256 groupId = _group.tokenOfOwnerByIndex(account, i);
             if (
-                groupManager.actionIdsByGroupIdCount(
+                _groupManager.actionIdsByGroupIdCount(
                     GROUP_ACTION_FACTORY_ADDRESS,
                     GROUP_ACTION_TOKEN_ADDRESS,
                     groupId
@@ -148,57 +152,11 @@ contract LOVE20ExtensionGroupService is
         view
         returns (uint256[] memory actionIds, address[] memory extensions)
     {
-        (actionIds, extensions) = _validGroupActions(round);
-    }
-
-    /// @dev Get all valid group action extensions and their actionIds for a round
-    function _validGroupActions(
-        uint256 round
-    )
-        internal
-        view
-        returns (uint256[] memory actionIds_, address[] memory extensions)
-    {
-        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
-        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
-            GROUP_ACTION_FACTORY_ADDRESS
-        );
-
-        uint256 count = vote.votedActionIdsCount(
+        (actionIds, extensions) = _groupManager.votedGroupActions(
+            GROUP_ACTION_FACTORY_ADDRESS,
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
-        if (count == 0) return (actionIds_, extensions);
-
-        address[] memory tempExt = new address[](count);
-        uint256[] memory tempIds = new uint256[](count);
-        uint256 valid;
-
-        for (uint256 i; i < count; ) {
-            uint256 aid = vote.votedActionIdsAtIndex(
-                GROUP_ACTION_TOKEN_ADDRESS,
-                round,
-                i
-            );
-            address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, aid);
-            if (ext != address(0) && factory.exists(ext)) {
-                tempExt[valid] = ext;
-                tempIds[valid++] = aid;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        extensions = new address[](valid);
-        actionIds_ = new uint256[](valid);
-        for (uint256 i; i < valid; ) {
-            extensions[i] = tempExt[i];
-            actionIds_[i] = tempIds[i];
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     /// @notice Set reward recipients for a specific action and group
@@ -282,9 +240,11 @@ contract LOVE20ExtensionGroupService is
     /// @dev Check that address array has no duplicates
     function _checkNoDuplicates(address[] memory addrs) internal pure {
         uint256 len = addrs.length;
+        if (len <= 1) return;
         for (uint256 i = 1; i < len; ) {
+            address addr = addrs[i];
             for (uint256 j; j < i; ) {
-                if (addrs[j] == addrs[i]) revert DuplicateAddress();
+                if (addrs[j] == addr) revert DuplicateAddress();
                 unchecked {
                     ++j;
                 }
@@ -520,21 +480,19 @@ contract LOVE20ExtensionGroupService is
     function _getTotalStaked(
         address account
     ) internal view returns (uint256 total) {
-        (uint256[] memory aids, address[] memory exts) = _validGroupActions(
-            _join.currentRound()
-        );
+        (uint256[] memory aids, address[] memory exts) = _groupManager
+            .votedGroupActions(
+                GROUP_ACTION_FACTORY_ADDRESS,
+                GROUP_ACTION_TOKEN_ADDRESS,
+                _join.currentRound()
+            );
         for (uint256 i; i < exts.length; ) {
-            ILOVE20ExtensionGroupAction ext = ILOVE20ExtensionGroupAction(
-                exts[i]
-            );
-            address stakeToken = ext.STAKE_TOKEN_ADDRESS();
-            ILOVE20GroupManager mgr = ILOVE20GroupManager(
-                ext.GROUP_MANAGER_ADDRESS()
-            );
+            address stakeToken = ILOVE20ExtensionGroupAction(exts[i])
+                .STAKE_TOKEN_ADDRESS();
 
             uint256 staked = account == address(0)
-                ? mgr.totalStaked(GROUP_ACTION_TOKEN_ADDRESS, aids[i])
-                : mgr.totalStakedByActionIdByOwner(
+                ? _groupManager.totalStaked(GROUP_ACTION_TOKEN_ADDRESS, aids[i])
+                : _groupManager.totalStakedByActionIdByOwner(
                     GROUP_ACTION_TOKEN_ADDRESS,
                     aids[i],
                     account
@@ -650,7 +608,11 @@ contract LOVE20ExtensionGroupService is
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (, address[] memory exts) = _validGroupActions(round);
+        (, address[] memory exts) = _groupManager.votedGroupActions(
+            GROUP_ACTION_FACTORY_ADDRESS,
+            GROUP_ACTION_TOKEN_ADDRESS,
+            round
+        );
         for (uint256 i; i < exts.length; ) {
             ILOVE20ExtensionGroupAction ga = ILOVE20ExtensionGroupAction(
                 exts[i]

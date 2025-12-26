@@ -10,6 +10,7 @@ import {
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
+import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {ILOVE20SLToken} from "@core/interfaces/ILOVE20SLToken.sol";
 import {ILOVE20STToken} from "@core/interfaces/ILOVE20STToken.sol";
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
@@ -576,6 +577,61 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             tokenAddress
         ].at(index);
         return _extensionTokenActionPair[extension].actionId;
+    }
+
+    /// @notice Get all voted group action extensions and their actionIds for a round
+    function votedGroupActions(
+        address actionFactory,
+        address tokenAddress,
+        uint256 round
+    )
+        external
+        view
+        override
+        returns (uint256[] memory actionIds_, address[] memory extensions)
+    {
+        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
+        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
+            actionFactory
+        );
+
+        uint256 count = vote.votedActionIdsCount(tokenAddress, round);
+        if (count == 0) return (actionIds_, extensions);
+
+        address[] memory tempExt = new address[](count);
+        uint256[] memory tempIds = new uint256[](count);
+        uint256 valid;
+
+        for (uint256 i; i < count; ) {
+            uint256 aid = vote.votedActionIdsAtIndex(tokenAddress, round, i);
+            address ext = _center.extension(tokenAddress, aid);
+            if (
+                ext != address(0) &&
+                _activeGroupIds[ext].length() > 0 &&
+                factory.exists(ext)
+            ) {
+                tempExt[valid] = ext;
+                tempIds[valid] = aid;
+                unchecked {
+                    ++valid;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        if (valid == 0) return (actionIds_, extensions);
+
+        extensions = new address[](valid);
+        actionIds_ = new uint256[](valid);
+        for (uint256 i; i < valid; ) {
+            extensions[i] = tempExt[i];
+            actionIds_[i] = tempIds[i];
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     // ============ Internal Functions ============

@@ -1000,11 +1000,26 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         uint256 actionId2 = 100;
-        submit.setActionInfo(address(token), actionId2, address(groupAction2));
-        vote.setVotedActionIds(
+        // Prepare extension init for groupAction2 (this sets votedActionIds)
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        // Create and activate a group for groupAction2
+        uint256 groupId3 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup3");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
             address(token),
-            verify.currentRound(),
-            actionId2
+            actionId2,
+            groupId3,
+            "Group3",
+            0, // maxCapacity
+            1e18, // minJoinAmount
+            0,
+            0
         );
 
         uint256 round = verify.currentRound();

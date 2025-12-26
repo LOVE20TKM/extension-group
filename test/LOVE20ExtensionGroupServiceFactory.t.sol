@@ -12,6 +12,9 @@ import {
     LOVE20ExtensionGroupService
 } from "../src/LOVE20ExtensionGroupService.sol";
 import {
+    ILOVE20ExtensionGroupService
+} from "../src/interface/ILOVE20ExtensionGroupService.sol";
+import {
     LOVE20ExtensionGroupActionFactory
 } from "../src/LOVE20ExtensionGroupActionFactory.sol";
 import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
@@ -31,10 +34,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     // Event declaration for testing
     event ExtensionCreate(
         address indexed extension,
-        address indexed tokenAddress,
-        address groupActionTokenAddress,
-        address groupActionFactoryAddress,
-        uint256 maxRecipients
+        address indexed tokenAddress
     );
 
     function setUp() public {
@@ -194,31 +194,15 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
             MAX_RECIPIENTS
         );
 
-        (
-            address tokenAddress,
-            address groupActionTokenAddr,
-            address groupActionFactoryAddr,
-            uint256 maxRecipients
-        ) = factory.extensionParams(extension);
+        LOVE20ExtensionGroupService ext = LOVE20ExtensionGroupService(
+            extension
+        );
 
-        assertEq(tokenAddress, address(token));
-        assertEq(groupActionTokenAddr, address(token));
-        assertEq(groupActionFactoryAddr, address(actionFactory));
-        assertEq(maxRecipients, MAX_RECIPIENTS);
-    }
-
-    function test_ExtensionParams_ZeroForNonExistent() public view {
-        (
-            address tokenAddress,
-            address groupActionTokenAddr,
-            address groupActionFactoryAddr,
-            uint256 maxRecipients
-        ) = factory.extensionParams(address(0x123));
-
-        assertEq(tokenAddress, address(0));
-        assertEq(groupActionTokenAddr, address(0));
-        assertEq(groupActionFactoryAddr, address(0));
-        assertEq(maxRecipients, 0);
+        // All parameters are public immutable, can be accessed directly
+        assertEq(ext.tokenAddress(), address(token));
+        assertEq(ext.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
+        assertEq(ext.GROUP_ACTION_FACTORY_ADDRESS(), address(actionFactory));
+        assertEq(ext.MAX_RECIPIENTS(), MAX_RECIPIENTS);
     }
 
     // ============ Exists Tests ============
@@ -254,13 +238,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         vm.expectEmit(true, true, false, false);
-        emit ExtensionCreate({
-            extension: expectedExtension,
-            tokenAddress: address(token),
-            groupActionTokenAddress: address(token),
-            groupActionFactoryAddress: address(actionFactory),
-            maxRecipients: MAX_RECIPIENTS
-        });
+        emit ExtensionCreate(expectedExtension, address(token));
 
         address extension = factory.createExtension(
             address(token),

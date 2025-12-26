@@ -250,4 +250,13 @@ interface ILOVE20GroupManager {
         address tokenAddress,
         uint256 index
     ) external view returns (uint256);
+
+    function votedGroupActions(
+        address actionFactory,
+        address tokenAddress,
+        uint256 round
+    )
+        external
+        view
+        returns (uint256[] memory actionIds_, address[] memory extensions);
 }

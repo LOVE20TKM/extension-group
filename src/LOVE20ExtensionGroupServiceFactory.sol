@@ -15,10 +15,6 @@ contract LOVE20ExtensionGroupServiceFactory is
     LOVE20ExtensionFactoryBase,
     ILOVE20ExtensionGroupServiceFactory
 {
-    // ============ Storage ============
-
-    mapping(address => ExtensionParams) private _extensionParams;
-
     // ============ Constructor ============
 
     constructor(address center_) LOVE20ExtensionFactoryBase(center_) {}
@@ -47,45 +43,8 @@ contract LOVE20ExtensionGroupServiceFactory is
             )
         );
 
-        _extensionParams[extension] = ExtensionParams({
-            tokenAddress: tokenAddress_,
-            groupActionTokenAddress: groupActionTokenAddress_,
-            groupActionFactoryAddress: groupActionFactoryAddress_,
-            maxRecipients: maxRecipients_
-        });
-
         _registerExtension(extension, tokenAddress_);
 
-        emit ExtensionCreate({
-            extension: extension,
-            tokenAddress: tokenAddress_,
-            groupActionTokenAddress: groupActionTokenAddress_,
-            groupActionFactoryAddress: groupActionFactoryAddress_,
-            maxRecipients: maxRecipients_
-        });
-    }
-
-    // ============ View Functions ============
-
-    /// @notice Get the parameters of an extension
-    function extensionParams(
-        address extension_
-    )
-        external
-        view
-        returns (
-            address tokenAddress,
-            address groupActionTokenAddress,
-            address groupActionFactoryAddress,
-            uint256 maxRecipients
-        )
-    {
-        ExtensionParams memory params = _extensionParams[extension_];
-        return (
-            params.tokenAddress,
-            params.groupActionTokenAddress,
-            params.groupActionFactoryAddress,
-            params.maxRecipients
-        );
+        emit ExtensionCreate(extension, tokenAddress_);
     }
 }
