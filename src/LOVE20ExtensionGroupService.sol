@@ -50,7 +50,7 @@ contract LOVE20ExtensionGroupService is
 
     // ============ Constants ============
 
-    uint256 public constant BASIS_POINTS_BASE = 10000;
+    uint256 public constant BASIS_POINTS_BASE = 1e18;
 
     // ============ Immutables ============
 

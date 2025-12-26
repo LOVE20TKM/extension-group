@@ -84,8 +84,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         recipients[0] = member2().userAddress;
         recipients[1] = member3().userAddress;
         uint256[] memory basisPoints = new uint256[](2);
-        basisPoints[0] = 5000; // 50%
-        basisPoints[1] = 3000; // 30%
+        basisPoints[0] = 5e17; // 50%
+        basisPoints[1] = 3e17; // 30%
         bobGroup1.recipients = recipients;
         bobGroup1.basisPoints = basisPoints;
         h.group_service_set_recipients(bobGroup1);
@@ -192,12 +192,12 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(addrs.length, 2, "Should have 2 recipients");
         assertEq(addrs[0], member2().userAddress, "Recipient 0 = member2");
         assertEq(addrs[1], member3().userAddress, "Recipient 1 = member3");
-        assertEq(bps[0], 5000, "Recipient 0 = 50%");
-        assertEq(bps[1], 3000, "Recipient 1 = 30%");
+        assertEq(bps[0], 5e17, "Recipient 0 = 50%");
+        assertEq(bps[1], 3e17, "Recipient 1 = 30%");
 
         // Calculate expected amounts
-        uint256 expectedM2 = (expectedTotal * 5000) / 10000;
-        uint256 expectedM3 = (expectedTotal * 3000) / 10000;
+        uint256 expectedM2 = (expectedTotal * 5e17) / 1e18;
+        uint256 expectedM3 = (expectedTotal * 3e17) / 1e18;
         uint256 expectedBob = expectedTotal - expectedM2 - expectedM3;
 
         // Verify rewardByRecipient
@@ -252,8 +252,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(distAmounts[0], expectedM2, "Distribution amt 0");
         assertEq(distAmounts[1], expectedM3, "Distribution amt 1");
         assertEq(ownerAmt, expectedBob, "Owner amount");
-        assertEq(distBps[0], 5000, "Distribution bps 0");
-        assertEq(distBps[1], 3000, "Distribution bps 1");
+        assertEq(distBps[0], 5e17, "Distribution bps 0");
+        assertEq(distBps[1], 3e17, "Distribution bps 1");
     }
 
     function _claimAndVerifyServiceTransfers(
@@ -262,8 +262,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 expectedTotal
     ) internal {
         // Calculate expected amounts
-        uint256 expectedM2 = (expectedTotal * 5000) / 10000;
-        uint256 expectedM3 = (expectedTotal * 3000) / 10000;
+        uint256 expectedM2 = (expectedTotal * 5e17) / 1e18;
+        uint256 expectedM3 = (expectedTotal * 3e17) / 1e18;
         uint256 expectedBob = expectedTotal - expectedM2 - expectedM3;
 
         // Record balances
@@ -426,8 +426,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         recipients1[0] = member3().userAddress;
         recipients1[1] = member4().userAddress;
         uint256[] memory bps1 = new uint256[](2);
-        bps1[0] = 3000;
-        bps1[1] = 2000;
+        bps1[0] = 3e17;
+        bps1[1] = 2e17;
         bobGroup1.recipients = recipients1;
         bobGroup1.basisPoints = bps1;
         h.group_service_set_recipients(bobGroup1);
@@ -436,7 +436,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         address[] memory recipients2 = new address[](1);
         recipients2[0] = member5().userAddress;
         uint256[] memory bps2 = new uint256[](1);
-        bps2[0] = 6000;
+        bps2[0] = 6e17;
         bobGroup2.recipients = recipients2;
         bobGroup2.basisPoints = bps2;
         h.group_service_set_recipients(bobGroup2);
@@ -509,10 +509,13 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             ? distributions[0].groupReward
             : distributions[1].groupReward;
 
-        uint256 expectedM3 = (group1Reward * 3000) / 10000;
-        uint256 expectedM4 = (group1Reward * 2000) / 10000;
-        uint256 expectedM5 = (group2Reward * 6000) / 10000;
-        uint256 expectedBob = totalClaimed - expectedM3 - expectedM4 - expectedM5;
+        uint256 expectedM3 = (group1Reward * 3e17) / 1e18;
+        uint256 expectedM4 = (group1Reward * 2e17) / 1e18;
+        uint256 expectedM5 = (group2Reward * 6e17) / 1e18;
+        uint256 expectedBob = totalClaimed -
+            expectedM3 -
+            expectedM4 -
+            expectedM5;
 
         // Verify transfers
         assertEq(
@@ -541,5 +544,4 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             "Bob should receive remaining"
         );
     }
-
 }

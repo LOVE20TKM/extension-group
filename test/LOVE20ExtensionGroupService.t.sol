@@ -231,8 +231,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[1] = address(0x200);
 
         uint256[] memory basisPoints = new uint256[](2);
-        basisPoints[0] = 3000; // 30%
-        basisPoints[1] = 2000; // 20%
+        basisPoints[0] = 3e17; // 30%
+        basisPoints[1] = 2e17; // 20%
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -249,8 +249,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(addrs.length, 2);
         assertEq(addrs[0], recipients[0]);
         assertEq(addrs[1], recipients[1]);
-        assertEq(points[0], 3000);
-        assertEq(points[1], 2000);
+        assertEq(points[0], 3e17);
+        assertEq(points[1], 2e17);
     }
 
     function test_SetRecipients_RevertNotJoined() public {
@@ -258,7 +258,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[0] = address(0x100);
 
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 5000;
+        basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
         vm.expectRevert(IJoin.NotJoined.selector);
@@ -285,7 +285,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[0] = address(0x100);
 
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 5000;
+        basisPoints[0] = 5e17;
 
         // groupOwner2 tries to set recipients for groupId1 (owned by groupOwner1)
         vm.prank(groupOwner2);
@@ -309,7 +309,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[1] = address(0x200);
 
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 5000;
+        basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
         vm.expectRevert(
@@ -334,7 +334,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         for (uint256 i = 0; i < MAX_RECIPIENTS + 1; i++) {
             recipients[i] = address(uint160(0x100 + i));
-            basisPoints[i] = 100;
+            basisPoints[i] = 1e16;
         }
 
         vm.prank(groupOwner1);
@@ -359,7 +359,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[0] = address(0);
 
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 5000;
+        basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
         vm.expectRevert(ILOVE20ExtensionGroupService.ZeroAddress.selector);
@@ -404,8 +404,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[1] = address(0x200);
 
         uint256[] memory basisPoints = new uint256[](2);
-        basisPoints[0] = 6000; // 60%
-        basisPoints[1] = 5000; // 50% - total > 100%
+        basisPoints[0] = 6e17; // 60%
+        basisPoints[1] = 5e17; // 50% - total > 100%
 
         vm.prank(groupOwner1);
         vm.expectRevert(
@@ -430,7 +430,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[0] = groupOwner1; // Self
 
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 5000;
+        basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
         vm.expectRevert(
@@ -456,7 +456,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients1 = new address[](1);
         recipients1[0] = address(0x100);
         uint256[] memory basisPoints1 = new uint256[](1);
-        basisPoints1[0] = 3000;
+        basisPoints1[0] = 3e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -477,7 +477,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients2 = new address[](1);
         recipients2[0] = address(0x200);
         uint256[] memory basisPoints2 = new uint256[](1);
-        basisPoints2[0] = 4000;
+        basisPoints2[0] = 4e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -491,13 +491,13 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         (address[] memory addrs1, uint256[] memory points1) = groupService
             .recipients(groupOwner1, ACTION_ID, groupId1, round1);
         assertEq(addrs1[0], address(0x100));
-        assertEq(points1[0], 3000);
+        assertEq(points1[0], 3e17);
 
         // Check round 2 recipients
         (address[] memory addrs2, uint256[] memory points2) = groupService
             .recipients(groupOwner1, ACTION_ID, groupId1, round2);
         assertEq(addrs2[0], address(0x200));
-        assertEq(points2[0], 4000);
+        assertEq(points2[0], 4e17);
     }
 
     function test_RecipientsLatest() public {
@@ -509,7 +509,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients = new address[](1);
         recipients[0] = address(0x100);
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 3000;
+        basisPoints[0] = 3e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -523,7 +523,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             .recipientsLatest(groupOwner1, ACTION_ID, groupId1);
         assertEq(addrs.length, 1);
         assertEq(addrs[0], address(0x100));
-        assertEq(points[0], 3000);
+        assertEq(points[0], 3e17);
     }
 
     // ============ rewardByRecipient Tests ============
@@ -539,7 +539,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients = new address[](1);
         recipients[0] = recipient;
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 3000; // 30%
+        basisPoints[0] = 3e17; // 30%
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -576,7 +576,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients = new address[](1);
         recipients[0] = recipient;
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 3000; // 30%
+        basisPoints[0] = 3e17; // 30%
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -612,8 +612,8 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         recipients[0] = address(0x100);
         recipients[1] = address(0x200);
         uint256[] memory basisPoints = new uint256[](2);
-        basisPoints[0] = 3000; // 30%
-        basisPoints[1] = 2000; // 20%
+        basisPoints[0] = 3e17; // 30%
+        basisPoints[1] = 2e17; // 20%
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -658,7 +658,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients = new address[](1);
         recipients[0] = address(0x100);
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 3000;
+        basisPoints[0] = 3e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -682,7 +682,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(distributions[0].groupId, groupId1);
         assertEq(distributions[0].recipients.length, 1);
         assertEq(distributions[0].recipients[0], address(0x100));
-        assertEq(distributions[0].basisPoints[0], 3000);
+        assertEq(distributions[0].basisPoints[0], 3e17);
     }
 
     // ============ IExtensionJoinedValue Tests ============
@@ -735,7 +735,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients = new address[](1);
         recipients[0] = address(0x100);
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 3000;
+        basisPoints[0] = 3e17;
 
         uint256 round = verify.currentRound();
 
@@ -777,7 +777,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients1 = new address[](1);
         recipients1[0] = address(0x100);
         uint256[] memory basisPoints1 = new uint256[](1);
-        basisPoints1[0] = 3000;
+        basisPoints1[0] = 3e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -790,7 +790,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients2 = new address[](1);
         recipients2[0] = address(0x200);
         uint256[] memory basisPoints2 = new uint256[](1);
-        basisPoints2[0] = 4000;
+        basisPoints2[0] = 4e17;
 
         vm.prank(groupOwner2);
         groupService.setRecipients(
@@ -858,7 +858,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients1 = new address[](1);
         recipients1[0] = address(0x100);
         uint256[] memory basisPoints1 = new uint256[](1);
-        basisPoints1[0] = 3000;
+        basisPoints1[0] = 3e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -872,7 +872,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients2 = new address[](1);
         recipients2[0] = address(0x200);
         uint256[] memory basisPoints2 = new uint256[](1);
-        basisPoints2[0] = 5000;
+        basisPoints2[0] = 5e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -887,7 +887,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             .recipients(groupOwner1, ACTION_ID, groupId1, round);
 
         assertEq(addrs[0], address(0x200));
-        assertEq(points[0], 5000);
+        assertEq(points[0], 5e17);
     }
 
     function test_MaxBasisPoints() public {
@@ -900,7 +900,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients = new address[](1);
         recipients[0] = address(0x100);
         uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 10000; // 100%
+        basisPoints[0] = 1e18; // 100%
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -915,7 +915,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             .recipients(groupOwner1, ACTION_ID, groupId1, round);
 
         assertEq(addrs[0], address(0x100));
-        assertEq(points[0], 10000);
+        assertEq(points[0], 1e18);
     }
 
     // ============ hasActiveGroups Tests ============
@@ -1187,12 +1187,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] memory recipients1 = new address[](1);
         recipients1[0] = address(0x100);
         uint256[] memory basisPoints1 = new uint256[](1);
-        basisPoints1[0] = 3000;
+        basisPoints1[0] = 3e17;
 
         address[] memory recipients3 = new address[](1);
         recipients3[0] = address(0x300);
         uint256[] memory basisPoints3 = new uint256[](1);
-        basisPoints3[0] = 5000;
+        basisPoints3[0] = 5e17;
 
         vm.prank(groupOwner1);
         groupService.setRecipients(
@@ -1219,9 +1219,9 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             .recipients(groupOwner1, ACTION_ID, groupId3, round);
 
         assertEq(addrs1[0], address(0x100));
-        assertEq(points1[0], 3000);
+        assertEq(points1[0], 3e17);
         assertEq(addrs3[0], address(0x300));
-        assertEq(points3[0], 5000);
+        assertEq(points3[0], 5e17);
     }
 }
 
