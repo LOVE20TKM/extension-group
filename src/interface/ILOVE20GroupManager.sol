@@ -15,6 +15,7 @@ interface ILOVE20GroupManager {
     error InvalidMaxAccounts();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
+    error ExtensionTokenActionMismatch();
 
     // ============ Events ============
 
@@ -67,6 +68,11 @@ interface ILOVE20GroupManager {
         bool isActive;
         uint256 activatedRound; // 0 = never activated
         uint256 deactivatedRound; // 0 = never deactivated
+    }
+
+    struct TokenActionPair {
+        address tokenAddress;
+        uint256 actionId;
     }
 
     // ============ Config Functions ============
@@ -205,5 +211,36 @@ interface ILOVE20GroupManager {
     function totalStaked(
         address tokenAddress,
         uint256 actionId
+    ) external view returns (uint256);
+
+    // ============ Extension Activation View Functions ============
+
+    function actionIdsByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256[] memory);
+
+    function actionIdsByGroupIdCount(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function actionIdsByGroupIdAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (uint256);
+
+    function actionIds(
+        address tokenAddress
+    ) external view returns (uint256[] memory);
+
+    function actionIdsCount(
+        address tokenAddress
+    ) external view returns (uint256);
+
+    function actionIdsAtIndex(
+        address tokenAddress,
+        uint256 index
     ) external view returns (uint256);
 }

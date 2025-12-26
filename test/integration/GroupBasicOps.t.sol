@@ -212,4 +212,329 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             "Should not be calculated when joinToken == tokenAddress"
         );
     }
+
+    // ============ Extension Activation Tracking Tests ============
+
+    /// @notice Test actionIdsByGroupId with single extension
+    function test_actionIdsByGroupId_SingleExtension() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Verify actionId is tracked for this groupId
+        uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
+            h.firstTokenAddress(),
+            bobGroup1.groupId
+        );
+        assertEq(actionIds_.length, 1, "Should have 1 actionId");
+        assertEq(actionIds_[0], actionId, "ActionId should match");
+
+        // 3. Verify count
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup1.groupId
+            ),
+            1,
+            "Count should be 1"
+        );
+
+        // 4. Verify at index
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdAtIndex(
+                h.firstTokenAddress(),
+                bobGroup1.groupId,
+                0
+            ),
+            actionId,
+            "ActionId at index 0 should match"
+        );
+    }
+
+    /// @notice Test actionIdsByGroupId with multiple extensions
+    function test_actionIdsByGroupId_MultipleExtensions() public {
+        // 1. Setup first group action
+        address extensionAddr1 = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr1;
+        uint256 actionId1 = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId1;
+        bobGroup1.groupActionId = actionId1;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Setup second group action (different actionId) activating same groupId
+        // Create a new action but activate it with bobGroup1's groupId
+        address extensionAddr2 = h.group_action_create(bobGroup2);
+        bobGroup2.groupActionAddress = extensionAddr2;
+        uint256 actionId2 = h.submit_group_action(bobGroup2);
+        bobGroup2.flow.actionId = actionId2;
+        bobGroup2.groupActionId = actionId2;
+
+        h.vote(bobGroup2.flow);
+        h.next_phase();
+        // Activate with bobGroup1's groupId to test multiple extensions for same groupId
+        uint256 sharedGroupId = bobGroup1.groupId;
+        bobGroup2.groupId = sharedGroupId;
+        h.group_activate(bobGroup2);
+
+        // 3. Verify both actionIds are tracked for this groupId
+        uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
+            h.firstTokenAddress(),
+            sharedGroupId
+        );
+        assertEq(actionIds_.length, 2, "Should have 2 actionIds");
+        assertTrue(
+            (actionIds_[0] == actionId1 && actionIds_[1] == actionId2) ||
+                (actionIds_[0] == actionId2 && actionIds_[1] == actionId1),
+            "Both actionIds should be present"
+        );
+    }
+
+    /// @notice Test actionIdsByGroupId after deactivate
+    function test_actionIdsByGroupId_AfterDeactivate() public {
+        // 1. Setup and activate
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Verify actionId is tracked
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup1.groupId
+            ),
+            1,
+            "Should have 1 actionId before deactivate"
+        );
+
+        // 3. Deactivate
+        h.next_phase();
+        h.group_deactivate(bobGroup1);
+
+        // 4. Verify actionId is removed
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup1.groupId
+            ),
+            0,
+            "Should have 0 actionIds after deactivate"
+        );
+        uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
+            h.firstTokenAddress(),
+            bobGroup1.groupId
+        );
+        assertEq(actionIds_.length, 0, "ActionIds array should be empty");
+    }
+
+    /// @notice Test actionIds with single extension
+    function test_actionIds_SingleExtension() public {
+        // 1. Setup and activate
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Verify actionId is tracked
+        uint256[] memory actionIds_ = h.getGroupManager().actionIds(
+            h.firstTokenAddress()
+        );
+        assertEq(actionIds_.length, 1, "Should have 1 actionId");
+        assertEq(actionIds_[0], actionId, "ActionId should match");
+
+        // 3. Verify count
+        assertEq(
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
+            1,
+            "Count should be 1"
+        );
+
+        // 4. Verify at index
+        assertEq(
+            h.getGroupManager().actionIdsAtIndex(h.firstTokenAddress(), 0),
+            actionId,
+            "ActionId at index 0 should match"
+        );
+    }
+
+    /// @notice Test actionIds with multiple extensions
+    function test_actionIds_MultipleExtensions() public {
+        // 1. Setup and activate first extension
+        address extensionAddr1 = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr1;
+        uint256 actionId1 = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId1;
+        bobGroup1.groupActionId = actionId1;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Setup and activate second extension
+        address extensionAddr2 = h.group_action_create(bobGroup2);
+        bobGroup2.groupActionAddress = extensionAddr2;
+        uint256 actionId2 = h.submit_group_action(bobGroup2);
+        bobGroup2.flow.actionId = actionId2;
+        bobGroup2.groupActionId = actionId2;
+
+        h.vote(bobGroup2.flow);
+        h.next_phase();
+        h.group_activate(bobGroup2);
+
+        // 3. Verify both actionIds are tracked
+        uint256[] memory actionIds_ = h.getGroupManager().actionIds(
+            h.firstTokenAddress()
+        );
+        assertEq(actionIds_.length, 2, "Should have 2 actionIds");
+        assertTrue(
+            (actionIds_[0] == actionId1 && actionIds_[1] == actionId2) ||
+                (actionIds_[0] == actionId2 && actionIds_[1] == actionId1),
+            "Both actionIds should be present"
+        );
+    }
+
+    /// @notice Test actionIds after all deactivated
+    function test_actionIds_AfterAllDeactivated() public {
+        // 1. Setup and activate
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Verify actionId is tracked
+        assertEq(
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
+            1,
+            "Should have 1 actionId before deactivate"
+        );
+
+        // 3. Deactivate
+        h.next_phase();
+        h.group_deactivate(bobGroup1);
+
+        // 4. Verify actionId is removed
+        assertEq(
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
+            0,
+            "Should have 0 actionIds after deactivate"
+        );
+        uint256[] memory actionIds_ = h.getGroupManager().actionIds(
+            h.firstTokenAddress()
+        );
+        assertEq(actionIds_.length, 0, "ActionIds array should be empty");
+    }
+
+    /// @notice Test complex scenario with multiple extensions and groupIds
+    function test_ExtensionTracking_ComplexScenario() public {
+        // 1. Setup first extension with group1
+        address extensionAddr1 = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr1;
+        uint256 actionId1 = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId1;
+        bobGroup1.groupActionId = actionId1;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Setup second extension with group2
+        address extensionAddr2 = h.group_action_create(bobGroup2);
+        bobGroup2.groupActionAddress = extensionAddr2;
+        uint256 actionId2 = h.submit_group_action(bobGroup2);
+        bobGroup2.flow.actionId = actionId2;
+        bobGroup2.groupActionId = actionId2;
+
+        h.vote(bobGroup2.flow);
+        h.next_phase();
+        h.group_activate(bobGroup2);
+
+        // 3. Verify both actionIds are tracked globally
+        assertEq(
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
+            2,
+            "Should have 2 actionIds globally"
+        );
+
+        // 4. Verify each groupId has its actionId
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup1.groupId
+            ),
+            1,
+            "Group1 should have 1 actionId"
+        );
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup2.groupId
+            ),
+            1,
+            "Group2 should have 1 actionId"
+        );
+
+        // 5. Deactivate group1
+        h.next_phase();
+        h.group_deactivate(bobGroup1);
+
+        // 6. Verify group1 has no actionIds, but actionId1 still tracked globally (if it has other groups)
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup1.groupId
+            ),
+            0,
+            "Group1 should have 0 actionIds after deactivate"
+        );
+        // ActionId1 should be removed from global set since it has no more active groups
+        assertEq(
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
+            1,
+            "Should have 1 actionId globally after group1 deactivated"
+        );
+
+        // 7. Deactivate group2
+        h.next_phase();
+        h.group_deactivate(bobGroup2);
+
+        // 8. Verify all actionIds removed
+        assertEq(
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
+            0,
+            "Should have 0 actionIds globally after all deactivated"
+        );
+        assertEq(
+            h.getGroupManager().actionIdsByGroupIdCount(
+                h.firstTokenAddress(),
+                bobGroup2.groupId
+            ),
+            0,
+            "Group2 should have 0 actionIds after deactivate"
+        );
+    }
 }

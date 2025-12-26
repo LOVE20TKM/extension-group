@@ -113,7 +113,7 @@ contract LOVE20ExtensionGroupService is
 
     /// @notice Check if account has staked in any valid group action
     function hasActiveGroups(address account) public view returns (bool) {
-        (address[] memory exts, uint256[] memory aids) = _validGroupActions(
+        (uint256[] memory aids, address[] memory exts) = _validGroupActions(
             _join.currentRound()
         );
         for (uint256 i; i < exts.length; ) {
@@ -138,9 +138,9 @@ contract LOVE20ExtensionGroupService is
     )
         external
         view
-        returns (address[] memory extensions, uint256[] memory actionIds)
+        returns (uint256[] memory actionIds, address[] memory extensions)
     {
-        (extensions, actionIds) = _validGroupActions(round);
+        (actionIds, extensions) = _validGroupActions(round);
     }
 
     /// @dev Get all valid group action extensions and their actionIds for a round
@@ -149,7 +149,7 @@ contract LOVE20ExtensionGroupService is
     )
         internal
         view
-        returns (address[] memory extensions, uint256[] memory actionIds_)
+        returns (uint256[] memory actionIds_, address[] memory extensions)
     {
         ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
         ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
@@ -160,7 +160,7 @@ contract LOVE20ExtensionGroupService is
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
-        if (count == 0) return (extensions, actionIds_);
+        if (count == 0) return (actionIds_, extensions);
 
         address[] memory tempExt = new address[](count);
         uint256[] memory tempIds = new uint256[](count);
@@ -512,7 +512,7 @@ contract LOVE20ExtensionGroupService is
     function _getTotalStaked(
         address account
     ) internal view returns (uint256 total) {
-        (address[] memory exts, uint256[] memory aids) = _validGroupActions(
+        (uint256[] memory aids, address[] memory exts) = _validGroupActions(
             _join.currentRound()
         );
         for (uint256 i; i < exts.length; ) {
@@ -642,7 +642,7 @@ contract LOVE20ExtensionGroupService is
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (address[] memory exts, ) = _validGroupActions(round);
+        (, address[] memory exts) = _validGroupActions(round);
         for (uint256 i; i < exts.length; ) {
             ILOVE20ExtensionGroupAction ga = ILOVE20ExtensionGroupAction(
                 exts[i]

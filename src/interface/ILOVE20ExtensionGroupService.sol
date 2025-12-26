@@ -62,7 +62,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     )
         external
         view
-        returns (address[] memory extensions, uint256[] memory actionIds);
+        returns (uint256[] memory actionIds, address[] memory extensions);
 
     function actionIdsWithRecipients(
         address account,

@@ -24,6 +24,7 @@ import {
 /// @dev Users call directly, uses msg.sender for owner verification and transfers
 contract LOVE20GroupManager is ILOVE20GroupManager {
     using EnumerableSet for EnumerableSet.UintSet;
+    using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
 
     // ============ Immutables ============
@@ -51,6 +52,17 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     // extension => totalStaked
     mapping(address => uint256) internal _totalStaked;
+
+    // tokenAddress => groupId => activated extensions set
+    mapping(address => mapping(uint256 => EnumerableSet.AddressSet))
+        internal _extensionsByActivatedGroupId;
+
+    // tokenAddress => extensions with at least one group activated
+    mapping(address => EnumerableSet.AddressSet)
+        internal _extensionsWithGroupActivation;
+
+    // extension => (tokenAddress, actionId) 首次激活时的绑定关系
+    mapping(address => TokenActionPair) internal _extensionTokenActionPair;
 
     // ============ Constructor ============
 
@@ -138,6 +150,26 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
     }
 
+    function _checkAndSetExtensionTokenActionPair(
+        address extension,
+        address tokenAddress,
+        uint256 actionId
+    ) internal {
+        TokenActionPair storage pair = _extensionTokenActionPair[extension];
+        if (pair.tokenAddress != address(0)) {
+            // Extension has been used before, check if (tokenAddress, actionId) matches
+            if (
+                pair.tokenAddress != tokenAddress || pair.actionId != actionId
+            ) {
+                revert ExtensionTokenActionMismatch();
+            }
+        } else {
+            // First time using this extension, store the binding
+            pair.tokenAddress = tokenAddress;
+            pair.actionId = actionId;
+        }
+    }
+
     // ============ Write Functions ============
 
     function activateGroup(
@@ -151,6 +183,8 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 maxAccounts_
     ) external override returns (bool) {
         address extension = _getExtension(tokenAddress, actionId);
+        _checkAndSetExtensionTokenActionPair(extension, tokenAddress, actionId);
+
         Config storage cfg = _getConfig(extension);
         _checkGroupOwner(groupId);
 
@@ -181,6 +215,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         _activeGroupIds[extension].add(groupId);
         _totalStaked[extension] += cfg.activationStakeAmount;
+
+        // Track extension activation for this groupId
+        _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
+        // Track extension with group activation
+        _extensionsWithGroupActivation[tokenAddress].add(extension);
 
         emit GroupActivate(
             tokenAddress,
@@ -216,6 +255,13 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         group.deactivatedRound = currentRound;
 
         _activeGroupIds[extension].remove(groupId);
+
+        // Remove extension from this groupId's activated extensions
+        _extensionsByActivatedGroupId[tokenAddress][groupId].remove(extension);
+        // If this extension has no more active groups, remove from global set
+        if (_activeGroupIds[extension].length() == 0) {
+            _extensionsWithGroupActivation[tokenAddress].remove(extension);
+        }
 
         // All activated groups stake the same fixed amount from config
         uint256 stakedAmount = cfg.activationStakeAmount;
@@ -416,6 +462,72 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     ) public view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
         return _totalStaked[extension];
+    }
+
+    // ============ Extension Activation View Functions ============
+
+    function actionIdsByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) public view override returns (uint256[] memory) {
+        address[] memory extensions = _extensionsByActivatedGroupId[
+            tokenAddress
+        ][groupId].values();
+        uint256[] memory actionIds_ = new uint256[](extensions.length);
+
+        for (uint256 i = 0; i < extensions.length; i++) {
+            actionIds_[i] = _extensionTokenActionPair[extensions[i]].actionId;
+        }
+
+        return actionIds_;
+    }
+
+    function actionIdsByGroupIdCount(
+        address tokenAddress,
+        uint256 groupId
+    ) external view override returns (uint256) {
+        return _extensionsByActivatedGroupId[tokenAddress][groupId].length();
+    }
+
+    function actionIdsByGroupIdAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        uint256 index
+    ) external view override returns (uint256) {
+        address extension = _extensionsByActivatedGroupId[tokenAddress][groupId]
+            .at(index);
+        return _extensionTokenActionPair[extension].actionId;
+    }
+
+    function actionIds(
+        address tokenAddress
+    ) public view override returns (uint256[] memory) {
+        address[] memory extensions = _extensionsWithGroupActivation[
+            tokenAddress
+        ].values();
+        uint256[] memory actionIds_ = new uint256[](extensions.length);
+
+        for (uint256 i = 0; i < extensions.length; i++) {
+            actionIds_[i] = _extensionTokenActionPair[extensions[i]].actionId;
+        }
+
+        return actionIds_;
+    }
+
+    function actionIdsCount(
+        address tokenAddress
+    ) external view override returns (uint256) {
+        return _extensionsWithGroupActivation[tokenAddress].length();
+    }
+
+    function actionIdsAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view override returns (uint256) {
+        address extension = _extensionsWithGroupActivation[tokenAddress].at(
+            index
+        );
+        return _extensionTokenActionPair[extension].actionId;
     }
 
     // ============ Internal Functions ============
