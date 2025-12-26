@@ -16,6 +16,7 @@ interface ILOVE20GroupManager {
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
     error ExtensionTokenActionMismatch();
+    error NotRegisteredExtensionInFactory();
 
     // ============ Events ============
 

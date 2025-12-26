@@ -12,6 +12,10 @@ import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {ILOVE20SLToken} from "@core/interfaces/ILOVE20SLToken.sol";
 import {ILOVE20STToken} from "@core/interfaces/ILOVE20STToken.sol";
+import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
+import {
+    ILOVE20ExtensionFactory
+} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
 import {
     ILOVE20ExtensionCenter
 } from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
@@ -135,7 +139,18 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 actionId
     ) internal view returns (address extension) {
         extension = _center.extension(tokenAddress, actionId);
+        ILOVE20Extension extensionContract = ILOVE20Extension(extension);
         if (extension == address(0)) revert NotRegisteredExtension();
+        try
+            ILOVE20ExtensionFactory(extensionContract.factory()).exists(
+                extension
+            )
+        returns (bool exists) {
+            if (!exists) revert NotRegisteredExtensionInFactory();
+        } catch {
+            revert NotRegisteredExtensionInFactory();
+        }
+        return extension;
     }
 
     function _getConfig(

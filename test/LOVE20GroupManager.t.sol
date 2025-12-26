@@ -5,6 +5,7 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {LOVE20GroupManager} from "../src/LOVE20GroupManager.sol";
 import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 import {MockGroupToken} from "./mocks/MockGroupToken.sol";
+import {MockExtension} from "@extension/test/mocks/MockExtension.sol";
 
 /**
  * @title LOVE20GroupManagerTest
@@ -12,8 +13,8 @@ import {MockGroupToken} from "./mocks/MockGroupToken.sol";
  */
 contract LOVE20GroupManagerTest is BaseGroupTest {
     // Additional test extensions and tokens
-    address public extension1;
-    address public extension2;
+    MockExtension public extension1;
+    MockExtension public extension2;
     MockGroupToken public token2;
     uint256 constant ACTION_ID_1 = 0;
     uint256 constant ACTION_ID_2 = 1;
@@ -21,9 +22,17 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
-        // Create mock extensions (just addresses for testing)
-        extension1 = address(0xE1);
-        extension2 = address(0xE2);
+        // Create mock extensions with proper factory setup
+        extension1 = new MockExtension(address(mockFactory), address(token));
+        extension2 = new MockExtension(address(mockFactory), address(token));
+
+        // Approve factory to transfer tokens for registration
+        // DEFAULT_JOIN_AMOUNT is typically 1e18
+        token.approve(address(mockFactory), type(uint256).max);
+
+        // Register extensions in factory (this will transfer DEFAULT_JOIN_AMOUNT to each extension)
+        mockFactory.registerExtension(address(extension1), address(token));
+        mockFactory.registerExtension(address(extension2), address(token));
 
         // Create second token
         token2 = new MockGroupToken();
@@ -32,7 +41,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         token2.mint(address(this), 1_000_000e18);
 
         // Setup extension1 config
-        vm.prank(extension1);
+        vm.prank(address(extension1));
         groupManager.setConfig(
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -41,7 +50,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         );
 
         // Setup extension2 config
-        vm.prank(extension2);
+        vm.prank(address(extension2));
         groupManager.setConfig(
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -50,9 +59,9 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         );
 
         // Setup extension mappings
-        submit.setActionInfo(address(token), ACTION_ID_1, extension1);
-        submit.setActionInfo(address(token), ACTION_ID_2, extension2);
-        submit.setActionInfo(address(token2), ACTION_ID_1, extension1);
+        submit.setActionInfo(address(token), ACTION_ID_1, address(extension1));
+        submit.setActionInfo(address(token), ACTION_ID_2, address(extension2));
+        submit.setActionInfo(address(token2), ACTION_ID_1, address(extension1));
 
         // Setup group owners
         setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
@@ -172,7 +181,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         );
 
         // Map extension1 to (token2, ACTION_ID_1) - same extension, different token
-        submit.setActionInfo(address(token2), ACTION_ID_1, extension1);
+        submit.setActionInfo(address(token2), ACTION_ID_1, address(extension1));
 
         // Second activation with same extension but different tokenAddress should revert
         // Note: This will fail at config check since extension1's config uses token, not token2
@@ -223,7 +232,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         );
 
         // Setup extension1 for ACTION_ID_2 (but same extension address)
-        submit.setActionInfo(address(token), ACTION_ID_2, extension1);
+        submit.setActionInfo(address(token), ACTION_ID_2, address(extension1));
 
         // Second activation with same extension but different actionId should revert
         vm.prank(groupOwner2, groupOwner2);
@@ -262,7 +271,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         );
 
         // First activation with extension1
-        submit.setActionInfo(address(token), ACTION_ID_1, extension1);
+        submit.setActionInfo(address(token), ACTION_ID_1, address(extension1));
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
             address(token),
@@ -283,7 +292,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
 
         // Second activation with extension2 (different extension, same token, different actionId)
         // This verifies that different extensions can coexist with the same token
-        submit.setActionInfo(address(token), ACTION_ID_2, extension2);
+        submit.setActionInfo(address(token), ACTION_ID_2, address(extension2));
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
             address(token),
@@ -342,7 +351,7 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId1);
 
         // Try to activate with different actionId should still revert
-        submit.setActionInfo(address(token), ACTION_ID_2, extension1);
+        submit.setActionInfo(address(token), ACTION_ID_2, address(extension1));
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(
             ILOVE20GroupManager.ExtensionTokenActionMismatch.selector
