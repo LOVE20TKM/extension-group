@@ -196,7 +196,7 @@ interface ILOVE20GroupManager {
         address owner
     ) external view returns (uint256);
 
-    function totalStakedByOwner(
+    function totalStakedByActionIdByOwner(
         address tokenAddress,
         uint256 actionId,
         address owner

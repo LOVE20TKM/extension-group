@@ -120,7 +120,7 @@ contract LOVE20ExtensionGroupService is
             if (
                 ILOVE20GroupManager(
                     ILOVE20ExtensionGroupAction(exts[i]).GROUP_MANAGER_ADDRESS()
-                ).totalStakedByOwner(
+                ).totalStakedByActionIdByOwner(
                         GROUP_ACTION_TOKEN_ADDRESS,
                         aids[i],
                         account
@@ -526,7 +526,7 @@ contract LOVE20ExtensionGroupService is
 
             uint256 staked = account == address(0)
                 ? mgr.totalStaked(GROUP_ACTION_TOKEN_ADDRESS, aids[i])
-                : mgr.totalStakedByOwner(
+                : mgr.totalStakedByActionIdByOwner(
                     GROUP_ACTION_TOKEN_ADDRESS,
                     aids[i],
                     account

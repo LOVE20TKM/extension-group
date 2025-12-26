@@ -40,16 +40,16 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
     // ============ State ============
 
-    /// @notice Config per extension address
+    // extension => Config
     mapping(address => Config) internal _configs;
 
-    /// @notice Group info per (extension, groupId)
+    // extension, groupId => GroupInfo
     mapping(address => mapping(uint256 => GroupInfo)) internal _groupInfo;
 
-    /// @notice Active group IDs per extension
+    // extension => active groupIds set
     mapping(address => EnumerableSet.UintSet) internal _activeGroupIds;
 
-    /// @notice Total staked per extension
+    // extension => totalStaked
     mapping(address => uint256) internal _totalStaked;
 
     // ============ Constructor ============
@@ -399,7 +399,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             );
     }
 
-    function totalStakedByOwner(
+    function totalStakedByActionIdByOwner(
         address tokenAddress,
         uint256 actionId,
         address owner
@@ -407,7 +407,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         address extension = _center.extension(tokenAddress, actionId);
         Config storage cfg = _configs[extension];
         if (cfg.stakeTokenAddress == address(0)) return 0;
-        return _totalStakedByOwner(extension, owner);
+        return _totalStakedByActionIdByOwner(extension, owner);
     }
 
     function totalStaked(
@@ -454,7 +454,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         return baseCapacity * verifyCapacityMultiplier;
     }
 
-    function _totalStakedByOwner(
+    function _totalStakedByActionIdByOwner(
         address extension,
         address owner
     ) internal view returns (uint256 staked) {

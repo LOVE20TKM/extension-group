@@ -712,7 +712,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
         assertEq(
             ownerValue,
-            groupManager.totalStakedByOwner(
+            groupManager.totalStakedByActionIdByOwner(
                 address(token),
                 ACTION_ID,
                 groupOwner1
