@@ -217,30 +217,36 @@ interface ILOVE20GroupManager {
     // ============ Extension Activation View Functions ============
 
     function actionIdsByGroupId(
+        address actionFactory,
         address tokenAddress,
         uint256 groupId
     ) external view returns (uint256[] memory);
 
     function actionIdsByGroupIdCount(
+        address actionFactory,
         address tokenAddress,
         uint256 groupId
     ) external view returns (uint256);
 
     function actionIdsByGroupIdAtIndex(
+        address actionFactory,
         address tokenAddress,
         uint256 groupId,
         uint256 index
     ) external view returns (uint256);
 
     function actionIds(
+        address actionFactory,
         address tokenAddress
     ) external view returns (uint256[] memory);
 
     function actionIdsCount(
+        address actionFactory,
         address tokenAddress
     ) external view returns (uint256);
 
     function actionIdsAtIndex(
+        address actionFactory,
         address tokenAddress,
         uint256 index
     ) external view returns (uint256);

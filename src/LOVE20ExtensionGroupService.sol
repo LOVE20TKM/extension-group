@@ -129,6 +129,7 @@ contract LOVE20ExtensionGroupService is
             uint256 groupId = group.tokenOfOwnerByIndex(account, i);
             if (
                 groupManager.actionIdsByGroupIdCount(
+                    GROUP_ACTION_FACTORY_ADDRESS,
                     GROUP_ACTION_TOKEN_ADDRESS,
                     groupId
                 ) > 0
