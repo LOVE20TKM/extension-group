@@ -145,7 +145,7 @@ contract LOVE20ExtensionGroupService is
         return false;
     }
 
-    function validGroupActions(
+    function votedGroupActions(
         uint256 round
     )
         external

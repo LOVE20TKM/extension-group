@@ -969,24 +969,24 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertTrue(groupService.hasActiveGroups(groupOwner2));
     }
 
-    // ============ validGroupActions Tests ============
+    // ============ votedGroupActions Tests ============
 
-    function test_ValidGroupActions_Empty() public view {
+    function test_votedGroupActions_Empty() public view {
         // Use a round that has no voted actionIds
         uint256 emptyRound = 999;
         (uint256[] memory aids, address[] memory exts) = groupService
-            .validGroupActions(emptyRound);
+            .votedGroupActions(emptyRound);
 
         assertEq(exts.length, 0);
         assertEq(aids.length, 0);
     }
 
-    function test_ValidGroupActions_SingleValid() public {
+    function test_votedGroupActions_SingleValid() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         uint256 round = verify.currentRound();
         (uint256[] memory aids, address[] memory exts) = groupService
-            .validGroupActions(round);
+            .votedGroupActions(round);
 
         assertEq(exts.length, 1);
         assertEq(aids.length, 1);
@@ -994,7 +994,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(aids[0], ACTION_ID);
     }
 
-    function test_ValidGroupActions_MultipleValid() public {
+    function test_votedGroupActions_MultipleValid() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
         setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 90);
 
@@ -1038,7 +1038,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
         (uint256[] memory aids, address[] memory exts) = groupService
-            .validGroupActions(round);
+            .votedGroupActions(round);
 
         assertEq(exts.length, 2);
         assertEq(aids.length, 2);
@@ -1054,7 +1054,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertTrue(exts[0] != exts[1]);
     }
 
-    function test_ValidGroupActions_FiltersInvalidExtension() public {
+    function test_votedGroupActions_FiltersInvalidExtension() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Add an actionId with extension not registered in factory
@@ -1069,7 +1069,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
         (uint256[] memory aids, address[] memory exts) = groupService
-            .validGroupActions(round);
+            .votedGroupActions(round);
 
         // Should only return the valid one
         assertEq(exts.length, 1);
@@ -1078,7 +1078,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(aids[0], ACTION_ID);
     }
 
-    function test_ValidGroupActions_FiltersZeroExtension() public {
+    function test_votedGroupActions_FiltersZeroExtension() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Add an actionId with zero extension address
@@ -1092,7 +1092,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
         (uint256[] memory aids, address[] memory exts) = groupService
-            .validGroupActions(round);
+            .votedGroupActions(round);
 
         // Should only return the valid one
         assertEq(exts.length, 1);
@@ -1101,12 +1101,12 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(aids[0], ACTION_ID);
     }
 
-    function test_ValidGroupActions_DifferentRounds() public {
+    function test_votedGroupActions_DifferentRounds() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         uint256 round1 = verify.currentRound();
         (uint256[] memory aids1, address[] memory exts1) = groupService
-            .validGroupActions(round1);
+            .votedGroupActions(round1);
 
         assertEq(exts1.length, 1);
         assertEq(aids1.length, 1);
@@ -1116,7 +1116,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round2 = verify.currentRound();
         (uint256[] memory aids2, address[] memory exts2) = groupService
-            .validGroupActions(round2);
+            .votedGroupActions(round2);
 
         // Round2 should have no valid actions (no voted actionIds in round2)
         assertEq(exts2.length, 0);
@@ -1126,7 +1126,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         (
             uint256[] memory aids1Again,
             address[] memory exts1Again
-        ) = groupService.validGroupActions(round1);
+        ) = groupService.votedGroupActions(round1);
         assertEq(exts1Again.length, 1);
         assertEq(aids1Again.length, 1);
     }

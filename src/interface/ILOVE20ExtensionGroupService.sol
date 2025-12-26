@@ -57,7 +57,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
 
     // ============ View Functions ============
 
-    function validGroupActions(
+    function votedGroupActions(
         uint256 round
     )
         external
