@@ -10,6 +10,9 @@ import {
     ILOVE20ExtensionGroupAction
 } from "./interface/ILOVE20ExtensionGroupAction.sol";
 import {
+    ILOVE20ExtensionGroupActionFactory
+} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+import {
     ILOVE20ExtensionGroupService
 } from "./interface/ILOVE20ExtensionGroupService.sol";
 import {ILOVE20GroupManager} from "./interface/ILOVE20GroupManager.sol";
@@ -113,23 +116,27 @@ contract LOVE20ExtensionGroupService is
 
     /// @notice Check if account has staked in any valid group action
     function hasActiveGroups(address account) public view returns (bool) {
-        (uint256[] memory aids, address[] memory exts) = _validGroupActions(
-            _join.currentRound()
+        ILOVE20GroupManager groupManager = ILOVE20GroupManager(
+            ILOVE20ExtensionGroupActionFactory(GROUP_ACTION_FACTORY_ADDRESS)
+                .GROUP_MANAGER_ADDRESS()
         );
-        for (uint256 i; i < exts.length; ) {
+
+        ILOVE20Group group = ILOVE20Group(groupManager.GROUP_ADDRESS());
+
+        uint256 balance = group.balanceOf(account);
+
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 groupId = group.tokenOfOwnerByIndex(account, i);
             if (
-                ILOVE20GroupManager(
-                    ILOVE20ExtensionGroupAction(exts[i]).GROUP_MANAGER_ADDRESS()
-                ).totalStakedByActionIdByOwner(
-                        GROUP_ACTION_TOKEN_ADDRESS,
-                        aids[i],
-                        account
-                    ) > 0
-            ) return true;
-            unchecked {
-                ++i;
+                groupManager.actionIdsByGroupIdCount(
+                    GROUP_ACTION_TOKEN_ADDRESS,
+                    groupId
+                ) > 0
+            ) {
+                return true;
             }
         }
+
         return false;
     }
 

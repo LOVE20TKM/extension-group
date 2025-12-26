@@ -17,6 +17,9 @@ import {IJoin} from "@extension/src/interface/base/IJoin.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
+import {
+    LOVE20ExtensionGroupActionFactory
+} from "../src/LOVE20ExtensionGroupActionFactory.sol";
 import {MockERC20} from "@extension/test/mocks/MockERC20.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 import {
@@ -44,7 +47,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     LOVE20ExtensionGroupService public groupService;
     LOVE20ExtensionGroupAction public groupAction;
     LOVE20GroupDistrust public groupDistrust;
-    MockExtensionFactory public actionFactory;
+    LOVE20ExtensionGroupActionFactory public actionFactory;
     MockExtensionFactory public serviceFactory;
 
     uint256 public groupId1;
@@ -57,30 +60,36 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setUpBase();
 
         // Deploy separate factories for actions and services
-        actionFactory = new MockExtensionFactory(address(center));
-        serviceFactory = new MockExtensionFactory(address(center));
-
-        // Deploy GroupDistrust singleton
+        // Deploy GroupDistrust singleton first (needed for actionFactory)
         groupDistrust = new LOVE20GroupDistrust(
             address(center),
             address(verify),
             address(group)
         );
 
-        // Deploy GroupAction first (as dependency)
-        groupAction = new LOVE20ExtensionGroupAction(
-            address(actionFactory),
-            address(token),
+        // Deploy actionFactory with GroupManager and GroupDistrust
+        actionFactory = new LOVE20ExtensionGroupActionFactory(
+            address(center),
             address(groupManager),
-            address(groupDistrust),
+            address(groupDistrust)
+        );
+        serviceFactory = new MockExtensionFactory(address(center));
+
+        // Create GroupAction using factory
+        token.mint(address(this), 2e18);
+        token.approve(address(actionFactory), type(uint256).max);
+        address groupActionAddress = actionFactory.createExtension(
+            address(token), // tokenAddress
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
         );
+        groupAction = LOVE20ExtensionGroupAction(groupActionAddress);
 
         // Deploy GroupService (use actionFactory as GROUP_ACTION_FACTORY_ADDRESS)
+        token.approve(address(serviceFactory), type(uint256).max);
         groupService = new LOVE20ExtensionGroupService(
             address(serviceFactory),
             address(token),
@@ -88,12 +97,6 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(actionFactory),
             MAX_RECIPIENTS
         );
-
-        // Register extensions to their respective factories
-        token.mint(address(this), 2e18);
-        token.approve(address(actionFactory), type(uint256).max);
-        token.approve(address(serviceFactory), type(uint256).max);
-        actionFactory.registerExtension(address(groupAction), address(token));
         serviceFactory.registerExtension(address(groupService), address(token));
 
         // Setup group owners
@@ -981,21 +984,22 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
         setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 90);
 
-        // Create another group action with different actionId
-        LOVE20ExtensionGroupAction groupAction2 = new LOVE20ExtensionGroupAction(
-                address(actionFactory),
-                address(token),
-                address(groupManager),
-                address(groupDistrust),
-                address(token),
-                address(token),
-                GROUP_ACTIVATION_STAKE_AMOUNT,
-                MAX_JOIN_AMOUNT_MULTIPLIER,
-                CAPACITY_FACTOR
-            );
+        // Create another group action with different actionId using factory
+        token.mint(address(this), 1e18);
+        token.approve(address(actionFactory), type(uint256).max);
+        address groupAction2Address = actionFactory.createExtension(
+            address(token), // tokenAddress
+            address(token), // stakeTokenAddress
+            address(token), // joinTokenAddress
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_MULTIPLIER,
+            CAPACITY_FACTOR
+        );
+        LOVE20ExtensionGroupAction groupAction2 = LOVE20ExtensionGroupAction(
+            groupAction2Address
+        );
 
         uint256 actionId2 = 100;
-        actionFactory.registerExtension(address(groupAction2), address(token));
         submit.setActionInfo(address(token), actionId2, address(groupAction2));
         vote.setVotedActionIds(
             address(token),
@@ -1231,7 +1235,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
  */
 contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
     LOVE20GroupDistrust public groupDistrust;
-    MockExtensionFactory public actionFactory;
+    LOVE20ExtensionGroupActionFactory public actionFactory;
     MockExtensionFactory public serviceFactory;
 
     MockERC20 public otherToken;
@@ -1246,16 +1250,20 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         // Deploy additional token for testing
         otherToken = new MockERC20();
 
-        // Deploy separate factories
-        actionFactory = new MockExtensionFactory(address(center));
-        serviceFactory = new MockExtensionFactory(address(center));
-
-        // Deploy GroupDistrust singleton
+        // Deploy GroupDistrust singleton first (needed for actionFactory)
         groupDistrust = new LOVE20GroupDistrust(
             address(center),
             address(verify),
             address(group)
         );
+
+        // Deploy actionFactory with GroupManager and GroupDistrust
+        actionFactory = new LOVE20ExtensionGroupActionFactory(
+            address(center),
+            address(groupManager),
+            address(groupDistrust)
+        );
+        serviceFactory = new MockExtensionFactory(address(center));
 
         // Setup group owner
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
@@ -1285,20 +1293,23 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         verify.setCurrentRound(testRound);
         join.setCurrentRound(testRound);
 
-        // Deploy GroupAction with specified stakeToken
-        groupAction = new LOVE20ExtensionGroupAction(
-            address(actionFactory),
-            address(token),
-            address(groupManager),
-            address(groupDistrust),
-            stakeTokenAddress,
+        // Create GroupAction using factory with specified stakeToken
+        if (token.balanceOf(address(this)) < 2e18) {
+            token.mint(address(this), 2e18);
+        }
+        token.approve(address(actionFactory), type(uint256).max);
+        address groupActionAddress = actionFactory.createExtension(
+            address(token), // tokenAddress
+            stakeTokenAddress, // stakeTokenAddress
             address(token), // joinTokenAddress
             stakeAmount,
             MAX_JOIN_AMOUNT_MULTIPLIER,
             CAPACITY_FACTOR
         );
+        groupAction = LOVE20ExtensionGroupAction(groupActionAddress);
 
         // Deploy GroupService
+        token.approve(address(serviceFactory), type(uint256).max);
         groupService = new LOVE20ExtensionGroupService(
             address(serviceFactory),
             address(token),
@@ -1306,9 +1317,6 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             address(actionFactory),
             MAX_RECIPIENTS
         );
-
-        // Register extensions
-        actionFactory.registerExtension(address(groupAction), address(token));
         serviceFactory.registerExtension(address(groupService), address(token));
 
         // Prepare extension init
