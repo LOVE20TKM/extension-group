@@ -404,19 +404,27 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         if (cfg.stakeTokenAddress == address(0)) return new uint256[](0);
 
         uint256 nftBalance = _group.balanceOf(owner);
-        uint256[] memory tempResult = new uint256[](nftBalance);
-        uint256 count = 0;
+        uint256[] memory result = new uint256[](nftBalance);
+        uint256 count;
 
-        for (uint256 i = 0; i < nftBalance; i++) {
+        for (uint256 i; i < nftBalance; ) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
             if (_groupInfo[extension][gId].isActive) {
-                tempResult[count++] = gId;
+                result[count] = gId;
+                unchecked {
+                    ++count;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
 
-        uint256[] memory result = new uint256[](count);
-        for (uint256 i = 0; i < count; i++) {
-            result[i] = tempResult[i];
+        if (count == 0) return new uint256[](0);
+
+        // Resize array to valid length using assembly
+        assembly {
+            mstore(result, count)
         }
         return result;
     }
@@ -538,8 +546,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         ][tokenAddress][groupId].values();
         uint256[] memory actionIds_ = new uint256[](extensions.length);
 
-        for (uint256 i = 0; i < extensions.length; i++) {
+        for (uint256 i; i < extensions.length; ) {
             actionIds_[i] = _extensionTokenActionPair[extensions[i]].actionId;
+            unchecked {
+                ++i;
+            }
         }
 
         return actionIds_;
@@ -576,8 +587,11 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         ][tokenAddress].values();
         uint256[] memory actionIds_ = new uint256[](extensions.length);
 
-        for (uint256 i = 0; i < extensions.length; i++) {
+        for (uint256 i; i < extensions.length; ) {
             actionIds_[i] = _extensionTokenActionPair[extensions[i]].actionId;
+            unchecked {
+                ++i;
+            }
         }
 
         return actionIds_;
@@ -614,28 +628,27 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         override
         returns (uint256[] memory actionIds_, address[] memory extensions)
     {
-        ILOVE20Vote vote = ILOVE20Vote(_center.voteAddress());
         ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
             actionFactory
         );
 
-        uint256 count = vote.votedActionIdsCount(tokenAddress, round);
+        uint256 count = _vote.votedActionIdsCount(tokenAddress, round);
         if (count == 0) return (actionIds_, extensions);
 
-        address[] memory tempExt = new address[](count);
-        uint256[] memory tempIds = new uint256[](count);
+        extensions = new address[](count);
+        actionIds_ = new uint256[](count);
         uint256 valid;
 
         for (uint256 i; i < count; ) {
-            uint256 aid = vote.votedActionIdsAtIndex(tokenAddress, round, i);
+            uint256 aid = _vote.votedActionIdsAtIndex(tokenAddress, round, i);
             address ext = _center.extension(tokenAddress, aid);
             if (
                 ext != address(0) &&
                 _activeGroupIds[ext].length() > 0 &&
                 factory.exists(ext)
             ) {
-                tempExt[valid] = ext;
-                tempIds[valid] = aid;
+                extensions[valid] = ext;
+                actionIds_[valid] = aid;
                 unchecked {
                     ++valid;
                 }
@@ -647,14 +660,10 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
 
         if (valid == 0) return (actionIds_, extensions);
 
-        extensions = new address[](valid);
-        actionIds_ = new uint256[](valid);
-        for (uint256 i; i < valid; ) {
-            extensions[i] = tempExt[i];
-            actionIds_[i] = tempIds[i];
-            unchecked {
-                ++i;
-            }
+        // Resize arrays to valid length using assembly
+        assembly {
+            mstore(extensions, valid)
+            mstore(actionIds_, valid)
         }
     }
 
@@ -700,11 +709,14 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
     ) internal view returns (uint256 staked) {
         Config storage cfg = _configs[extension];
         uint256 nftBalance = _group.balanceOf(owner);
-        for (uint256 i = 0; i < nftBalance; i++) {
+        for (uint256 i; i < nftBalance; ) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
             if (_groupInfo[extension][gId].isActive) {
                 // All activated groups stake the same fixed amount
                 staked += cfg.activationStakeAmount;
+            }
+            unchecked {
+                ++i;
             }
         }
     }
