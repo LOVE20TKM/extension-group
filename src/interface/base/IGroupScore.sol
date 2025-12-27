@@ -92,6 +92,11 @@ interface IGroupScore {
         uint256 groupId
     ) external view returns (uint256);
 
+    function isVerified(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (bool);
+
     // Verifiers (recorded at verification time)
 
     function verifiers(uint256 round) external view returns (address[] memory);

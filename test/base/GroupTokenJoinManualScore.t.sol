@@ -646,6 +646,124 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         assertEq(scoreContract.scoreByGroupId(round, groupId1), joinAmount * 3);
     }
 
+    // ============ isVerified Tests ============
+
+    function test_IsVerified_ReturnsFalseBeforeVerification() public view {
+        uint256 round = verify.currentRound();
+        assertFalse(scoreContract.isVerified(round, groupId1));
+        assertFalse(scoreContract.isVerified(round, groupId2));
+    }
+
+    function test_IsVerified_ReturnsTrueAfterVerification() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        // Before verification
+        assertFalse(scoreContract.isVerified(round, groupId1));
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+
+        vm.prank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+
+        // After verification
+        assertTrue(scoreContract.isVerified(round, groupId1));
+    }
+
+    function test_IsVerified_BatchSubmission_ReturnsFalseUntilComplete() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(scoreContract));
+        setupUser(user2, joinAmount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+        vm.prank(user2);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores1 = new uint256[](1);
+        scores1[0] = 80;
+
+        uint256[] memory scores2 = new uint256[](1);
+        scores2[0] = 90;
+
+        vm.startPrank(groupOwner1);
+
+        // First batch - not complete yet
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores1);
+        assertFalse(scoreContract.isVerified(round, groupId1));
+
+        // Second batch - now complete
+        scoreContract.verifyWithOriginScores(groupId1, 1, scores2);
+        assertTrue(scoreContract.isVerified(round, groupId1));
+
+        vm.stopPrank();
+    }
+
+    function test_IsVerified_DifferentRounds() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+
+        uint256 round1 = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+
+        vm.prank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+
+        assertTrue(scoreContract.isVerified(round1, groupId1));
+
+        // Advance to next round
+        advanceRound();
+        uint256 round2 = verify.currentRound();
+
+        // Round2 should not be verified
+        assertFalse(scoreContract.isVerified(round2, groupId1));
+        // Round1 should still be verified
+        assertTrue(scoreContract.isVerified(round1, groupId1));
+    }
+
+    function test_IsVerified_DifferentGroups() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(scoreContract));
+        setupUser(user2, joinAmount, address(scoreContract));
+
+        vm.prank(user1);
+        scoreContract.join(groupId1, joinAmount, new string[](0));
+        vm.prank(user2);
+        scoreContract.join(groupId2, joinAmount, new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+
+        // Verify only groupId1
+        vm.prank(groupOwner1);
+        scoreContract.verifyWithOriginScores(groupId1, 0, scores);
+
+        assertTrue(scoreContract.isVerified(round, groupId1));
+        assertFalse(scoreContract.isVerified(round, groupId2));
+
+        // Verify groupId2
+        vm.prank(groupOwner2);
+        scoreContract.verifyWithOriginScores(groupId2, 0, scores);
+
+        assertTrue(scoreContract.isVerified(round, groupId1));
+        assertTrue(scoreContract.isVerified(round, groupId2));
+    }
+
     function test_verifyWithOriginScores_RevertInvalidStartIndex() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));

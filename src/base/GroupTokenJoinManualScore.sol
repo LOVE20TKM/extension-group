@@ -40,7 +40,7 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     mapping(uint256 => uint256) internal _score;
 
     /// @dev round => groupId => whether verification is complete
-    mapping(uint256 => mapping(uint256 => bool)) internal _verified;
+    mapping(uint256 => mapping(uint256 => bool)) internal _isVerified;
 
     /// @dev round => list of verified group ids
     mapping(uint256 => uint256[]) internal _verifiedGroupIds;
@@ -212,6 +212,14 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
     }
 
     /// @inheritdoc IGroupScore
+    function isVerified(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (bool) {
+        return _isVerified[round][groupId];
+    }
+
+    /// @inheritdoc IGroupScore
     function verifiers(uint256 round) external view returns (address[] memory) {
         return _verifiers[round];
     }
@@ -278,7 +286,7 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
             revert NotVerifier();
         }
 
-        if (_verified[currentRound][groupId]) {
+        if (_isVerified[currentRound][groupId]) {
             revert AlreadyVerified();
         }
 
@@ -340,7 +348,7 @@ abstract contract GroupTokenJoinManualScore is GroupTokenJoin, IGroupScore {
         _scoreByGroupId[currentRound][groupId] = groupScore;
         _score[currentRound] += groupScore;
 
-        _verified[currentRound][groupId] = true;
+        _isVerified[currentRound][groupId] = true;
         _verifiedGroupIds[currentRound].push(groupId);
     }
 
