@@ -7,9 +7,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
 import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
 import {ILOVE20GroupManager} from "../interface/ILOVE20GroupManager.sol";
@@ -21,11 +18,7 @@ using SafeERC20 for IERC20;
 
 /// @title GroupTokenJoin
 /// @notice Handles token-based group joining and exiting
-abstract contract GroupTokenJoin is
-    GroupCore,
-    ReentrancyGuard,
-    IGroupTokenJoin
-{
+abstract contract GroupTokenJoin is GroupCore, IGroupTokenJoin {
     // ============ Immutables ============
 
     address public immutable JOIN_TOKEN_ADDRESS;
