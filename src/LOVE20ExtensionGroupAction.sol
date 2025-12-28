@@ -7,7 +7,6 @@ import {
 import {GroupTokenJoin} from "./base/GroupTokenJoin.sol";
 import {GroupCore} from "./base/GroupCore.sol";
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
-import {IGroupManualScore} from "./interface/base/IGroupManualScore.sol";
 import {IGroupTokenJoin} from "./interface/base/IGroupTokenJoin.sol";
 import {
     IUniswapV2Pair
@@ -17,8 +16,7 @@ import {
 /// @notice Extension contract for manual scoring verification in group-based actions
 contract LOVE20ExtensionGroupAction is
     GroupTokenJoinManualScoreDistrustReward,
-    ILOVE20Extension,
-    IGroupManualScore
+    ILOVE20Extension
 {
     // ============ Constructor ============
 

@@ -16,7 +16,6 @@ import {
 } from "../src/interface/base/IGroupScore.sol";
 import {IGroupDistrust} from "../src/interface/base/IGroupDistrust.sol";
 import {IGroupReward} from "../src/interface/base/IGroupReward.sol";
-import {IGroupManualScore} from "../src/interface/base/IGroupManualScore.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 
 /**
@@ -362,10 +361,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         assertEq(groupAction.joinedValueByAccount(user2), 0);
     }
 
-    // ============ IGroupManualScore Implementation Tests ============
+    // ============ IGroupTokenJoin, IGroupScore, IGroupDistrust Implementation Tests ============
 
-    function test_ImplementsIGroupManualScore() public view {
-        // Contract should properly implement the interface
+    function test_ImplementsGroupInterfaces() public view {
+        // Contract should properly implement the interfaces
         assertTrue(groupAction.canVerify(groupOwner1, groupId1));
         assertFalse(groupAction.canVerify(user1, groupId1));
     }

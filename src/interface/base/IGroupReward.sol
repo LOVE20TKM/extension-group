@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    IExtensionReward
-} from "@extension/src/interface/base/IExtensionReward.sol";
-
 /// @title IGroupReward
 /// @notice Interface for group reward queries
-interface IGroupReward is IExtensionReward {
+interface IGroupReward {
     // ============ Errors ============
 
     error RoundHasVerifiedGroups();
