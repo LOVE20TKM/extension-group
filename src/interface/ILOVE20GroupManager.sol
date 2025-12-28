@@ -122,7 +122,7 @@ interface ILOVE20GroupManager {
         uint256 minJoinAmount,
         uint256 maxJoinAmount,
         uint256 maxAccounts_
-    ) external returns (bool);
+    ) external;
 
     function deactivateGroup(
         address tokenAddress,

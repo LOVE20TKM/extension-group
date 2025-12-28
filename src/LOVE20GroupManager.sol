@@ -213,7 +213,7 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
         uint256 minJoinAmount,
         uint256 maxJoinAmount,
         uint256 maxAccounts_
-    ) external override returns (bool) {
+    ) external override {
         address extension = _getExtension(tokenAddress, actionId);
         address actionFactory = ILOVE20Extension(extension).factory();
         _checkAndSetExtensionTokenActionPair(extension, tokenAddress, actionId);
@@ -266,7 +266,6 @@ contract LOVE20GroupManager is ILOVE20GroupManager {
             maxCapacity,
             maxAccounts_
         );
-        return true;
     }
 
     function deactivateGroup(
