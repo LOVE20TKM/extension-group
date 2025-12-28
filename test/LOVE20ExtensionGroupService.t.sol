@@ -83,7 +83,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
         groupAction = LOVE20ExtensionGroupAction(groupActionAddress);
@@ -1006,7 +1006,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
         LOVE20ExtensionGroupAction groupAction2 = LOVE20ExtensionGroupAction(
@@ -1332,7 +1332,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             stakeTokenAddress, // stakeTokenAddress
             address(token), // joinTokenAddress
             stakeAmount,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
         groupAction = LOVE20ExtensionGroupAction(groupActionAddress);

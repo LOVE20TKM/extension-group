@@ -19,19 +19,21 @@ contract MockGroupTokenJoin is GroupTokenJoin {
         address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 verifyCapacityMultiplier_
+        uint256 maxJoinAmountRatio_,
+        uint256 maxVerifyCapacityFactor_
     )
         GroupCore(
             factory_,
             tokenAddress_,
             groupManagerAddress_,
             stakeTokenAddress_,
-            groupActivationStakeAmount_,
-            maxJoinAmountMultiplier_,
-            verifyCapacityMultiplier_
+            groupActivationStakeAmount_
         )
-        GroupTokenJoin(tokenAddress_)
+        GroupTokenJoin(
+            tokenAddress_,
+            maxJoinAmountRatio_,
+            maxVerifyCapacityFactor_
+        )
     {}
 
     function isJoinedValueCalculated() external pure returns (bool) {
@@ -82,7 +84,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
             address(groupManager),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -530,7 +532,7 @@ contract GroupTokenJoinTest is BaseGroupTest {
 
     function test_CalculateJoinMaxAmount_WithVoteRate() public {
         uint256 totalSupply = token.totalSupply();
-        uint256 baseMaxAmount = totalSupply / MAX_JOIN_AMOUNT_MULTIPLIER;
+        uint256 baseMaxAmount = (totalSupply * MAX_JOIN_AMOUNT_RATIO) / 1e18;
 
         // Test with 100% vote rate (default from prepareExtensionInit)
         uint256 maxAmount = groupManager.calculateJoinMaxAmount(

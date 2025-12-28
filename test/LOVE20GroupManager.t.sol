@@ -44,8 +44,10 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         vm.prank(address(extension1));
         groupManager.setConfig(
             address(token),
+            address(token),
+            address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -53,8 +55,10 @@ contract LOVE20GroupManagerTest is BaseGroupTest {
         vm.prank(address(extension2));
         groupManager.setConfig(
             address(token),
+            address(token),
+            address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 

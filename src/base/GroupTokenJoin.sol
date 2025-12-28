@@ -24,6 +24,10 @@ abstract contract GroupTokenJoin is GroupCore, IGroupTokenJoin {
     address public immutable JOIN_TOKEN_ADDRESS;
     IERC20 internal immutable _joinToken;
 
+    // Config parameters for token join operations
+    uint256 public immutable MAX_JOIN_AMOUNT_RATIO;
+    uint256 public immutable MAX_VERIFY_CAPACITY_FACTOR;
+
     // ============ Account State ============
 
     mapping(address => uint256) internal _joinedRoundByAccount;
@@ -49,10 +53,26 @@ abstract contract GroupTokenJoin is GroupCore, IGroupTokenJoin {
 
     // ============ Constructor ============
 
-    constructor(address joinTokenAddress_) {
+    constructor(
+        address joinTokenAddress_,
+        uint256 maxJoinAmountRatio_,
+        uint256 maxVerifyCapacityFactor_
+    ) {
         if (joinTokenAddress_ == address(0)) revert InvalidJoinTokenAddress();
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         _joinToken = IERC20(joinTokenAddress_);
+        MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;
+        MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
+
+        // Register config in GroupManager (msg.sender is this extension)
+        _groupManager.setConfig(
+            tokenAddress,
+            STAKE_TOKEN_ADDRESS,
+            joinTokenAddress_,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            MAX_VERIFY_CAPACITY_FACTOR
+        );
     }
 
     // ============ Write Functions ============

@@ -32,8 +32,8 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
         address groupDistrustAddress_,
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 verifyCapacityMultiplier_
+        uint256 maxJoinAmountRatio_,
+        uint256 maxVerifyCapacityFactor_
     )
         GroupTokenJoinManualScoreDistrustReward(groupDistrustAddress_)
         GroupCore(
@@ -41,11 +41,13 @@ contract MockGroupReward is GroupTokenJoinManualScoreDistrustReward {
             tokenAddress_,
             groupManagerAddress_,
             stakeTokenAddress_,
-            groupActivationStakeAmount_,
-            maxJoinAmountMultiplier_,
-            verifyCapacityMultiplier_
+            groupActivationStakeAmount_
         )
-        GroupTokenJoin(tokenAddress_)
+        GroupTokenJoin(
+            tokenAddress_,
+            maxJoinAmountRatio_,
+            maxVerifyCapacityFactor_
+        )
     {}
 
     function isJoinedValueCalculated() external pure returns (bool) {
@@ -113,7 +115,7 @@ contract GroupTokenJoinManualScoreDistrustRewardTest is BaseGroupTest {
             address(groupDistrust),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 

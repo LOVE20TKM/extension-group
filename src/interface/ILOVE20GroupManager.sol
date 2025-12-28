@@ -53,10 +53,12 @@ interface ILOVE20GroupManager {
     // ============ Structs ============
 
     struct Config {
+        address tokenAddress;
         address stakeTokenAddress;
+        address joinTokenAddress;
         uint256 activationStakeAmount;
-        uint256 maxJoinAmountMultiplier;
-        uint256 verifyCapacityMultiplier;
+        uint256 maxJoinAmountRatio;
+        uint256 maxVerifyCapacityFactor;
     }
 
     struct GroupInfo {
@@ -76,6 +78,9 @@ interface ILOVE20GroupManager {
         uint256 actionId;
     }
 
+    /// @notice Returns the precision constant (1e18) used for ratio and factor calculations
+    function PRECISION() external view returns (uint256);
+
     // ============ Config Functions ============
 
     /// @notice Returns the ExtensionCenter contract address
@@ -92,10 +97,12 @@ interface ILOVE20GroupManager {
 
     /// @notice Set config for extension (msg.sender is the extension)
     function setConfig(
+        address tokenAddress,
         address stakeTokenAddress,
+        address joinTokenAddress,
         uint256 activationStakeAmount,
-        uint256 maxJoinAmountMultiplier,
-        uint256 verifyCapacityMultiplier
+        uint256 maxJoinAmountRatio,
+        uint256 maxVerifyCapacityFactor
     ) external;
 
     function config(
@@ -106,9 +113,10 @@ interface ILOVE20GroupManager {
         view
         returns (
             address stakeTokenAddress,
+            address joinTokenAddress,
             uint256 activationStakeAmount,
-            uint256 maxJoinAmountMultiplier,
-            uint256 verifyCapacityMultiplier
+            uint256 maxJoinAmountRatio_,
+            uint256 maxVerifyCapacityFactor_
         );
 
     // ============ Write Functions ============

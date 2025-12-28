@@ -73,7 +73,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -89,7 +89,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -110,7 +110,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -127,7 +127,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -154,7 +154,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -163,7 +163,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token2),
             address(token2), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -172,7 +172,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token3),
             address(token3), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -192,7 +192,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -208,8 +208,8 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             ext.GROUP_ACTIVATION_STAKE_AMOUNT(),
             GROUP_ACTIVATION_STAKE_AMOUNT
         );
-        assertEq(ext.MAX_JOIN_AMOUNT_MULTIPLIER(), MAX_JOIN_AMOUNT_MULTIPLIER);
-        assertEq(ext.VERIFY_CAPACITY_MULTIPLIER(), CAPACITY_FACTOR);
+        assertEq(ext.MAX_JOIN_AMOUNT_RATIO(), MAX_JOIN_AMOUNT_RATIO);
+        assertEq(ext.MAX_VERIFY_CAPACITY_FACTOR(), CAPACITY_FACTOR);
     }
 
     // ============ Exists Tests ============
@@ -222,7 +222,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -254,7 +254,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 

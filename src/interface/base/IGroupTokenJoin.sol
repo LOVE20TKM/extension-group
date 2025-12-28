@@ -49,6 +49,12 @@ interface IGroupTokenJoin is IExit {
 
     // ============ View Functions ============
 
+    /// @notice Returns the max join amount ratio (with 1e18 precision)
+    function MAX_JOIN_AMOUNT_RATIO() external view returns (uint256);
+
+    /// @notice Returns the max verify capacity factor (with 1e18 precision)
+    function MAX_VERIFY_CAPACITY_FACTOR() external view returns (uint256);
+
     function joinInfo(
         address account
     )

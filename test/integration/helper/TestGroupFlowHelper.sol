@@ -129,7 +129,7 @@ contract TestGroupFlowHelper is Test {
     // ============ Constants ============
 
     uint256 constant DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
-    uint256 constant DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER = 100;
+    uint256 constant DEFAULT_MAX_JOIN_AMOUNT_RATIO = 1e16; // 1% (1e16 / 1e18 = 0.01)
     uint256 constant DEFAULT_CAPACITY_FACTOR = 1e18; // 100%
     uint256 constant DEFAULT_MAX_RECIPIENTS = 10;
     uint256 constant DEFAULT_JOIN_AMOUNT = 1e18;
@@ -750,7 +750,7 @@ contract TestGroupFlowHelper is Test {
             user.flow.tokenAddress,
             user.flow.tokenAddress, // joinTokenAddress
             DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT,
-            DEFAULT_MAX_JOIN_AMOUNT_MULTIPLIER,
+            DEFAULT_MAX_JOIN_AMOUNT_RATIO,
             DEFAULT_CAPACITY_FACTOR
         );
         vm.stopPrank();

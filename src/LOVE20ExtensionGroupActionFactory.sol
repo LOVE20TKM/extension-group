@@ -44,16 +44,16 @@ contract LOVE20ExtensionGroupActionFactory is
     /// @param stakeTokenAddress_ The stake token address
     /// @param joinTokenAddress_ The join token address
     /// @param activationStakeAmount_ The activation stake amount
-    /// @param maxJoinAmountMultiplier_ The max join amount multiplier
-    /// @param verifyCapacityMultiplier_ The verify capacity multiplier
+    /// @param maxJoinAmountRatio_ The max join amount ratio (with 1e18 precision)
+    /// @param maxVerifyCapacityFactor_ The max verify capacity factor (with 1e18 precision)
     /// @return extension The address of the created extension
     function createExtension(
         address tokenAddress_,
         address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 verifyCapacityMultiplier_
+        uint256 maxJoinAmountRatio_,
+        uint256 maxVerifyCapacityFactor_
     ) external returns (address extension) {
         extension = address(
             new LOVE20ExtensionGroupAction(
@@ -64,8 +64,8 @@ contract LOVE20ExtensionGroupActionFactory is
                 stakeTokenAddress_,
                 joinTokenAddress_,
                 activationStakeAmount_,
-                maxJoinAmountMultiplier_,
-                verifyCapacityMultiplier_
+                maxJoinAmountRatio_,
+                maxVerifyCapacityFactor_
             )
         );
 

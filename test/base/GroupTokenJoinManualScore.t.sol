@@ -24,19 +24,21 @@ contract MockGroupManualScore is GroupTokenJoinManualScore {
         address groupManagerAddress_,
         address stakeTokenAddress_,
         uint256 groupActivationStakeAmount_,
-        uint256 maxJoinAmountMultiplier_,
-        uint256 verifyCapacityMultiplier_
+        uint256 maxJoinAmountRatio_,
+        uint256 maxVerifyCapacityFactor_
     )
         GroupCore(
             factory_,
             tokenAddress_,
             groupManagerAddress_,
             stakeTokenAddress_,
-            groupActivationStakeAmount_,
-            maxJoinAmountMultiplier_,
-            verifyCapacityMultiplier_
+            groupActivationStakeAmount_
         )
-        GroupTokenJoin(tokenAddress_)
+        GroupTokenJoin(
+            tokenAddress_,
+            maxJoinAmountRatio_,
+            maxVerifyCapacityFactor_
+        )
     {}
 
     function isJoinedValueCalculated() external pure returns (bool) {
@@ -100,7 +102,7 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
             address(groupManager),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -676,7 +678,9 @@ contract GroupTokenJoinManualScoreTest is BaseGroupTest {
         assertTrue(scoreContract.isVerified(round, groupId1));
     }
 
-    function test_IsVerified_BatchSubmission_ReturnsFalseUntilComplete() public {
+    function test_IsVerified_BatchSubmission_ReturnsFalseUntilComplete()
+        public
+    {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(scoreContract));
         setupUser(user2, joinAmount, address(scoreContract));
@@ -888,8 +892,8 @@ contract CapacityReductionTest is BaseGroupTest {
     uint256 public groupId2;
     uint256 public groupId3;
 
-    // Use verifyCapacityMultiplier = 1 to make maxVerifyCapacity = baseCapacity
-    uint256 constant SMALL_CAPACITY_MULTIPLIER = 1;
+    // Use maxVerifyCapacityFactor = 1e18 to make maxVerifyCapacity = baseCapacity
+    uint256 constant SMALL_CAPACITY_MULTIPLIER = 1e18;
 
     function setUp() public {
         setUpBase();
@@ -901,7 +905,7 @@ contract CapacityReductionTest is BaseGroupTest {
             address(groupManager),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             SMALL_CAPACITY_MULTIPLIER
         );
 

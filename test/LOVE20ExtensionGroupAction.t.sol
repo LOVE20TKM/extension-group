@@ -129,7 +129,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -582,7 +582,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token), // stakeToken
             invalidToken, // invalid joinToken
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
     }
@@ -603,7 +603,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token),
             address(badLp), // LP doesn't contain token
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
     }
@@ -618,7 +618,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token),
             address(token), // joinToken = token
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -641,7 +641,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token),
             address(lpToken), // LP containing token
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -659,7 +659,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token),
             address(lpToken),
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_MULTIPLIER,
+            MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
 
@@ -690,8 +690,29 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             0
         );
 
+        // Increase LP token total supply to allow larger join amounts
+        // Mint more LP tokens to increase totalSupply, so maxJoinAmount is large enough
+        lpToken.mint(address(this), 1000e18); // Increase totalSupply to 1100e18
+
+        // Calculate max join amount based on LP token totalSupply
+        uint256 maxJoinAmount = groupManager.calculateJoinMaxAmount(
+            address(token),
+            ACTION_ID
+        );
+
+        // Use a join amount that's within the limit (use 80% of max to be safe)
+        uint256 lpAmount = (maxJoinAmount * 80) / 100;
+        if (lpAmount == 0) {
+            // If maxJoinAmount is too small, mint more LP tokens
+            lpToken.mint(address(this), 10000e18);
+            maxJoinAmount = groupManager.calculateJoinMaxAmount(
+                address(token),
+                ACTION_ID
+            );
+            lpAmount = (maxJoinAmount * 80) / 100;
+        }
+
         // User joins with LP tokens
-        uint256 lpAmount = 10e18;
         lpToken.mint(user1, lpAmount);
         vm.prank(user1);
         lpToken.approve(address(action), type(uint256).max);
@@ -700,10 +721,8 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         action.join(groupId, lpAmount, new string[](0));
 
         // Calculate expected value:
-        // LP total supply = 100e18 + 10e18 (minted to user) = 110e18
         // tokenReserve = 1000e18 (token is token0)
         // joinedValue = tokenReserve * lpAmount * 2 / totalSupply
-        //             = 1000e18 * 10e18 * 2 / 110e18
         uint256 totalSupply = lpToken.totalSupply();
         uint256 expectedValue = (1000e18 * lpAmount * 2) / totalSupply;
 
