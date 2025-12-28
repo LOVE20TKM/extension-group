@@ -48,12 +48,12 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     // ============ Constants ============
 
     function BASIS_POINTS_BASE() external view returns (uint256);
+    function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
 
     // ============ Immutables ============
 
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
-    function MAX_RECIPIENTS() external view returns (uint256);
 
     // ============ View Functions ============
 

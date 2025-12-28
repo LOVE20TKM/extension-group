@@ -29,7 +29,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     LOVE20ExtensionGroupActionFactory public actionFactory;
     LOVE20GroupDistrust public groupDistrust;
 
-    uint256 constant MAX_RECIPIENTS = 10;
+    uint256 constant MAX_RECIPIENTS = 100;
 
     // Event declaration for testing
     event ExtensionCreate(
@@ -72,8 +72,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         assertTrue(extension != address(0));
@@ -86,8 +85,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         assertEq(factory.extensionsCount(), 1);
@@ -105,8 +103,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -120,8 +117,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
@@ -138,8 +134,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
@@ -158,22 +153,19 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address ext1 = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         address ext2 = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            5 // different max recipients
+            address(actionFactory)
         );
 
         address ext3 = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            20
+            address(actionFactory)
         );
 
         assertEq(factory.extensionsCount(), 3);
@@ -190,8 +182,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         LOVE20ExtensionGroupService ext = LOVE20ExtensionGroupService(
@@ -202,7 +193,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         assertEq(ext.tokenAddress(), address(token));
         assertEq(ext.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
         assertEq(ext.GROUP_ACTION_FACTORY_ADDRESS(), address(actionFactory));
-        assertEq(ext.MAX_RECIPIENTS(), MAX_RECIPIENTS);
+        assertEq(ext.DEFAULT_MAX_RECIPIENTS(), MAX_RECIPIENTS);
     }
 
     // ============ Exists Tests ============
@@ -213,8 +204,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         assertTrue(factory.exists(extension));
@@ -243,8 +233,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
 
         assertEq(extension, expectedExtension);

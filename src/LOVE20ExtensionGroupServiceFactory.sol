@@ -25,21 +25,18 @@ contract LOVE20ExtensionGroupServiceFactory is
     /// @param tokenAddress_ The service token address
     /// @param groupActionTokenAddress_ The group action token address
     /// @param groupActionFactoryAddress_ The GroupAction factory address
-    /// @param maxRecipients_ Maximum number of reward recipients
     /// @return extension The address of the created extension
     function createExtension(
         address tokenAddress_,
         address groupActionTokenAddress_,
-        address groupActionFactoryAddress_,
-        uint256 maxRecipients_
+        address groupActionFactoryAddress_
     ) external returns (address extension) {
         extension = address(
             new LOVE20ExtensionGroupService(
                 address(this),
                 tokenAddress_,
                 groupActionTokenAddress_,
-                groupActionFactoryAddress_,
-                maxRecipients_
+                groupActionFactoryAddress_
             )
         );
 

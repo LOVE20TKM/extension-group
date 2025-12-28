@@ -50,12 +50,12 @@ contract LOVE20ExtensionGroupService is
     // ============ Constants ============
 
     uint256 public constant BASIS_POINTS_BASE = 1e18;
+    uint256 public constant DEFAULT_MAX_RECIPIENTS = 100;
 
     // ============ Immutables ============
 
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
-    uint256 public immutable MAX_RECIPIENTS;
 
     // ============ Cached Interfaces ============
 
@@ -87,8 +87,7 @@ contract LOVE20ExtensionGroupService is
         address factory_,
         address tokenAddress_,
         address groupActionTokenAddress_,
-        address groupActionFactoryAddress_,
-        uint256 maxRecipients_
+        address groupActionFactoryAddress_
     ) LOVE20ExtensionBaseJoin(factory_, tokenAddress_) {
         if (groupActionTokenAddress_ != tokenAddress_) {
             if (
@@ -103,7 +102,6 @@ contract LOVE20ExtensionGroupService is
         }
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
-        MAX_RECIPIENTS = maxRecipients_;
 
         // Cache frequently used interfaces
         _actionFactory = ILOVE20ExtensionGroupActionFactory(
@@ -189,7 +187,7 @@ contract LOVE20ExtensionGroupService is
     ) internal {
         uint256 len = addrs.length;
         if (len != basisPoints.length) revert ArrayLengthMismatch();
-        if (len > MAX_RECIPIENTS) revert TooManyRecipients();
+        if (len > DEFAULT_MAX_RECIPIENTS) revert TooManyRecipients();
 
         uint256 totalBps;
         for (uint256 i; i < len; ) {

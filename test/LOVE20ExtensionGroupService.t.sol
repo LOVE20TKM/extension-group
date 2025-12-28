@@ -53,7 +53,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     uint256 public groupId1;
     uint256 public groupId2;
 
-    uint256 constant MAX_RECIPIENTS = 10;
+    uint256 constant MAX_RECIPIENTS = 100;
     uint256 constant SERVICE_ACTION_ID = 2;
 
     function setUp() public {
@@ -94,8 +94,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             address(serviceFactory),
             address(token),
             address(token), // groupActionTokenAddress
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
         serviceFactory.registerExtension(address(groupService), address(token));
 
@@ -204,7 +203,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             groupService.GROUP_ACTION_FACTORY_ADDRESS(),
             address(actionFactory)
         );
-        assertEq(groupService.MAX_RECIPIENTS(), MAX_RECIPIENTS);
+        assertEq(groupService.DEFAULT_MAX_RECIPIENTS(), MAX_RECIPIENTS);
     }
 
     // ============ join Tests ============
@@ -1271,7 +1270,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
     uint256 public groupId1;
 
-    uint256 constant MAX_RECIPIENTS = 10;
+    uint256 constant MAX_RECIPIENTS = 100;
 
     function setUp() public {
         setUpBase();
@@ -1343,8 +1342,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             address(serviceFactory),
             address(token),
             address(token),
-            address(actionFactory),
-            MAX_RECIPIENTS
+            address(actionFactory)
         );
         serviceFactory.registerExtension(address(groupService), address(token));
 
