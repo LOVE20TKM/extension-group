@@ -9,7 +9,8 @@ import {
 /**
  * @title DeployGroupActionFactory
  * @notice Script for deploying LOVE20ExtensionGroupActionFactory contract
- * @dev Requires extensionCenter, GroupManager, and GroupDistrust contracts to be deployed first
+ * @dev Requires extensionCenter, GroupManager, GroupJoin, GroupVerify contracts to be deployed first
+ * @dev Note: Singletons should be initialized separately using 05_initialize_singletons.sh after deployment
  */
 contract DeployGroupActionFactory is BaseScript {
     address public groupActionFactoryAddress;
@@ -24,9 +25,13 @@ contract DeployGroupActionFactory is BaseScript {
             "address.extension.group.params",
             "groupManagerAddress"
         );
-        address groupDistrustAddress = readAddressParamsFile(
+        address groupJoinAddress = readAddressParamsFile(
             "address.extension.group.params",
-            "groupDistrustAddress"
+            "groupJoinAddress"
+        );
+        address groupVerifyAddress = readAddressParamsFile(
+            "address.extension.group.params",
+            "groupVerifyAddress"
         );
 
         // Validate addresses are not zero
@@ -39,8 +44,12 @@ contract DeployGroupActionFactory is BaseScript {
             "groupManagerAddress not found in params"
         );
         require(
-            groupDistrustAddress != address(0),
-            "groupDistrustAddress not found in params"
+            groupJoinAddress != address(0),
+            "groupJoinAddress not found in params"
+        );
+        require(
+            groupVerifyAddress != address(0),
+            "groupVerifyAddress not found in params"
         );
 
         // Validate contracts are deployed (have code)
@@ -53,16 +62,30 @@ contract DeployGroupActionFactory is BaseScript {
             "GroupManager contract not deployed"
         );
         require(
-            groupDistrustAddress.code.length > 0,
-            "GroupDistrust contract not deployed"
+            groupJoinAddress.code.length > 0,
+            "GroupJoin contract not deployed"
         );
+        require(
+            groupVerifyAddress.code.length > 0,
+            "GroupVerify contract not deployed"
+        );
+
+        // Read group address
+        address groupAddress = readAddressParamsFile(
+            "address.group.params",
+            "groupAddress"
+        );
+        require(groupAddress != address(0), "groupAddress not found in params");
+        require(groupAddress.code.length > 0, "group contract not deployed");
 
         vm.startBroadcast();
         groupActionFactoryAddress = address(
             new LOVE20ExtensionGroupActionFactory(
                 centerAddress,
                 groupManagerAddress,
-                groupDistrustAddress
+                groupJoinAddress,
+                groupVerifyAddress,
+                groupAddress
             )
         );
         vm.stopBroadcast();
@@ -75,7 +98,8 @@ contract DeployGroupActionFactory is BaseScript {
             console.log("Constructor parameters:");
             console.log("  centerAddress:", centerAddress);
             console.log("  groupManagerAddress:", groupManagerAddress);
-            console.log("  groupDistrustAddress:", groupDistrustAddress);
+            console.log("  groupJoinAddress:", groupJoinAddress);
+            console.log("  groupVerifyAddress:", groupVerifyAddress);
         }
 
         updateParamsFile(

@@ -28,8 +28,13 @@ import {MockGroupToken} from "../mocks/MockGroupToken.sol";
 import {MockVerifyExtended} from "../mocks/MockVerifyExtended.sol";
 
 // Import GroupManager
-import {LOVE20GroupManager} from "../../src/LOVE20GroupManager.sol";
-import {ILOVE20GroupManager} from "../../src/interface/ILOVE20GroupManager.sol";
+import {GroupManager} from "../../src/GroupManager.sol";
+import {IGroupManager} from "../../src/interface/IGroupManager.sol";
+import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
+import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
+import {GroupJoin} from "../../src/GroupJoin.sol";
+import {GroupVerify} from "../../src/GroupVerify.sol";
+import {MockExtensionGroupActionFactory} from "../mocks/MockExtensionGroupActionFactory.sol";
 
 /**
  * @title BaseGroupTest
@@ -46,7 +51,10 @@ abstract contract BaseGroupTest is Test {
 
     // ============ GroupManager (singleton) ============
 
-    LOVE20GroupManager public groupManager;
+    GroupManager public groupManager;
+    GroupJoin public groupJoin;
+    GroupVerify public groupVerify;
+    MockExtensionGroupActionFactory public mockGroupActionFactory;
 
     // ============ Mock Contracts ============
 
@@ -111,13 +119,28 @@ abstract contract BaseGroupTest is Test {
         // Deploy mock factory
         mockFactory = new MockExtensionFactory(address(center));
 
-        // Deploy GroupManager singleton
-        groupManager = new LOVE20GroupManager(
+        // Deploy GroupManager singleton (no parameters, will be initialized by factory)
+        groupManager = new GroupManager();
+
+
+        // Deploy GroupJoin and GroupVerify singletons
+        groupJoin = new GroupJoin();
+        groupVerify = new GroupVerify();
+
+        // Deploy MockExtensionGroupActionFactory
+        mockGroupActionFactory = new MockExtensionGroupActionFactory(
             address(center),
-            address(group),
-            address(stake),
-            address(join)
+            address(groupManager),
+            address(groupJoin),
+            address(groupVerify),
+            address(group)
         );
+
+        // Initialize GroupManager, GroupJoin and GroupVerify with the factory
+        // Must be called after factory is fully deployed
+        IGroupManager(address(groupManager)).initialize(address(mockGroupActionFactory));
+        IGroupJoin(address(groupJoin)).initialize(address(mockGroupActionFactory));
+        IGroupVerify(address(groupVerify)).initialize(address(mockGroupActionFactory));
 
         // Setup initial token supply
         token.mint(address(this), 1_000_000e18);
@@ -136,17 +159,21 @@ abstract contract BaseGroupTest is Test {
     function createDefaultConfig()
         internal
         view
-        returns (ILOVE20GroupManager.Config memory)
+        returns (
+            address stakeTokenAddress,
+            address joinTokenAddress,
+            uint256 activationStakeAmount,
+            uint256 maxJoinAmountRatio,
+            uint256 maxVerifyCapacityFactor
+        )
     {
-        return
-            ILOVE20GroupManager.Config({
-                tokenAddress: address(token),
-                joinTokenAddress: address(token),
-                stakeTokenAddress: address(token),
-                activationStakeAmount: GROUP_ACTIVATION_STAKE_AMOUNT,
-                maxJoinAmountRatio: MAX_JOIN_AMOUNT_RATIO,
-                maxVerifyCapacityFactor: CAPACITY_FACTOR
-            });
+        return (
+            address(token), // stakeTokenAddress
+            address(token), // joinTokenAddress
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
     }
 
     // ============ Helper Functions ============

@@ -18,6 +18,7 @@ interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
     error ArrayLengthMismatch();
     error DuplicateAddress();
     error InvalidGroupActionTokenAddress();
+    error InvalidExtension();
     error NotGroupOwner();
     error RecipientCannotBeSelf();
 

@@ -40,8 +40,12 @@ import {LOVE20ExtensionCenter} from "@extension/src/LOVE20ExtensionCenter.sol";
 
 // Group contracts
 import {LOVE20Group} from "@group/LOVE20Group.sol";
-import {LOVE20GroupManager} from "../../../src/LOVE20GroupManager.sol";
-import {LOVE20GroupDistrust} from "../../../src/LOVE20GroupDistrust.sol";
+import {GroupManager} from "../../../src/GroupManager.sol";
+import {GroupJoin} from "../../../src/GroupJoin.sol";
+import {GroupVerify} from "../../../src/GroupVerify.sol";
+import {IGroupManager} from "../../../src/interface/IGroupManager.sol";
+import {IGroupJoin} from "../../../src/interface/IGroupJoin.sol";
+import {IGroupVerify} from "../../../src/interface/IGroupVerify.sol";
 import {
     LOVE20ExtensionGroupActionFactory
 } from "../../../src/LOVE20ExtensionGroupActionFactory.sol";
@@ -121,8 +125,7 @@ contract TestGroupFlowHelper is Test {
     // ============ Group Contracts ============
 
     LOVE20Group public group;
-    LOVE20GroupManager public groupManager;
-    LOVE20GroupDistrust public groupDistrust;
+    GroupManager public groupManager;
     LOVE20ExtensionGroupActionFactory public groupActionFactory;
     LOVE20ExtensionGroupServiceFactory public groupServiceFactory;
 
@@ -369,29 +372,31 @@ contract TestGroupFlowHelper is Test {
             GROUP_MAX_NAME_LENGTH
         );
 
-        // Deploy group manager
-        groupManager = new LOVE20GroupManager(
-            address(extensionCenter),
-            address(group),
-            address(stakeContract),
-            address(joinContract)
-        );
+        // Deploy group manager (no parameters, will be initialized by factory)
+        groupManager = new GroupManager();
 
-        // Deploy group distrust
-        groupDistrust = new LOVE20GroupDistrust(
-            address(extensionCenter),
-            address(verifyContract),
-            address(group)
-        );
+        // Deploy GroupJoin and GroupVerify singletons
+        GroupJoin groupJoin = new GroupJoin();
+        GroupVerify groupVerify = new GroupVerify();
 
         // Deploy factories
         groupActionFactory = new LOVE20ExtensionGroupActionFactory(
             address(extensionCenter),
             address(groupManager),
-            address(groupDistrust)
+            address(groupJoin),
+            address(groupVerify),
+            address(group)
+        );
+        // Initialize singletons after factory is fully constructed
+        IGroupManager(address(groupManager)).initialize(
+            address(groupActionFactory)
+        );
+        IGroupJoin(address(groupJoin)).initialize(address(groupActionFactory));
+        IGroupVerify(address(groupVerify)).initialize(
+            address(groupActionFactory)
         );
         groupServiceFactory = new LOVE20ExtensionGroupServiceFactory(
-            address(extensionCenter)
+            address(groupActionFactory)
         );
     }
 
@@ -797,9 +802,6 @@ contract TestGroupFlowHelper is Test {
         GroupUserParams memory groupOwner
     ) public {
         address tokenAddress = member.flow.tokenAddress;
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            groupOwner.groupActionAddress
-        );
         IERC20 token = IERC20(tokenAddress);
 
         // Ensure we are not in the last blocks of the phase (LastBlocksOfPhaseCannotJoin check)
@@ -819,8 +821,13 @@ contract TestGroupFlowHelper is Test {
         }
 
         vm.startPrank(member.flow.userAddress);
-        token.approve(address(groupAction), member.joinAmount);
-        groupAction.join(
+        GroupJoin groupJoinContract = GroupJoin(
+            groupActionFactory.GROUP_JOIN_ADDRESS()
+        );
+        token.approve(address(groupJoinContract), member.joinAmount);
+        groupJoinContract.join(
+            tokenAddress,
+            groupOwner.groupActionId,
             groupOwner.groupId,
             member.joinAmount,
             new string[](0)
@@ -832,24 +839,33 @@ contract TestGroupFlowHelper is Test {
         GroupUserParams memory groupOwner,
         uint256[] memory scores
     ) public {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            groupOwner.groupActionAddress
+        vm.startPrank(groupOwner.flow.userAddress);
+        GroupVerify groupVerifyContract = GroupVerify(
+            groupActionFactory.GROUP_VERIFY_ADDRESS()
         );
-
-        vm.prank(groupOwner.flow.userAddress);
-        groupAction.verifyWithOriginScores(groupOwner.groupId, 0, scores);
+        groupVerifyContract.verifyWithOriginScores(
+            groupOwner.flow.tokenAddress,
+            groupOwner.groupActionId,
+            groupOwner.groupId,
+            0,
+            scores
+        );
+        vm.stopPrank();
     }
 
     function group_exit(
         GroupUserParams memory member,
         GroupUserParams memory groupOwner
     ) public {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            groupOwner.groupActionAddress
+        vm.startPrank(member.flow.userAddress);
+        GroupJoin groupJoinContract = GroupJoin(
+            groupActionFactory.GROUP_JOIN_ADDRESS()
         );
-
-        vm.prank(member.flow.userAddress);
-        groupAction.exit();
+        groupJoinContract.exit(
+            member.flow.tokenAddress,
+            groupOwner.groupActionId
+        );
+        vm.stopPrank();
     }
 
     function group_deactivate(GroupUserParams memory groupOwner) public {
@@ -881,8 +897,7 @@ contract TestGroupFlowHelper is Test {
         token.approve(address(groupServiceFactory), DEFAULT_JOIN_AMOUNT);
         address extensionAddr = groupServiceFactory.createExtension(
             user.flow.tokenAddress,
-            groupActionTokenAddress,
-            address(groupActionFactory)
+            groupActionTokenAddress
         );
         vm.stopPrank();
 
@@ -930,12 +945,17 @@ contract TestGroupFlowHelper is Test {
         uint256 amount,
         string memory reason
     ) public {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            target.groupActionAddress
-        );
-
         vm.prank(voter.flow.userAddress, voter.flow.userAddress);
-        groupAction.distrustVote(target.flow.userAddress, amount, reason);
+        GroupVerify groupVerifyContract = GroupVerify(
+            groupActionFactory.GROUP_VERIFY_ADDRESS()
+        );
+        groupVerifyContract.distrustVote(
+            voter.flow.tokenAddress,
+            voter.groupActionId,
+            target.flow.userAddress,
+            amount,
+            reason
+        );
     }
 
     // ============ Core Verify Helpers ============
@@ -956,14 +976,29 @@ contract TestGroupFlowHelper is Test {
 
         // Build scores array - give full score to extension account
         uint256[] memory scores = new uint256[](accounts.length);
+        
+        // For group actions, if accounts is empty, we need to handle it differently
+        // The verify function will call prepareRandomAccountsIfNeeded again internally,
+        // so we need to ensure the scores array matches what verify will get
+        if (accounts.length == 0) {
+            // For group actions with no accounts in core LOVE20Join,
+            // use abstentionScore to give score to extension
+            // This avoids ScoresAndAccountsLengthMismatch error
+            vm.startPrank(verifier.userAddress);
+            verifyContract.verify(tokenAddress, actionId, 100, scores);
+            vm.stopPrank();
+            return;
+        }
+        
         for (uint256 i = 0; i < accounts.length; i++) {
             if (accounts[i] == extensionAddress) {
                 scores[i] = 100;
             }
         }
 
-        vm.prank(verifier.userAddress);
+        vm.startPrank(verifier.userAddress);
         verifyContract.verify(tokenAddress, actionId, 0, scores);
+        vm.stopPrank();
     }
 
     /// @notice Shorthand for group action verification
@@ -1010,12 +1045,8 @@ contract TestGroupFlowHelper is Test {
 
     // ============ View Helpers ============
 
-    function getGroupManager() public view returns (LOVE20GroupManager) {
+    function getGroupManager() public view returns (GroupManager) {
         return groupManager;
-    }
-
-    function getGroupDistrust() public view returns (LOVE20GroupDistrust) {
-        return groupDistrust;
     }
 
     function getExtensionCenter() public view returns (LOVE20ExtensionCenter) {
@@ -1026,3 +1057,4 @@ contract TestGroupFlowHelper is Test {
         return group;
     }
 }
+

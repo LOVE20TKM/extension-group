@@ -7,6 +7,8 @@ import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
     LOVE20ExtensionGroupAction
 } from "../../src/LOVE20ExtensionGroupAction.sol";
+import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
+import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 
 /// @title MultiGroupFlowTest
 /// @notice Integration tests for multi-group and multi-member scenarios
@@ -75,23 +77,45 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
             extensionAddr
         );
+        IGroupVerify groupVerify = IGroupVerify(
+            h.groupActionFactory().GROUP_VERIFY_ADDRESS()
+        );
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
         assertEq(
-            ga.verifiersCount(verifyRound),
+            groupVerify.verifiersCount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                verifyRound
+            ),
             2,
             "2 unique verifiers (bobGroup1=bobGroup2, aliceGroup)"
         );
         assertEq(
-            ga.accountsByGroupIdCount(bobGroup1.groupId),
+            groupJoin.accountsByGroupIdCount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                bobGroup1.groupId
+            ),
             3,
             "Group1 has 3 members"
         );
         assertEq(
-            ga.accountsByGroupIdCount(bobGroup2.groupId),
+            groupJoin.accountsByGroupIdCount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                bobGroup2.groupId
+            ),
             3,
             "Group2 has 3 members"
         );
         assertEq(
-            ga.accountsByGroupIdCount(aliceGroup.groupId),
+            groupJoin.accountsByGroupIdCount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                aliceGroup.groupId
+            ),
             3,
             "Group3 has 3 members"
         );
@@ -157,12 +181,16 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         h.group_submit_score(aliceGroup, aliceScores);
 
         // Verify both verifiers registered
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            extensionAddr
+        IGroupVerify groupVerifyContract = IGroupVerify(
+            h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
         uint256 round = h.verifyContract().currentRound();
         assertEq(
-            groupAction.verifiersCount(round),
+            groupVerifyContract.verifiersCount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                round
+            ),
             2,
             "Verifiers count mismatch"
         );
@@ -491,39 +519,44 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         h.group_submit_score(bobGroup2, scores2);
 
         // Verify capacity reduction coefficients
-        LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
-            extensionAddr
-        );
-
         // Both groups should have no reduction (1e18) since join amounts are small
-        uint256 reduction1 = ga.capacityReductionByGroupId(
+        IGroupVerify groupVerifyContract2 = IGroupVerify(
+            h.groupActionFactory().GROUP_VERIFY_ADDRESS()
+        );
+        uint256 reduction1 = groupVerifyContract2.capacityReductionByGroupId(
+            bobGroup1.flow.tokenAddress,
+            bobGroup1.groupActionId,
             verifyRound,
             bobGroup1.groupId
         );
-        uint256 reduction2 = ga.capacityReductionByGroupId(
+        uint256 reduction2 = groupVerifyContract2.capacityReductionByGroupId(
+            bobGroup1.flow.tokenAddress,
+            bobGroup1.groupActionId,
             verifyRound,
             bobGroup2.groupId
         );
 
-        assertEq(
-            reduction1,
-            1e18,
-            "Group1 should have no capacity reduction"
-        );
-        assertEq(
-            reduction2,
-            1e18,
-            "Group2 should have no capacity reduction"
-        );
+        assertEq(reduction1, 1e18, "Group1 should have no capacity reduction");
+        assertEq(reduction2, 1e18, "Group2 should have no capacity reduction");
 
         // Verify group scores match joined amounts (no reduction applied)
         assertEq(
-            ga.scoreByGroupId(verifyRound, bobGroup1.groupId),
+            groupVerifyContract2.scoreByGroupId(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                verifyRound,
+                bobGroup1.groupId
+            ),
             10e18,
             "Group1 score should equal joined amount"
         );
         assertEq(
-            ga.scoreByGroupId(verifyRound, bobGroup2.groupId),
+            groupVerifyContract2.scoreByGroupId(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                verifyRound,
+                bobGroup2.groupId
+            ),
             15e18,
             "Group2 score should equal joined amount"
         );

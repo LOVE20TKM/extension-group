@@ -37,14 +37,19 @@ verify_contract(){
 }
 echo "verify_contract() loaded"
 
-# Verify LOVE20GroupDistrust
-if [ -n "$groupDistrustAddress" ]; then
-    verify_contract $groupDistrustAddress "LOVE20GroupDistrust" "src/LOVE20GroupDistrust.sol"
+# Verify GroupManager
+if [ -n "$groupManagerAddress" ]; then
+    verify_contract $groupManagerAddress "GroupManager" "src/GroupManager.sol"
 fi
 
-# Verify LOVE20GroupManager
-if [ -n "$groupManagerAddress" ]; then
-    verify_contract $groupManagerAddress "LOVE20GroupManager" "src/LOVE20GroupManager.sol"
+# Verify GroupJoin
+if [ -n "$groupJoinAddress" ]; then
+    verify_contract $groupJoinAddress "GroupJoin" "src/GroupJoin.sol"
+fi
+
+# Verify GroupVerify
+if [ -n "$groupVerifyAddress" ]; then
+    verify_contract $groupVerifyAddress "GroupVerify" "src/GroupVerify.sol"
 fi
 
 # Verify LOVE20ExtensionGroupActionFactory

@@ -17,8 +17,12 @@ import {
 import {
     LOVE20ExtensionGroupActionFactory
 } from "../src/LOVE20ExtensionGroupActionFactory.sol";
-import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
-import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
+import {GroupManager} from "../src/GroupManager.sol";
+import {GroupJoin} from "../src/GroupJoin.sol";
+import {GroupVerify} from "../src/GroupVerify.sol";
+import {IGroupManager} from "../src/interface/IGroupManager.sol";
+import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
+import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 
 /**
  * @title LOVE20ExtensionGroupServiceFactoryTest
@@ -27,7 +31,6 @@ import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
 contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     LOVE20ExtensionGroupServiceFactory public factory;
     LOVE20ExtensionGroupActionFactory public actionFactory;
-    LOVE20GroupDistrust public groupDistrust;
 
     uint256 constant MAX_RECIPIENTS = 100;
 
@@ -40,27 +43,42 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
-        // Deploy GroupDistrust singleton
-        groupDistrust = new LOVE20GroupDistrust(
-            address(center),
-            address(verify),
-            address(group)
-        );
+        // Create new singleton instances for this test (not using BaseGroupTest's instances)
+        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        GroupManager newGroupManager = new GroupManager();
+        GroupJoin newGroupJoin = new GroupJoin();
+        GroupVerify newGroupVerify = new GroupVerify();
 
         // Deploy GroupAction factory
         actionFactory = new LOVE20ExtensionGroupActionFactory(
             address(center),
-            address(groupManager),
-            address(groupDistrust)
+            address(newGroupManager),
+            address(newGroupJoin),
+            address(newGroupVerify),
+            address(group)
+        );
+        // Initialize singletons after factory is fully constructed
+        IGroupManager(address(newGroupManager)).initialize(
+            address(actionFactory)
+        );
+        IGroupJoin(address(newGroupJoin)).initialize(address(actionFactory));
+        IGroupVerify(address(newGroupVerify)).initialize(
+            address(actionFactory)
         );
 
         // Deploy GroupService factory
-        factory = new LOVE20ExtensionGroupServiceFactory(address(center));
+        factory = new LOVE20ExtensionGroupServiceFactory(
+            address(actionFactory)
+        );
     }
 
     // ============ Constructor Tests ============
 
-    function test_Constructor_StoresCenter() public view {
+    function test_Constructor_StoresGroupActionFactory() public view {
+        assertEq(
+            factory.GROUP_ACTION_FACTORY_ADDRESS(),
+            address(actionFactory)
+        );
         assertEq(factory.center(), address(center));
     }
 
@@ -71,8 +89,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         assertTrue(extension != address(0));
@@ -84,8 +101,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         assertEq(factory.extensionsCount(), 1);
@@ -102,8 +118,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -116,8 +131,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
@@ -133,8 +147,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
@@ -150,23 +163,11 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
     function test_CreateExtension_MultipleExtensions() public {
         token.approve(address(factory), 3e18);
 
-        address ext1 = factory.createExtension(
-            address(token),
-            address(token),
-            address(actionFactory)
-        );
+        address ext1 = factory.createExtension(address(token), address(token));
 
-        address ext2 = factory.createExtension(
-            address(token),
-            address(token),
-            address(actionFactory)
-        );
+        address ext2 = factory.createExtension(address(token), address(token));
 
-        address ext3 = factory.createExtension(
-            address(token),
-            address(token),
-            address(actionFactory)
-        );
+        address ext3 = factory.createExtension(address(token), address(token));
 
         assertEq(factory.extensionsCount(), 3);
         assertTrue(factory.exists(ext1));
@@ -181,8 +182,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         LOVE20ExtensionGroupService ext = LOVE20ExtensionGroupService(
@@ -203,8 +203,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         assertTrue(factory.exists(extension));
@@ -232,8 +231,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
-            address(actionFactory)
+            address(token)
         );
 
         assertEq(extension, expectedExtension);

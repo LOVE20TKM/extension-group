@@ -8,6 +8,9 @@ import {LOVE20ExtensionGroupAction} from "./LOVE20ExtensionGroupAction.sol";
 import {
     ILOVE20ExtensionGroupActionFactory
 } from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+import {IGroupManager} from "./interface/IGroupManager.sol";
+import {IGroupJoin} from "./interface/IGroupJoin.sol";
+import {IGroupVerify} from "./interface/IGroupVerify.sol";
 
 /// @title LOVE20ExtensionGroupActionFactory
 /// @notice Factory contract for creating LOVE20ExtensionGroupAction instances
@@ -20,21 +23,33 @@ contract LOVE20ExtensionGroupActionFactory is
     /// @notice The group manager address configured in the factory
     address public immutable GROUP_MANAGER_ADDRESS;
 
-    /// @notice The group distrust address configured in the factory
-    address public immutable GROUP_DISTRUST_ADDRESS;
+    /// @notice The group join address configured in the factory
+    address public immutable GROUP_JOIN_ADDRESS;
+
+    /// @notice The group verify address configured in the factory
+    address public immutable GROUP_VERIFY_ADDRESS;
+
+    /// @notice The group address configured in the factory
+    address public immutable GROUP_ADDRESS;
 
     // ============ Constructor ============
 
     /// @param center_ The extension center address
     /// @param groupManagerAddress_ The group manager address
-    /// @param groupDistrustAddress_ The group distrust address
+    /// @param groupJoinAddress_ The group join address
+    /// @param groupVerifyAddress_ The group verify address
+    /// @param groupAddress_ The group address
     constructor(
         address center_,
         address groupManagerAddress_,
-        address groupDistrustAddress_
+        address groupJoinAddress_,
+        address groupVerifyAddress_,
+        address groupAddress_
     ) LOVE20ExtensionFactoryBase(center_) {
         GROUP_MANAGER_ADDRESS = groupManagerAddress_;
-        GROUP_DISTRUST_ADDRESS = groupDistrustAddress_;
+        GROUP_JOIN_ADDRESS = groupJoinAddress_;
+        GROUP_VERIFY_ADDRESS = groupVerifyAddress_;
+        GROUP_ADDRESS = groupAddress_;
     }
 
     // ============ Factory Functions ============
@@ -60,7 +75,6 @@ contract LOVE20ExtensionGroupActionFactory is
                 address(this),
                 tokenAddress_,
                 GROUP_MANAGER_ADDRESS,
-                GROUP_DISTRUST_ADDRESS,
                 stakeTokenAddress_,
                 joinTokenAddress_,
                 activationStakeAmount_,

@@ -2,11 +2,11 @@
 pragma solidity =0.8.17;
 
 import "@extension/lib/core/script/BaseScript.sol";
-import {LOVE20GroupManager} from "../src/LOVE20GroupManager.sol";
+import {GroupManager} from "../src/GroupManager.sol";
 
 /**
  * @title DeployGroupManager
- * @notice Script for deploying LOVE20GroupManager singleton contract
+ * @notice Script for deploying GroupManager singleton contract
  * @dev Requires extensionCenter, group, stake, and join contracts to be deployed first
  */
 contract DeployGroupManager is BaseScript {
@@ -50,23 +50,14 @@ contract DeployGroupManager is BaseScript {
         require(joinAddress.code.length > 0, "join contract not deployed");
 
         vm.startBroadcast();
-        groupManagerAddress = address(
-            new LOVE20GroupManager(
-                centerAddress,
-                groupAddress,
-                stakeAddress,
-                joinAddress
-            )
-        );
+        groupManagerAddress = address(new GroupManager());
         vm.stopBroadcast();
 
         if (!hideLogs) {
-            console.log("LOVE20GroupManager deployed at:", groupManagerAddress);
-            console.log("Constructor parameters:");
-            console.log("  centerAddress:", centerAddress);
-            console.log("  groupAddress:", groupAddress);
-            console.log("  stakeAddress:", stakeAddress);
-            console.log("  joinAddress:", joinAddress);
+            console.log("GroupManager deployed at:", groupManagerAddress);
+            console.log(
+                "Note: GroupManager will be initialized by the Factory"
+            );
         }
 
         updateParamsFile(

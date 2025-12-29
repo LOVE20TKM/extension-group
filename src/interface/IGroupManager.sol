@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface ILOVE20GroupManager {
+interface IGroupManager {
     // ============ Errors ============
 
-    error ConfigAlreadySet();
-    error ConfigNotSet();
     error NotRegisteredExtension();
     error GroupNotFound();
     error GroupAlreadyActivated();
@@ -17,10 +15,10 @@ interface ILOVE20GroupManager {
     error OnlyGroupOwner();
     error ExtensionTokenActionMismatch();
     error NotRegisteredExtensionInFactory();
+    error AlreadyInitialized();
+    error InvalidFactory();
 
     // ============ Events ============
-
-    event ConfigSet(address indexed extension, address stakeTokenAddress);
 
     event GroupActivate(
         address indexed tokenAddress,
@@ -52,14 +50,7 @@ interface ILOVE20GroupManager {
 
     // ============ Structs ============
 
-    struct Config {
-        address tokenAddress;
-        address stakeTokenAddress;
-        address joinTokenAddress;
-        uint256 activationStakeAmount;
-        uint256 maxJoinAmountRatio;
-        uint256 maxVerifyCapacityFactor;
-    }
+    // Config is now stored in LOVE20ExtensionGroupAction
 
     struct GroupInfo {
         uint256 groupId;
@@ -78,46 +69,16 @@ interface ILOVE20GroupManager {
         uint256 actionId;
     }
 
+    function FACTORY_ADDRESS() external view returns (address);
+
     /// @notice Returns the precision constant (1e18) used for ratio and factor calculations
     function PRECISION() external view returns (uint256);
 
-    // ============ Config Functions ============
+    // ============ Initialization ============
 
-    /// @notice Returns the ExtensionCenter contract address
-    function CENTER_ADDRESS() external view returns (address);
-
-    /// @notice Returns the Group NFT contract address (set at construction)
-    function GROUP_ADDRESS() external view returns (address);
-
-    /// @notice Returns the Stake contract address (set at construction)
-    function STAKE_ADDRESS() external view returns (address);
-
-    /// @notice Returns the Join contract address (set at construction)
-    function JOIN_ADDRESS() external view returns (address);
-
-    /// @notice Set config for extension (msg.sender is the extension)
-    function setConfig(
-        address tokenAddress,
-        address stakeTokenAddress,
-        address joinTokenAddress,
-        uint256 activationStakeAmount,
-        uint256 maxJoinAmountRatio,
-        uint256 maxVerifyCapacityFactor
-    ) external;
-
-    function config(
-        address tokenAddress,
-        uint256 actionId
-    )
-        external
-        view
-        returns (
-            address stakeTokenAddress,
-            address joinTokenAddress,
-            uint256 activationStakeAmount,
-            uint256 maxJoinAmountRatio_,
-            uint256 maxVerifyCapacityFactor_
-        );
+    /// @notice Initialize the contract with factory address
+    /// @param factory_ The factory address
+    function initialize(address factory_) external;
 
     // ============ Write Functions ============
 
@@ -267,4 +228,15 @@ interface ILOVE20GroupManager {
         external
         view
         returns (uint256[] memory actionIds_, address[] memory extensions);
+
+    /// @notice Check if account has any active groups with actions
+    /// @param actionFactory The action factory address
+    /// @param tokenAddress The token address
+    /// @param account The account to check
+    /// @return True if account has at least one group with actions
+    function hasActiveGroups(
+        address actionFactory,
+        address tokenAddress,
+        address account
+    ) external view returns (bool);
 }

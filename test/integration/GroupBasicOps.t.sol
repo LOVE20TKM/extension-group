@@ -6,6 +6,8 @@ import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
     LOVE20ExtensionGroupAction
 } from "../../src/LOVE20ExtensionGroupAction.sol";
+import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
+import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 
 /// @title GroupBasicOpsTest
 /// @notice Integration tests for basic group operations: deactivation, exit/rejoin, etc.
@@ -75,13 +77,17 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         scores1[0] = 80;
         h.group_submit_score(bobGroup1, scores1);
 
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            extensionAddr
-        );
-
         // Verify round 1 score
+        IGroupVerify groupVerify = IGroupVerify(
+            h.groupActionFactory().GROUP_VERIFY_ADDRESS()
+        );
         assertEq(
-            groupAction.originScoreByAccount(round1, member1().userAddress),
+            groupVerify.originScoreByAccount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                round1,
+                member1().userAddress
+            ),
             80,
             "Round 1 score mismatch"
         );
@@ -97,12 +103,22 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 6. Verify scores are round-specific
         assertEq(
-            groupAction.originScoreByAccount(round1, member1().userAddress),
+            groupVerify.originScoreByAccount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                round1,
+                member1().userAddress
+            ),
             80,
             "Round 1 score should remain 80"
         );
         assertEq(
-            groupAction.originScoreByAccount(round2, member1().userAddress),
+            groupVerify.originScoreByAccount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                round2,
+                member1().userAddress
+            ),
             90,
             "Round 2 score should be 90"
         );
@@ -128,19 +144,26 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         m1.groupActionAddress = bobGroup1.groupActionAddress;
         h.group_join(m1, bobGroup1);
 
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
-            extensionAddr
-        );
-
         // Verify joined
-        (uint256 joinedRound, , ) = groupAction.joinInfo(member1().userAddress);
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        (uint256 joinedRound, , ) = groupJoin.joinInfo(
+            bobGroup1.flow.tokenAddress,
+            bobGroup1.groupActionId,
+            member1().userAddress
+        );
         assertTrue(joinedRound > 0, "Should be joined");
 
         // 3. Member exits
         h.group_exit(m1, bobGroup1);
 
         // Verify exited
-        (joinedRound, , ) = groupAction.joinInfo(member1().userAddress);
+        (joinedRound, , ) = groupJoin.joinInfo(
+            bobGroup1.flow.tokenAddress,
+            bobGroup1.groupActionId,
+            member1().userAddress
+        );
         assertEq(joinedRound, 0, "Should not be joined after exit");
 
         // 4. Member rejoins with different amount
@@ -149,7 +172,11 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // Verify rejoined
         uint256 amount;
-        (joinedRound, amount, ) = groupAction.joinInfo(member1().userAddress);
+        (joinedRound, amount, ) = groupJoin.joinInfo(
+            bobGroup1.flow.tokenAddress,
+            bobGroup1.groupActionId,
+            member1().userAddress
+        );
         assertTrue(joinedRound > 0, "Should be joined after rejoin");
         assertEq(amount, 15e18, "Amount should be 15e18");
     }

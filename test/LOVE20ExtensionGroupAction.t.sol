@@ -5,17 +5,11 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     LOVE20ExtensionGroupAction
 } from "../src/LOVE20ExtensionGroupAction.sol";
-import {LOVE20GroupManager} from "../src/LOVE20GroupManager.sol";
-import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
-import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
-import {IGroupCore} from "../src/interface/base/IGroupCore.sol";
-import {IGroupTokenJoin} from "../src/interface/base/IGroupTokenJoin.sol";
-import {
-    IGroupScore,
-    MAX_ORIGIN_SCORE
-} from "../src/interface/base/IGroupScore.sol";
-import {IGroupDistrust} from "../src/interface/base/IGroupDistrust.sol";
-import {IGroupReward} from "../src/interface/base/IGroupReward.sol";
+import {GroupManager} from "../src/GroupManager.sol";
+import {IGroupManager} from "../src/interface/IGroupManager.sol";
+import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
+import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
+import {MAX_ORIGIN_SCORE} from "../src/interface/IGroupVerify.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 
 /**
@@ -24,7 +18,6 @@ import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
  */
 contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     LOVE20ExtensionGroupAction public groupAction;
-    LOVE20GroupDistrust public groupDistrust;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -34,7 +27,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     ) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
-                ILOVE20GroupManager.groupInfo.selector,
+                IGroupManager.groupInfo.selector,
                 address(token),
                 ACTION_ID,
                 groupId
@@ -52,7 +45,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     function _minJoinAmount(uint256 groupId) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
-                ILOVE20GroupManager.groupInfo.selector,
+                IGroupManager.groupInfo.selector,
                 address(token),
                 ACTION_ID,
                 groupId
@@ -70,7 +63,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     function _maxJoinAmount(uint256 groupId) internal view returns (uint256) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
-                ILOVE20GroupManager.groupInfo.selector,
+                IGroupManager.groupInfo.selector,
                 address(token),
                 ACTION_ID,
                 groupId
@@ -90,7 +83,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     ) internal view returns (string memory s) {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
-                ILOVE20GroupManager.groupInfo.selector,
+                IGroupManager.groupInfo.selector,
                 address(token),
                 ACTION_ID,
                 groupId
@@ -112,19 +105,11 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
-        // Deploy GroupDistrust singleton
-        groupDistrust = new LOVE20GroupDistrust(
-            address(center),
-            address(verify),
-            address(group)
-        );
-
-        // Deploy the actual GroupAction contract
+        // Deploy the actual GroupAction contract using mockGroupActionFactory
         groupAction = new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(groupManager),
-            address(groupDistrust),
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -132,10 +117,11 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        // Register extension
+        // Register extension in mockGroupActionFactory (not mockFactory)
+        // because groupAction.factory() returns mockGroupActionFactory
         token.mint(address(this), 1e18);
-        token.approve(address(mockFactory), type(uint256).max);
-        mockFactory.registerExtension(address(groupAction), address(token));
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(address(groupAction), address(token));
 
         // Setup group owners
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
@@ -187,18 +173,40 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         // 1. Users join groups
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 20e18;
-        setupUser(user1, joinAmount1, address(groupAction));
-        setupUser(user2, joinAmount2, address(groupAction));
+        setupUser(user1, joinAmount1, address(groupJoin));
+        setupUser(user2, joinAmount2, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount1, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
 
         vm.prank(user2);
-        groupAction.join(groupId1, joinAmount2, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount2,
+            new string[](0)
+        );
 
         // Verify join state
-        assertEq(groupAction.totalJoinedAmount(), joinAmount1 + joinAmount2);
-        assertEq(groupAction.accountsByGroupIdCount(groupId1), 2);
+        assertEq(
+            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
+            joinAmount1 + joinAmount2
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                address(token),
+                ACTION_ID,
+                groupId1
+            ),
+            2
+        );
 
         // 2. Submit scores
         uint256[] memory scores = new uint256[](2);
@@ -206,19 +214,51 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[1] = 90;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         // 3. Verify scores
         uint256 round = verify.currentRound();
-        assertEq(groupAction.originScoreByAccount(round, user1), 80);
-        assertEq(groupAction.originScoreByAccount(round, user2), 90);
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round,
+                user1
+            ),
+            80
+        );
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round,
+                user2
+            ),
+            90
+        );
 
         // 4. User exits
         vm.prank(user1);
-        groupAction.exit();
+        groupJoin.exit(address(token), ACTION_ID);
 
-        assertEq(groupAction.totalJoinedAmount(), joinAmount2);
-        assertEq(groupAction.accountsByGroupIdCount(groupId1), 1);
+        assertEq(
+            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
+            joinAmount2
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                address(token),
+                ACTION_ID,
+                groupId1
+            ),
+            1
+        );
     }
 
     function test_GroupActivationAndDeactivation() public {
@@ -243,89 +283,175 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         // Cannot join deactivated group
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupTokenJoin.CannotJoinDeactivatedGroup.selector);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        vm.expectRevert(IGroupJoin.CannotJoinDeactivatedGroup.selector);
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
     }
 
     function test_DelegatedVerification() public {
         address delegatedVerifier = address(0x123);
 
         vm.prank(groupOwner1);
-        groupAction.setGroupDelegatedVerifier(groupId1, delegatedVerifier);
+        groupVerify.setGroupDelegatedVerifier(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            delegatedVerifier
+        );
 
         // User joins
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         // Delegated verifier can submit scores
         uint256[] memory scores = new uint256[](1);
         scores[0] = 85;
 
         vm.prank(delegatedVerifier);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         uint256 round = verify.currentRound();
-        assertEq(groupAction.originScoreByAccount(round, user1), 85);
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round,
+                user1
+            ),
+            85
+        );
     }
 
     function test_DistrustVoting() public {
         // Setup group with member
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         // Setup governor
         address governor = address(0x50);
         setupVerifyVotes(governor, ACTION_ID, address(groupAction), 100e18);
 
         uint256 round = verify.currentRound();
-        uint256 scoreBefore = groupAction.scoreByGroupId(round, groupId1);
+        uint256 scoreBefore = groupVerify.scoreByGroupId(
+            address(token),
+            ACTION_ID,
+            round,
+            groupId1
+        );
 
         // Cast distrust vote
         vm.prank(governor, governor);
-        groupAction.distrustVote(groupOwner1, 50e18, "Bad behavior");
+        groupVerify.distrustVote(
+            address(token),
+            ACTION_ID,
+            groupOwner1,
+            50e18,
+            "Bad behavior"
+        );
 
-        uint256 scoreAfter = groupAction.scoreByGroupId(round, groupId1);
+        uint256 scoreAfter = groupVerify.scoreByGroupId(
+            address(token),
+            ACTION_ID,
+            round,
+            groupId1
+        );
         assertTrue(scoreAfter < scoreBefore);
     }
 
     function test_MultipleGroupsWithDifferentOwners() public {
         // Both groups have members
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
-        setupUser(user2, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         vm.prank(user2);
-        groupAction.join(groupId2, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         vm.prank(groupOwner2);
-        groupAction.verifyWithOriginScores(groupId2, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            0,
+            scores
+        );
 
         uint256 round = verify.currentRound();
-        assertEq(groupAction.verifiersCount(round), 2);
+        assertEq(
+            groupVerify.verifiersCount(address(token), ACTION_ID, round),
+            2
+        );
     }
 
     // ============ IExtensionJoinedValue Tests ============
@@ -338,97 +464,178 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
     function test_JoinedValue() public {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 20e18;
-        setupUser(user1, joinAmount1, address(groupAction));
-        setupUser(user2, joinAmount2, address(groupAction));
+        setupUser(user1, joinAmount1, address(groupJoin));
+        setupUser(user2, joinAmount2, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount1, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
 
         vm.prank(user2);
-        groupAction.join(groupId2, joinAmount2, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            joinAmount2,
+            new string[](0)
+        );
 
         assertEq(groupAction.joinedValue(), joinAmount1 + joinAmount2);
     }
 
     function test_JoinedValueByAccount() public {
         uint256 joinAmount = 15e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         assertEq(groupAction.joinedValueByAccount(user1), joinAmount);
         assertEq(groupAction.joinedValueByAccount(user2), 0);
     }
 
-    // ============ IGroupTokenJoin, IGroupScore, IGroupDistrust Implementation Tests ============
+    // ============ Reward Functions Tests ============
 
     function test_ImplementsGroupInterfaces() public view {
         // Contract should properly implement the interfaces
-        assertTrue(groupAction.canVerify(groupOwner1, groupId1));
-        assertFalse(groupAction.canVerify(user1, groupId1));
+        assertTrue(
+            groupVerify.canVerify(
+                address(token),
+                ACTION_ID,
+                groupOwner1,
+                groupId1
+            )
+        );
+        assertFalse(
+            groupVerify.canVerify(address(token), ACTION_ID, user1, groupId1)
+        );
     }
 
     // ============ Edge Cases ============
 
     function test_JoinThenExitThenRejoin() public {
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount * 2, address(groupAction));
+        setupUser(user1, joinAmount * 2, address(groupJoin));
 
         // First join
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
-        assertEq(groupAction.totalJoinedAmount(), joinAmount);
+        assertEq(
+            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
+            joinAmount
+        );
 
         // Exit
         vm.prank(user1);
-        groupAction.exit();
+        groupJoin.exit(address(token), ACTION_ID);
 
-        assertEq(groupAction.totalJoinedAmount(), 0);
+        assertEq(groupJoin.totalJoinedAmount(address(token), ACTION_ID), 0);
 
         // Rejoin (possibly different group)
         vm.prank(user1);
-        groupAction.join(groupId2, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
 
-        assertEq(groupAction.totalJoinedAmount(), joinAmount);
-        (, , uint256 groupId) = groupAction.joinInfo(user1);
+        assertEq(
+            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
+            joinAmount
+        );
+        (, , uint256 groupId) = groupJoin.joinInfo(
+            address(token),
+            ACTION_ID,
+            user1
+        );
         assertEq(groupId, groupId2);
     }
 
     function test_ScoreWithZeroAmount() public {
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = 0;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         uint256 round = verify.currentRound();
-        assertEq(groupAction.scoreByAccount(round, user1), 0);
+        assertEq(
+            groupVerify.scoreByAccount(address(token), ACTION_ID, round, user1),
+            0
+        );
     }
 
     function test_MaxScore() public {
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         uint256[] memory scores = new uint256[](1);
         scores[0] = MAX_ORIGIN_SCORE;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         uint256 round = verify.currentRound();
         assertEq(
-            groupAction.originScoreByAccount(round, user1),
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round,
+                user1
+            ),
             MAX_ORIGIN_SCORE
         );
     }
@@ -480,13 +687,26 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         uint256 joinAmount = 1e18;
 
         // Have users join group
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         // Verify join was successful
-        assertEq(groupAction.accountsByGroupIdCount(groupId1), 1);
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                address(token),
+                ACTION_ID,
+                groupId1
+            ),
+            1
+        );
 
         // Capacity check is done during verifyWithOriginScores, so let's test that path
         advanceRound();
@@ -501,19 +721,34 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 
         // This should succeed since we're within capacity
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
-        assertEq(groupAction.verifiersCount(round), 1);
+        assertEq(
+            groupVerify.verifiersCount(address(token), ACTION_ID, round),
+            1
+        );
     }
 
     // ============ Cross-Round Tests ============
 
     function test_CrossRoundBehavior() public {
         uint256 joinAmount = 10e18;
-        setupUser(user1, joinAmount, address(groupAction));
+        setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        groupAction.join(groupId1, joinAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
 
         // Advance round to get fresh snapshot for round 1
         advanceRound();
@@ -524,24 +759,60 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores
+        );
 
         // Advance round
         advanceRound();
         uint256 round2 = verify.currentRound();
 
         // Scores should be specific to round
-        assertEq(groupAction.originScoreByAccount(round1, user1), 80);
-        assertEq(groupAction.originScoreByAccount(round2, user1), 0);
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round1,
+                user1
+            ),
+            80
+        );
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round2,
+                user1
+            ),
+            0
+        );
 
         // Submit scores in round 2
         uint256[] memory scores2 = new uint256[](1);
         scores2[0] = 90;
 
         vm.prank(groupOwner1);
-        groupAction.verifyWithOriginScores(groupId1, 0, scores2);
+        groupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            0,
+            scores2
+        );
 
-        assertEq(groupAction.originScoreByAccount(round2, user1), 90);
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(token),
+                ACTION_ID,
+                round2,
+                user1
+            ),
+            90
+        );
     }
 }
 
@@ -550,17 +821,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
  * @notice Tests for joinTokenAddress validation and LP token conversion
  */
 contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
-    LOVE20GroupDistrust public groupDistrust;
     MockUniswapV2Pair public lpToken;
 
     function setUp() public {
         setUpBase();
-
-        groupDistrust = new LOVE20GroupDistrust(
-            address(center),
-            address(verify),
-            address(group)
-        );
 
         // Create LP token containing token
         lpToken = new MockUniswapV2Pair(address(token), address(0x999));
@@ -574,10 +838,9 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
         vm.expectRevert(); // Low-level call to non-contract returns no data
         new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(groupManager),
-            address(groupDistrust),
             address(token), // stakeToken
             invalidToken, // invalid joinToken
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -593,12 +856,11 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(0x222)
         );
 
-        vm.expectRevert(IGroupTokenJoin.InvalidJoinTokenAddress.selector);
+        vm.expectRevert(IGroupJoin.InvalidJoinTokenAddress.selector);
         new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(groupManager),
-            address(groupDistrust),
             address(token),
             address(badLp), // LP doesn't contain token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -610,10 +872,9 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
     function test_ValidJoinToken_TokenItself() public {
         // Should not revert
         LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(groupManager),
-            address(groupDistrust),
             address(token),
             address(token), // joinToken = token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -621,7 +882,15 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        assertEq(action.JOIN_TOKEN_ADDRESS(), address(token));
+        // Register extension to get actionId
+        token.mint(address(this), 1e18);
+        token.approve(address(mockFactory), type(uint256).max);
+        mockFactory.registerExtension(address(action), address(token));
+        prepareExtensionInit(address(action), address(token), ACTION_ID);
+
+        // Get joinTokenAddress from extension config
+        address joinTokenAddress = action.JOIN_TOKEN_ADDRESS();
+        assertEq(joinTokenAddress, address(token));
         assertEq(
             action.tokenAddress(),
             address(token),
@@ -633,10 +902,9 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
     function test_ValidJoinToken_LPContainingToken() public {
         // Should not revert
         LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(groupManager),
-            address(groupDistrust),
             address(token),
             address(lpToken), // LP containing token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -644,17 +912,24 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        assertEq(action.JOIN_TOKEN_ADDRESS(), address(lpToken));
+        // Register extension to get actionId
+        token.mint(address(this), 1e18);
+        token.approve(address(mockFactory), type(uint256).max);
+        mockFactory.registerExtension(address(action), address(token));
+        prepareExtensionInit(address(action), address(token), ACTION_ID);
+
+        // Get joinTokenAddress from extension config
+        address joinTokenAddress = action.JOIN_TOKEN_ADDRESS();
+        assertEq(joinTokenAddress, address(lpToken));
         assertTrue(action.isJoinedValueCalculated());
     }
 
     function test_JoinedValue_WithLPToken() public {
         // Deploy action with LP as joinToken
         LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(groupManager),
-            address(groupDistrust),
             address(token),
             address(lpToken),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -662,10 +937,11 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        // Register extension
+        // Register extension in mockGroupActionFactory (not mockFactory)
+        // because action.factory() returns mockGroupActionFactory
         token.mint(address(this), 1e18);
-        token.approve(address(mockFactory), type(uint256).max);
-        mockFactory.registerExtension(address(action), address(token));
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(address(action), address(token));
 
         // Setup group owner
         uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "TestGroup");
@@ -714,10 +990,16 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // User joins with LP tokens
         lpToken.mint(user1, lpAmount);
         vm.prank(user1);
-        lpToken.approve(address(action), type(uint256).max);
+        lpToken.approve(address(groupJoin), type(uint256).max);
 
         vm.prank(user1);
-        action.join(groupId, lpAmount, new string[](0));
+        groupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId,
+            lpAmount,
+            new string[](0)
+        );
 
         // Calculate expected value:
         // tokenReserve = 1000e18 (token is token0)

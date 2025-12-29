@@ -8,11 +8,15 @@ import {
 import {
     LOVE20ExtensionGroupAction
 } from "../src/LOVE20ExtensionGroupAction.sol";
-import {LOVE20GroupDistrust} from "../src/LOVE20GroupDistrust.sol";
 import {
     ILOVE20ExtensionGroupService
 } from "../src/interface/ILOVE20ExtensionGroupService.sol";
-import {ILOVE20GroupManager} from "../src/interface/ILOVE20GroupManager.sol";
+import {GroupManager} from "../src/GroupManager.sol";
+import {GroupJoin} from "../src/GroupJoin.sol";
+import {GroupVerify} from "../src/GroupVerify.sol";
+import {IGroupManager} from "../src/interface/IGroupManager.sol";
+import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
+import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {IJoin} from "@extension/src/interface/base/IJoin.sol";
 import {
     MockExtensionFactory
@@ -46,9 +50,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     );
     LOVE20ExtensionGroupService public groupService;
     LOVE20ExtensionGroupAction public groupAction;
-    LOVE20GroupDistrust public groupDistrust;
     LOVE20ExtensionGroupActionFactory public actionFactory;
     MockExtensionFactory public serviceFactory;
+    GroupManager public newGroupManager;
+    GroupJoin public newGroupJoin;
+    GroupVerify public newGroupVerify;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -59,19 +65,27 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
-        // Deploy separate factories for actions and services
-        // Deploy GroupDistrust singleton first (needed for actionFactory)
-        groupDistrust = new LOVE20GroupDistrust(
-            address(center),
-            address(verify),
-            address(group)
-        );
+        // Create new singleton instances for this test (not using BaseGroupTest's instances)
+        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        newGroupManager = new GroupManager();
+        newGroupJoin = new GroupJoin();
+        newGroupVerify = new GroupVerify();
 
-        // Deploy actionFactory with GroupManager and GroupDistrust
+        // Deploy actionFactory with new singleton instances
         actionFactory = new LOVE20ExtensionGroupActionFactory(
             address(center),
-            address(groupManager),
-            address(groupDistrust)
+            address(newGroupManager),
+            address(newGroupJoin),
+            address(newGroupVerify),
+            address(group)
+        );
+        // Initialize singletons after factory is fully constructed
+        IGroupManager(address(newGroupManager)).initialize(
+            address(actionFactory)
+        );
+        IGroupJoin(address(newGroupJoin)).initialize(address(actionFactory));
+        IGroupVerify(address(newGroupVerify)).initialize(
+            address(actionFactory)
         );
         serviceFactory = new MockExtensionFactory(address(center));
 
@@ -116,16 +130,16 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setupUser(
             groupOwner1,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            address(groupManager)
+            address(newGroupManager)
         );
         setupUser(
             groupOwner2,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            address(groupManager)
+            address(newGroupManager)
         );
 
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             ACTION_ID,
             groupId1,
@@ -137,7 +151,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         vm.prank(groupOwner2, groupOwner2);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             ACTION_ID,
             groupId2,
@@ -159,17 +173,29 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 amount,
         uint256 score
     ) internal {
-        setupUser(member, amount, address(groupAction));
+        setupUser(member, amount, address(newGroupJoin));
 
         vm.prank(member);
-        groupAction.join(groupId, amount, new string[](0));
+        newGroupJoin.join(
+            address(token),
+            ACTION_ID,
+            groupId,
+            amount,
+            new string[](0)
+        );
 
         // Advance round and setup actionIds for new round
         uint256[] memory scores = new uint256[](1);
         scores[0] = score;
 
         vm.prank(owner);
-        groupAction.verifyWithOriginScores(groupId, 0, scores);
+        newGroupVerify.verifyWithOriginScores(
+            address(token),
+            ACTION_ID,
+            groupId,
+            0,
+            scores
+        );
     }
 
     /**
@@ -227,7 +253,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         _setupActionIdsForCurrentRound();
 
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
+        newGroupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         vm.prank(groupOwner1);
         vm.expectRevert(ILOVE20ExtensionGroupService.NoActiveGroups.selector);
@@ -715,7 +741,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 joinedVal = groupService.joinedValue();
         assertEq(
             joinedVal,
-            groupManager.totalStaked(address(token), ACTION_ID)
+            newGroupManager.totalStaked(address(token), ACTION_ID)
         );
     }
 
@@ -728,7 +754,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
         assertEq(
             ownerValue,
-            groupManager.totalStakedByActionIdByOwner(
+            newGroupManager.totalStakedByActionIdByOwner(
                 address(token),
                 ACTION_ID,
                 groupOwner1
@@ -955,7 +981,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         _setupActionIdsForCurrentRound();
 
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
+        newGroupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         assertFalse(groupService.hasActiveGroups(groupOwner1));
     }
@@ -1021,10 +1047,10 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setupUser(
             groupOwner1,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            address(groupManager)
+            address(newGroupManager)
         );
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             actionId2,
             groupId3,
@@ -1196,10 +1222,10 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setupUser(
             groupOwner1,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            address(groupManager)
+            address(newGroupManager)
         );
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             ACTION_ID,
             groupId3,
@@ -1262,9 +1288,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
  * @notice Test suite for stakeToken conversion in LOVE20ExtensionGroupService
  */
 contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
-    LOVE20GroupDistrust public groupDistrust;
     LOVE20ExtensionGroupActionFactory public actionFactory;
     MockExtensionFactory public serviceFactory;
+    GroupManager public newGroupManager;
+    GroupJoin public newGroupJoin;
+    GroupVerify public newGroupVerify;
 
     MockERC20 public otherToken;
 
@@ -1278,18 +1306,27 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         // Deploy additional token for testing
         otherToken = new MockERC20();
 
-        // Deploy GroupDistrust singleton first (needed for actionFactory)
-        groupDistrust = new LOVE20GroupDistrust(
-            address(center),
-            address(verify),
-            address(group)
-        );
+        // Create new singleton instances for this test (not using BaseGroupTest's instances)
+        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        newGroupManager = new GroupManager();
+        newGroupJoin = new GroupJoin();
+        newGroupVerify = new GroupVerify();
 
-        // Deploy actionFactory with GroupManager and GroupDistrust
+        // Deploy actionFactory with new singleton instances
         actionFactory = new LOVE20ExtensionGroupActionFactory(
             address(center),
-            address(groupManager),
-            address(groupDistrust)
+            address(newGroupManager),
+            address(newGroupJoin),
+            address(newGroupVerify),
+            address(group)
+        );
+        // Initialize singletons after factory is fully constructed
+        IGroupManager(address(newGroupManager)).initialize(
+            address(actionFactory)
+        );
+        IGroupJoin(address(newGroupJoin)).initialize(address(actionFactory));
+        IGroupVerify(address(newGroupVerify)).initialize(
+            address(actionFactory)
         );
         serviceFactory = new MockExtensionFactory(address(center));
 
@@ -1383,7 +1420,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         uint256 stakeAmount = 1000e18;
 
         (
-            LOVE20ExtensionGroupAction groupAction,
+            ,
             LOVE20ExtensionGroupService groupService
         ) = _setupGroupActionAndService(
                 address(token),
@@ -1394,10 +1431,10 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             );
 
         // Setup user and activate group
-        setupUser(groupOwner1, stakeAmount, address(groupManager));
+        setupUser(groupOwner1, stakeAmount, address(newGroupManager));
 
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             100,
             groupId1,
@@ -1409,16 +1446,22 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         );
 
         // User joins group
-        setupUser(user1, 100e18, address(groupAction));
+        setupUser(user1, 100e18, address(newGroupJoin));
         vm.prank(user1);
-        groupAction.join(groupId1, 50e18, new string[](0));
+        newGroupJoin.join(
+            address(token),
+            100, // Use actionId 100 that was set up in _setupGroupActionAndService
+            groupId1,
+            50e18,
+            new string[](0)
+        );
 
         // Owner joins service
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
 
         // Verify joinedValue equals total staked (no conversion)
-        uint256 totalStaked = groupManager.totalStaked(address(token), 100);
+        uint256 totalStaked = newGroupManager.totalStaked(address(token), 100);
         uint256 joinedVal = groupService.joinedValue();
         assertEq(
             joinedVal,
@@ -1448,17 +1491,17 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             LOVE20ExtensionGroupService groupService
         ) = _setupGroupActionAndService(lpToken, lpStakeAmount, 200, 201, 20);
 
-        // Setup: mint and approve LP tokens for groupManager
+        // Setup: mint and approve LP tokens for newGroupManager
         MockUniswapV2Pair(lpToken).mint(groupOwner1, 20e18);
         vm.prank(groupOwner1);
         MockUniswapV2Pair(lpToken).approve(
-            address(groupManager),
+            address(newGroupManager),
             type(uint256).max
         );
 
         // Activate group with LP token stake
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             200,
             groupId1,
@@ -1479,7 +1522,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         // token reserve = 1000e18 (token is token0)
         // LP value = (tokenReserve * lpAmount * 2) / totalSupply
         //          = (1000e18 * 10e18 * 2) / 120e18 = 166.67e18
-        uint256 lpStaked = groupManager.totalStaked(address(token), 200);
+        uint256 lpStaked = newGroupManager.totalStaked(address(token), 200);
         assertEq(lpStaked, lpStakeAmount, "LP staked should be 10e18");
 
         uint256 joinedVal = groupService.joinedValue();
@@ -1517,14 +1560,14 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
                 30
             );
 
-        // Setup: mint and approve otherToken for groupManager
+        // Setup: mint and approve otherToken for newGroupManager
         otherToken.mint(groupOwner1, 200e18);
         vm.prank(groupOwner1);
-        otherToken.approve(address(groupManager), type(uint256).max);
+        otherToken.approve(address(newGroupManager), type(uint256).max);
 
         // Activate group with otherToken stake
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             300,
             groupId1,
@@ -1543,7 +1586,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         // otherToken staked = 100e18
         // reserves: 1000 token, 500 otherToken
         // converted value = (100e18 * 1000e18) / 500e18 = 200e18
-        uint256 staked = groupManager.totalStaked(address(token), 300);
+        uint256 staked = newGroupManager.totalStaked(address(token), 300);
         assertEq(staked, stakeAmount, "OtherToken staked should be 100e18");
 
         uint256 joinedVal = groupService.joinedValue();
@@ -1571,14 +1614,14 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
                 40
             );
 
-        // Setup: mint and approve otherToken for groupManager
+        // Setup: mint and approve otherToken for newGroupManager
         otherToken.mint(groupOwner1, 200e18);
         vm.prank(groupOwner1);
-        otherToken.approve(address(groupManager), type(uint256).max);
+        otherToken.approve(address(newGroupManager), type(uint256).max);
 
         // Activate group with otherToken stake
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             400,
             groupId1,
@@ -1620,12 +1663,13 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
                 50
             );
 
-        otherToken.mint(groupOwner1, 200e18);
+        // Mint enough tokens for activation stake (stakeAmount is 100e18, but we need more for safety)
+        otherToken.mint(groupOwner1, stakeAmount * 3); // 300e18 to be safe
         vm.prank(groupOwner1);
-        otherToken.approve(address(groupManager), type(uint256).max);
+        otherToken.approve(address(newGroupManager), type(uint256).max);
 
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
+        newGroupManager.activateGroup(
             address(token),
             500,
             groupId1,

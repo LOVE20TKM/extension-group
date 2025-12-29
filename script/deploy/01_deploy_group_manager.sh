@@ -1,3 +1,3 @@
-echo "Deploying LOVE20GroupManager..."
+echo "Deploying GroupManager..."
 forge_script ../DeployGroupManager.s.sol:DeployGroupManager --sig "run()"
 

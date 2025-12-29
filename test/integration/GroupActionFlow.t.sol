@@ -7,6 +7,8 @@ import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
     LOVE20ExtensionGroupAction
 } from "../../src/LOVE20ExtensionGroupAction.sol";
+import {GroupJoin} from "../../src/GroupJoin.sol";
+import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 
 /// @title GroupActionFlowTest
 /// @notice Integration test for complete group action flow
@@ -60,8 +62,26 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         h.core_verify_extension(bobGroup1, bobGroup1.groupActionAddress);
 
         _ga = LOVE20ExtensionGroupAction(bobGroup1.groupActionAddress);
-        assertEq(_ga.totalJoinedAmount(), 30e18, "Total joined mismatch");
-        assertEq(_ga.accountsByGroupIdCount(bobGroup1.groupId), 2, "Member count");
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        assertEq(
+            groupJoin.totalJoinedAmount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId
+            ),
+            30e18,
+            "Total joined mismatch"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                bobGroup1.flow.tokenAddress,
+                bobGroup1.groupActionId,
+                bobGroup1.groupId
+            ),
+            2,
+            "Member count"
+        );
     }
 
     function _claimAndVerifyRewards() internal {

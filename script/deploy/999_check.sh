@@ -37,30 +37,33 @@ echo "  stakeAddress: $stakeAddress"
 echo "  joinAddress: $joinAddress"
 echo "  verifyAddress: $verifyAddress"
 
-echo "-------------------- GroupDistrust check --------------------"
-if [ -n "$groupDistrustAddress" ]; then
-    echo "  groupDistrustAddress: $groupDistrustAddress"
-    # GroupDistrust doesn't expose internal variables directly
-    # Verify by checking contract has code deployed
-    code_size=$(cast code $groupDistrustAddress --rpc-url $RPC_URL | wc -c)
-    if [ "$code_size" -gt 2 ]; then
-        echo "  (passed) GroupDistrust: contract deployed"
-    else
-        echo "(failed) GroupDistrust: contract not deployed"
-    fi
-else
-    echo "(warning) GroupDistrust not deployed"
-fi
-
 echo "-------------------- GroupManager check --------------------"
 if [ -n "$groupManagerAddress" ]; then
     echo "  groupManagerAddress: $groupManagerAddress"
-    check_equal "GroupManager: CENTER_ADDRESS" $centerAddress $(cast_call $groupManagerAddress "CENTER_ADDRESS()(address)")
-    check_equal "GroupManager: GROUP_ADDRESS" $groupAddress $(cast_call $groupManagerAddress "GROUP_ADDRESS()(address)")
-    check_equal "GroupManager: STAKE_ADDRESS" $stakeAddress $(cast_call $groupManagerAddress "STAKE_ADDRESS()(address)")
-    check_equal "GroupManager: JOIN_ADDRESS" $joinAddress $(cast_call $groupManagerAddress "JOIN_ADDRESS()(address)")
+    check_equal "GroupManager: FACTORY_ADDRESS" $groupActionFactoryAddress $(cast_call $groupManagerAddress "FACTORY_ADDRESS()(address)")
+    # Verify addresses through factory
+    if [ -n "$groupActionFactoryAddress" ]; then
+        check_equal "GroupManager factory: GROUP_ADDRESS" $groupAddress $(cast_call $groupActionFactoryAddress "GROUP_ADDRESS()(address)")
+        check_equal "GroupManager factory: center" $centerAddress $(cast_call $groupActionFactoryAddress "center()(address)")
+    fi
 else
     echo "(warning) GroupManager not deployed"
+fi
+
+echo "-------------------- GroupJoin check --------------------"
+if [ -n "$groupJoinAddress" ]; then
+    echo "  groupJoinAddress: $groupJoinAddress"
+    check_equal "GroupJoin: FACTORY_ADDRESS" $groupActionFactoryAddress $(cast_call $groupJoinAddress "FACTORY_ADDRESS()(address)")
+else
+    echo "(warning) GroupJoin not deployed"
+fi
+
+echo "-------------------- GroupVerify check --------------------"
+if [ -n "$groupVerifyAddress" ]; then
+    echo "  groupVerifyAddress: $groupVerifyAddress"
+    check_equal "GroupVerify: FACTORY_ADDRESS" $groupActionFactoryAddress $(cast_call $groupVerifyAddress "FACTORY_ADDRESS()(address)")
+else
+    echo "(warning) GroupVerify not deployed"
 fi
 
 echo "-------------------- GroupActionFactory check --------------------"
@@ -68,7 +71,9 @@ if [ -n "$groupActionFactoryAddress" ]; then
     echo "  groupActionFactoryAddress: $groupActionFactoryAddress"
     check_equal "GroupActionFactory: center" $centerAddress $(cast_call $groupActionFactoryAddress "center()(address)")
     check_equal "GroupActionFactory: GROUP_MANAGER_ADDRESS" $groupManagerAddress $(cast_call $groupActionFactoryAddress "GROUP_MANAGER_ADDRESS()(address)")
-    check_equal "GroupActionFactory: GROUP_DISTRUST_ADDRESS" $groupDistrustAddress $(cast_call $groupActionFactoryAddress "GROUP_DISTRUST_ADDRESS()(address)")
+    check_equal "GroupActionFactory: GROUP_JOIN_ADDRESS" $groupJoinAddress $(cast_call $groupActionFactoryAddress "GROUP_JOIN_ADDRESS()(address)")
+    check_equal "GroupActionFactory: GROUP_VERIFY_ADDRESS" $groupVerifyAddress $(cast_call $groupActionFactoryAddress "GROUP_VERIFY_ADDRESS()(address)")
+    check_equal "GroupActionFactory: GROUP_ADDRESS" $groupAddress $(cast_call $groupActionFactoryAddress "GROUP_ADDRESS()(address)")
 else
     echo "(warning) GroupActionFactory not deployed"
 fi
@@ -77,13 +82,14 @@ echo "-------------------- GroupServiceFactory check --------------------"
 if [ -n "$groupServiceFactoryAddress" ]; then
     echo "  groupServiceFactoryAddress: $groupServiceFactoryAddress"
     check_equal "GroupServiceFactory: center" $centerAddress $(cast_call $groupServiceFactoryAddress "center()(address)")
+    check_equal "GroupServiceFactory: GROUP_ACTION_FACTORY_ADDRESS" $groupActionFactoryAddress $(cast_call $groupServiceFactoryAddress "GROUP_ACTION_FACTORY_ADDRESS()(address)")
 else
     echo "(warning) GroupServiceFactory not deployed"
 fi
 
 echo "-------------------- address uniqueness check --------------------"
 # Verify all addresses are not zero addresses
-addresses=($groupDistrustAddress $groupManagerAddress $groupActionFactoryAddress $groupServiceFactoryAddress)
+addresses=($groupManagerAddress $groupJoinAddress $groupVerifyAddress $groupActionFactoryAddress $groupServiceFactoryAddress)
 for addr in "${addresses[@]}"; do
     if [[ -n "$addr" && "$addr" == "0x0000000000000000000000000000000000000000" ]]; then
         echo "(failed) Found zero address in deployment: $addr"

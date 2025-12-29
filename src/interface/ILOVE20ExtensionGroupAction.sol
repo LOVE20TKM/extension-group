@@ -2,19 +2,57 @@
 pragma solidity =0.8.17;
 
 import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
-import {IGroupTokenJoin} from "./base/IGroupTokenJoin.sol";
-import {IGroupScore} from "./base/IGroupScore.sol";
-import {IGroupDistrust} from "./base/IGroupDistrust.sol";
-import {IGroupCore} from "./base/IGroupCore.sol";
-import {IGroupReward} from "./base/IGroupReward.sol";
 
 /// @title ILOVE20ExtensionGroupAction
-/// @notice Combined interface for group-based action extension with manual scoring
-interface ILOVE20ExtensionGroupAction is
-    ILOVE20Extension,
-    IGroupCore,
-    IGroupTokenJoin,
-    IGroupScore,
-    IGroupDistrust,
-    IGroupReward
-{}
+/// @notice Interface for group-based action extension with manual scoring
+/// @dev Join and Verify functions are in GroupJoin and GroupVerify singleton contracts
+interface ILOVE20ExtensionGroupAction is ILOVE20Extension {
+    // ============ Errors ============
+
+    error RoundHasVerifiedGroups();
+
+    // ============ Events ============
+
+    event UnclaimedRewardBurn(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        uint256 amount
+    );
+
+    // ============ Functions ============
+
+    /// @notice Initialize action by joining through LOVE20Join
+    /// @dev Called by GroupManager when first group is activated
+    function initializeAction() external;
+
+    /// @notice Burn unclaimed reward when no group submitted verification in a round
+    function burnUnclaimedReward(uint256 round) external;
+
+    function generatedRewardByGroupId(
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function generatedRewardByVerifier(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256);
+
+    // ============ Config Getters ============
+
+    /// @notice Get stake token address
+    function STAKE_TOKEN_ADDRESS() external view returns (address);
+
+    /// @notice Get join token address
+    function JOIN_TOKEN_ADDRESS() external view returns (address);
+
+    /// @notice Get activation stake amount
+    function ACTIVATION_STAKE_AMOUNT() external view returns (uint256);
+
+    /// @notice Get max join amount ratio
+    function MAX_JOIN_AMOUNT_RATIO() external view returns (uint256);
+
+    /// @notice Get max verify capacity factor
+    function MAX_VERIFY_CAPACITY_FACTOR() external view returns (uint256);
+}

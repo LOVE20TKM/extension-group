@@ -21,9 +21,17 @@ interface ILOVE20ExtensionGroupActionFactory is ILOVE20ExtensionFactory {
     /// @return The group manager address
     function GROUP_MANAGER_ADDRESS() external view returns (address);
 
-    /// @notice Get the group distrust address configured in the factory
-    /// @return The group distrust address
-    function GROUP_DISTRUST_ADDRESS() external view returns (address);
+    /// @notice Get the group join address configured in the factory
+    /// @return The group join address
+    function GROUP_JOIN_ADDRESS() external view returns (address);
+
+    /// @notice Get the group verify address configured in the factory
+    /// @return The group verify address
+    function GROUP_VERIFY_ADDRESS() external view returns (address);
+
+    /// @notice Get the group address configured in the factory
+    /// @return The group address
+    function GROUP_ADDRESS() external view returns (address);
 
     /// @notice Create a new LOVE20ExtensionGroupAction extension
     /// @param tokenAddress_ The token address
