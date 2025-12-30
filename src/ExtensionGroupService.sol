@@ -8,10 +8,12 @@ import {
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 // Extension
-import {
-    ExtensionBaseJoin
-} from "@extension/src/ExtensionBaseJoin.sol";
+import {ExtensionBaseJoin} from "@extension/src/ExtensionBaseJoin.sol";
 import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
+import {
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {
     RoundHistoryAddressArray
 } from "@extension/src/lib/RoundHistoryAddressArray.sol";
@@ -28,24 +30,17 @@ import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 
 // Local
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {
-    IExtensionGroupAction
-} from "./interface/IExtensionGroupAction.sol";
+import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
-import {
-    IExtensionGroupService
-} from "./interface/IExtensionGroupService.sol";
+import {IExtensionGroupService} from "./interface/IExtensionGroupService.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
 /// @title ExtensionGroupService
 /// @notice Extension contract for rewarding group service providers
 /// @dev Service reward = Total service reward × (Account's group action reward / Group action total reward)
-contract ExtensionGroupService is
-    ExtensionBaseJoin,
-    IExtensionGroupService
-{
+contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
@@ -62,6 +57,7 @@ contract ExtensionGroupService is
 
     // ============ Cached Interfaces ============
 
+    ILOVE20Launch internal immutable _launch;
     IGroupManager internal immutable _groupManager;
     ILOVE20Group internal immutable _group;
     IExtensionGroupActionFactory internal immutable _actionFactory;
@@ -92,6 +88,9 @@ contract ExtensionGroupService is
         address groupActionTokenAddress_,
         address groupActionFactoryAddress_
     ) ExtensionBaseJoin(factory_, tokenAddress_) {
+        // Cache frequently used interfaces
+        _launch = ILOVE20Launch(_center.launchAddress());
+
         if (groupActionTokenAddress_ != tokenAddress_) {
             if (
                 !_launch.isLOVE20Token(groupActionTokenAddress_) ||
@@ -103,8 +102,6 @@ contract ExtensionGroupService is
         }
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
-
-        // Cache frequently used interfaces
         _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_
         );
@@ -589,9 +586,7 @@ contract ExtensionGroupService is
             round
         );
         for (uint256 i; i < exts.length; ) {
-            IExtensionGroupAction ga = IExtensionGroupAction(
-                exts[i]
-            );
+            IExtensionGroupAction ga = IExtensionGroupAction(exts[i]);
             accountReward += ga.generatedRewardByVerifier(round, verifier);
             totalReward += ga.reward(round);
             unchecked {
@@ -703,4 +698,3 @@ contract ExtensionGroupService is
         }
     }
 }
-
