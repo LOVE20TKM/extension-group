@@ -21,11 +21,11 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     IGroupVerify internal immutable _groupVerify;
     IGroupManager internal immutable _groupManager;
 
-    address public immutable override STAKE_TOKEN_ADDRESS;
-    address public immutable override JOIN_TOKEN_ADDRESS;
-    uint256 public immutable override ACTIVATION_STAKE_AMOUNT;
-    uint256 public immutable override MAX_JOIN_AMOUNT_RATIO;
-    uint256 public immutable override MAX_VERIFY_CAPACITY_FACTOR;
+    address public immutable STAKE_TOKEN_ADDRESS;
+    address public immutable JOIN_TOKEN_ADDRESS;
+    uint256 public immutable ACTIVATION_STAKE_AMOUNT;
+    uint256 public immutable MAX_JOIN_AMOUNT_RATIO;
+    uint256 public immutable MAX_VERIFY_CAPACITY_FACTOR;
 
     // round => burned amount
     mapping(uint256 => uint256) internal _burnedReward;
