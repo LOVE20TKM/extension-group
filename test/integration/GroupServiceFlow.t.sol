@@ -5,14 +5,14 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../../src/ExtensionGroupAction.sol";
 import {
-    LOVE20ExtensionGroupService
-} from "../../src/LOVE20ExtensionGroupService.sol";
+    ExtensionGroupService
+} from "../../src/ExtensionGroupService.sol";
 import {
-    ILOVE20ExtensionGroupService
-} from "../../src/interface/ILOVE20ExtensionGroupService.sol";
+    IExtensionGroupService
+} from "../../src/interface/IExtensionGroupService.sol";
 
 /// @title GroupServiceFlowTest
 /// @notice Integration test for complete group service flow with reward claiming
@@ -107,10 +107,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
     }
 
     function _verifyServiceRewardClaim(uint256 verifyRound) internal {
-        LOVE20ExtensionGroupService gs = LOVE20ExtensionGroupService(
+        ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
-        LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction ga = ExtensionGroupAction(
             bobGroup1.groupActionAddress
         );
 
@@ -178,7 +178,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
     }
 
     function _verifyServiceRecipientsConfig(
-        LOVE20ExtensionGroupService gs,
+        ExtensionGroupService gs,
         uint256 verifyRound,
         uint256 expectedTotal
     ) internal {
@@ -257,7 +257,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
     }
 
     function _claimAndVerifyServiceTransfers(
-        LOVE20ExtensionGroupService gs,
+        ExtensionGroupService gs,
         uint256 verifyRound,
         uint256 expectedTotal
     ) internal {
@@ -321,7 +321,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         GroupUserParams memory m1,
         uint256 verifyRound
     ) internal {
-        LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction ga = ExtensionGroupAction(
             bobGroup1.groupActionAddress
         );
 
@@ -466,12 +466,12 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // === Claim Phase ===
         h.next_phase();
 
-        LOVE20ExtensionGroupService gs = LOVE20ExtensionGroupService(
+        ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
 
         // Verify rewardDistributionAll returns both groups
-        ILOVE20ExtensionGroupService.GroupDistribution[]
+        IExtensionGroupService.GroupDistribution[]
             memory distributions = gs.rewardDistributionAll(
                 verifyRound,
                 bobGroup1.flow.userAddress

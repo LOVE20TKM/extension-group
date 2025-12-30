@@ -3,12 +3,12 @@ pragma solidity =0.8.17;
 
 import "@extension/lib/core/script/BaseScript.sol";
 import {
-    LOVE20ExtensionGroupServiceFactory
-} from "../src/LOVE20ExtensionGroupServiceFactory.sol";
+    ExtensionGroupServiceFactory
+} from "../src/ExtensionGroupServiceFactory.sol";
 
 /**
  * @title DeployGroupServiceFactory
- * @notice Script for deploying LOVE20ExtensionGroupServiceFactory contract
+ * @notice Script for deploying ExtensionGroupServiceFactory contract
  * @dev Requires extensionCenter contract to be deployed first
  */
 contract DeployGroupServiceFactory is BaseScript {
@@ -76,7 +76,7 @@ contract DeployGroupServiceFactory is BaseScript {
         );
         // #endregion
         groupServiceFactoryAddress = address(
-            new LOVE20ExtensionGroupServiceFactory(groupActionFactoryAddress)
+            new ExtensionGroupServiceFactory(groupActionFactoryAddress)
         );
         // #region agent log
         console.log(
@@ -92,7 +92,7 @@ contract DeployGroupServiceFactory is BaseScript {
 
         if (!hideLogs) {
             console.log(
-                "LOVE20ExtensionGroupServiceFactory deployed at:",
+                "ExtensionGroupServiceFactory deployed at:",
                 groupServiceFactoryAddress
             );
             console.log("Constructor parameters:");

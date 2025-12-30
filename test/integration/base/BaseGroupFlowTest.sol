@@ -10,11 +10,11 @@ import {
 } from "../helper/TestGroupFlowHelper.sol";
 import {FIRST_PARENT_TOKEN_FUNDRAISING_GOAL} from "@core-test/Constant.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../../../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../../../src/ExtensionGroupAction.sol";
 import {
-    LOVE20ExtensionGroupService
-} from "../../../src/LOVE20ExtensionGroupService.sol";
+    ExtensionGroupService
+} from "../../../src/ExtensionGroupService.sol";
 
 /// @title BaseGroupFlowTest
 /// @notice Base contract for Group Flow integration tests with common setup and helpers

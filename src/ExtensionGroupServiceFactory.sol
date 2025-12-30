@@ -4,19 +4,19 @@ pragma solidity =0.8.17;
 import {
     ExtensionFactoryBase
 } from "@extension/src/ExtensionFactoryBase.sol";
-import {LOVE20ExtensionGroupService} from "./LOVE20ExtensionGroupService.sol";
+import {ExtensionGroupService} from "./ExtensionGroupService.sol";
 import {
-    ILOVE20ExtensionGroupServiceFactory
-} from "./interface/ILOVE20ExtensionGroupServiceFactory.sol";
+    IExtensionGroupServiceFactory
+} from "./interface/IExtensionGroupServiceFactory.sol";
 import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 
-/// @title LOVE20ExtensionGroupServiceFactory
-/// @notice Factory contract for creating LOVE20ExtensionGroupService instances
-contract LOVE20ExtensionGroupServiceFactory is
+/// @title ExtensionGroupServiceFactory
+/// @notice Factory contract for creating ExtensionGroupService instances
+contract ExtensionGroupServiceFactory is
     ExtensionFactoryBase,
-    ILOVE20ExtensionGroupServiceFactory
+    IExtensionGroupServiceFactory
 {
     // ============ Storage ============
 
@@ -38,7 +38,7 @@ contract LOVE20ExtensionGroupServiceFactory is
 
     // ============ Factory Functions ============
 
-    /// @notice Create a new LOVE20ExtensionGroupService extension
+    /// @notice Create a new ExtensionGroupService extension
     /// @param tokenAddress_ The service token address
     /// @param groupActionTokenAddress_ The group action token address
     /// @return extension The address of the created extension
@@ -47,7 +47,7 @@ contract LOVE20ExtensionGroupServiceFactory is
         address groupActionTokenAddress_
     ) external returns (address extension) {
         extension = address(
-            new LOVE20ExtensionGroupService(
+            new ExtensionGroupService(
                 address(this),
                 tokenAddress_,
                 groupActionTokenAddress_,
@@ -60,3 +60,4 @@ contract LOVE20ExtensionGroupServiceFactory is
         emit ExtensionCreate(extension, tokenAddress_);
     }
 }
+

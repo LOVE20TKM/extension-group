@@ -50,7 +50,7 @@ interface IGroupManager {
 
     // ============ Structs ============
 
-    // Config is now stored in LOVE20ExtensionGroupAction
+    // Config is now stored in ExtensionGroupAction
 
     struct GroupInfo {
         uint256 groupId;

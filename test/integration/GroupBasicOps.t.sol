@@ -4,8 +4,8 @@ pragma solidity =0.8.17;
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../../src/ExtensionGroupAction.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 
@@ -194,7 +194,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.next_phase();
         h.group_activate(bobGroup1);
 
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction groupAction = ExtensionGroupAction(
             extensionAddr
         );
 

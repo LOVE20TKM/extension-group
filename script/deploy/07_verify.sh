@@ -52,12 +52,12 @@ if [ -n "$groupVerifyAddress" ]; then
     verify_contract $groupVerifyAddress "GroupVerify" "src/GroupVerify.sol"
 fi
 
-# Verify LOVE20ExtensionGroupActionFactory
+# Verify ExtensionGroupActionFactory
 if [ -n "$groupActionFactoryAddress" ]; then
-    verify_contract $groupActionFactoryAddress "LOVE20ExtensionGroupActionFactory" "src/LOVE20ExtensionGroupActionFactory.sol"
+    verify_contract $groupActionFactoryAddress "ExtensionGroupActionFactory" "src/ExtensionGroupActionFactory.sol"
 fi
 
-# Verify LOVE20ExtensionGroupServiceFactory
+# Verify ExtensionGroupServiceFactory
 if [ -n "$groupServiceFactoryAddress" ]; then
-    verify_contract $groupServiceFactoryAddress "LOVE20ExtensionGroupServiceFactory" "src/LOVE20ExtensionGroupServiceFactory.sol"
+    verify_contract $groupServiceFactoryAddress "ExtensionGroupServiceFactory" "src/ExtensionGroupServiceFactory.sol"
 fi

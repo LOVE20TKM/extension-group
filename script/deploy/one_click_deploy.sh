@@ -70,7 +70,7 @@ fi
 echo -e "\033[32m✓\033[0m GroupVerify deployed at: $groupVerifyAddress"
 
 # ------ Step 5: Deploy GroupActionFactory ------
-echo -e "\n[Step 5/9] Deploying LOVE20ExtensionGroupActionFactory..."
+echo -e "\n[Step 5/9] Deploying ExtensionGroupActionFactory..."
 source 04_deploy_group_action_factory.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupActionFactory deployment failed"
@@ -85,7 +85,7 @@ fi
 echo -e "\033[32m✓\033[0m GroupActionFactory deployed at: $groupActionFactoryAddress"
 
 # ------ Step 6: Deploy GroupServiceFactory ------
-echo -e "\n[Step 6/9] Deploying LOVE20ExtensionGroupServiceFactory..."
+echo -e "\n[Step 6/9] Deploying ExtensionGroupServiceFactory..."
 source 05_deploy_group_service_factory.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupServiceFactory deployment failed"

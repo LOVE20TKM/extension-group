@@ -3,12 +3,12 @@ pragma solidity =0.8.17;
 
 import "@extension/lib/core/script/BaseScript.sol";
 import {
-    LOVE20ExtensionGroupActionFactory
-} from "../src/LOVE20ExtensionGroupActionFactory.sol";
+    ExtensionGroupActionFactory
+} from "../src/ExtensionGroupActionFactory.sol";
 
 /**
  * @title DeployGroupActionFactory
- * @notice Script for deploying LOVE20ExtensionGroupActionFactory contract
+ * @notice Script for deploying ExtensionGroupActionFactory contract
  * @dev Requires extensionCenter, GroupManager, GroupJoin, GroupVerify contracts to be deployed first
  * @dev Note: Singletons should be initialized separately using 05_initialize_singletons.sh after deployment
  */
@@ -80,7 +80,7 @@ contract DeployGroupActionFactory is BaseScript {
 
         vm.startBroadcast();
         groupActionFactoryAddress = address(
-            new LOVE20ExtensionGroupActionFactory(
+            new ExtensionGroupActionFactory(
                 centerAddress,
                 groupManagerAddress,
                 groupJoinAddress,
@@ -92,7 +92,7 @@ contract DeployGroupActionFactory is BaseScript {
 
         if (!hideLogs) {
             console.log(
-                "LOVE20ExtensionGroupActionFactory deployed at:",
+                "ExtensionGroupActionFactory deployed at:",
                 groupActionFactoryAddress
             );
             console.log("Constructor parameters:");

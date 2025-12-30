@@ -3,10 +3,10 @@ pragma solidity =0.8.17;
 
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 
-/// @title ILOVE20ExtensionGroupAction
+/// @title IExtensionGroupAction
 /// @notice Interface for group-based action extension with manual scoring
 /// @dev Join and Verify functions are in GroupJoin and GroupVerify singleton contracts
-interface ILOVE20ExtensionGroupAction is IExtension{
+interface IExtensionGroupAction is IExtension{
     // ============ Errors ============
 
     error RoundHasVerifiedGroups();
@@ -52,3 +52,4 @@ interface ILOVE20ExtensionGroupAction is IExtension{
     /// @notice Get max verify capacity factor
     function MAX_VERIFY_CAPACITY_FACTOR() external view returns (uint256);
 }
+

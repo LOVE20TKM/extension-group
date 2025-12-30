@@ -5,9 +5,9 @@ import {
     IExtensionJoin
 } from "@extension/src/interface/IExtensionJoin.sol";
 
-/// @title ILOVE20ExtensionGroupService
+/// @title IExtensionGroupService
 /// @notice Interface for group service provider reward extension
-interface ILOVE20ExtensionGroupService is IExtensionJoin {
+interface IExtensionGroupService is IExtensionJoin {
     // ============ Errors ============
 
     error NoActiveGroups();
@@ -139,3 +139,4 @@ interface ILOVE20ExtensionGroupService is IExtensionJoin {
         uint256[] calldata basisPoints
     ) external;
 }
+

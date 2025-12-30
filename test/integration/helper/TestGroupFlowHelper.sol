@@ -47,17 +47,17 @@ import {IGroupManager} from "../../../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../../../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../../../src/interface/IGroupVerify.sol";
 import {
-    LOVE20ExtensionGroupActionFactory
-} from "../../../src/LOVE20ExtensionGroupActionFactory.sol";
+    ExtensionGroupActionFactory
+} from "../../../src/ExtensionGroupActionFactory.sol";
 import {
-    LOVE20ExtensionGroupServiceFactory
-} from "../../../src/LOVE20ExtensionGroupServiceFactory.sol";
+    ExtensionGroupServiceFactory
+} from "../../../src/ExtensionGroupServiceFactory.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../../../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../../../src/ExtensionGroupAction.sol";
 import {
-    LOVE20ExtensionGroupService
-} from "../../../src/LOVE20ExtensionGroupService.sol";
+    ExtensionGroupService
+} from "../../../src/ExtensionGroupService.sol";
 
 // Precompiled bytecode
 import {PrecompiledBytecodes} from "../../artifacts/PrecompiledBytecodes.sol";
@@ -126,8 +126,8 @@ contract TestGroupFlowHelper is Test {
 
     LOVE20Group public group;
     GroupManager public groupManager;
-    LOVE20ExtensionGroupActionFactory public groupActionFactory;
-    LOVE20ExtensionGroupServiceFactory public groupServiceFactory;
+    ExtensionGroupActionFactory public groupActionFactory;
+    ExtensionGroupServiceFactory public groupServiceFactory;
 
     // ============ Constants ============
 
@@ -380,7 +380,7 @@ contract TestGroupFlowHelper is Test {
         GroupVerify groupVerify = new GroupVerify();
 
         // Deploy factories
-        groupActionFactory = new LOVE20ExtensionGroupActionFactory(
+        groupActionFactory = new ExtensionGroupActionFactory(
             address(extensionCenter),
             address(groupManager),
             address(groupJoin),
@@ -395,7 +395,7 @@ contract TestGroupFlowHelper is Test {
         IGroupVerify(address(groupVerify)).initialize(
             address(groupActionFactory)
         );
-        groupServiceFactory = new LOVE20ExtensionGroupServiceFactory(
+        groupServiceFactory = new ExtensionGroupServiceFactory(
             address(groupActionFactory)
         );
     }
@@ -915,7 +915,7 @@ contract TestGroupFlowHelper is Test {
     }
 
     function group_service_join(GroupUserParams memory groupOwner) public {
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+        ExtensionGroupService groupService = ExtensionGroupService(
             groupOwner.groupServiceAddress
         );
 
@@ -926,7 +926,7 @@ contract TestGroupFlowHelper is Test {
     function group_service_set_recipients(
         GroupUserParams memory groupOwner
     ) public {
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+        ExtensionGroupService groupService = ExtensionGroupService(
             groupOwner.groupServiceAddress
         );
 
@@ -1022,7 +1022,7 @@ contract TestGroupFlowHelper is Test {
         GroupUserParams memory groupOwner,
         uint256 round
     ) public returns (uint256 reward) {
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction groupAction = ExtensionGroupAction(
             groupOwner.groupActionAddress
         );
 
@@ -1035,7 +1035,7 @@ contract TestGroupFlowHelper is Test {
         GroupUserParams memory groupOwner,
         uint256 round
     ) public returns (uint256 reward) {
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+        ExtensionGroupService groupService = ExtensionGroupService(
             groupOwner.groupServiceAddress
         );
 

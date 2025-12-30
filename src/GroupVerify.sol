@@ -4,8 +4,8 @@ pragma solidity =0.8.17;
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {
     IExtensionCenter
 } from "@extension/src/interface/IExtensionCenter.sol";
@@ -24,7 +24,7 @@ import {MAX_ORIGIN_SCORE} from "./interface/IGroupVerify.sol";
 contract GroupVerify is IGroupVerify, ReentrancyGuard {
     // ============ Immutables ============
 
-    ILOVE20ExtensionGroupActionFactory internal _factory;
+    IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
@@ -102,7 +102,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (factory_ == address(0)) revert InvalidFactory();
 
         _factoryAddress = factory_;
-        _factory = ILOVE20ExtensionGroupActionFactory(factory_);
+        _factory = IExtensionGroupActionFactory(factory_);
         _center = IExtensionCenter(_factory.center());
         _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());

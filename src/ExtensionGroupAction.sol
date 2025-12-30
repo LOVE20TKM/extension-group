@@ -3,11 +3,11 @@ pragma solidity =0.8.17;
 
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {
-    ILOVE20ExtensionGroupAction
-} from "./interface/ILOVE20ExtensionGroupAction.sol";
+    IExtensionGroupAction
+} from "./interface/IExtensionGroupAction.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
@@ -18,12 +18,12 @@ import {
 } from "@extension/src/interface/IExtensionFactory.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-/// @title LOVE20ExtensionGroupAction
+/// @title ExtensionGroupAction
 /// @notice Extension contract for manual scoring verification in group-based actions
 /// @dev Only implements GroupMint functionality, join/verify are in singleton contracts
-contract LOVE20ExtensionGroupAction is
+contract ExtensionGroupAction is
     ExtensionBase,
-    ILOVE20ExtensionGroupAction
+    IExtensionGroupAction
 {
     // ============ Immutables ============
 
@@ -57,7 +57,7 @@ contract LOVE20ExtensionGroupAction is
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
     ) ExtensionBase(factory_, tokenAddress_) {
-        ILOVE20ExtensionGroupActionFactory factory = ILOVE20ExtensionGroupActionFactory(
+        IExtensionGroupActionFactory factory = IExtensionGroupActionFactory(
                 factory_
             );
         address groupJoinAddress = factory.GROUP_JOIN_ADDRESS();
@@ -246,3 +246,4 @@ contract LOVE20ExtensionGroupAction is
         }
     }
 }
+

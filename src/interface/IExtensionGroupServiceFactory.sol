@@ -5,9 +5,9 @@ import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 
-/// @title ILOVE20ExtensionGroupServiceFactory
-/// @notice Interface for LOVE20ExtensionGroupServiceFactory
-interface ILOVE20ExtensionGroupServiceFactory is IExtensionFactory {
+/// @title IExtensionGroupServiceFactory
+/// @notice Interface for ExtensionGroupServiceFactory
+interface IExtensionGroupServiceFactory is IExtensionFactory {
     // ============ Events ============
 
     event ExtensionCreate(
@@ -15,3 +15,4 @@ interface ILOVE20ExtensionGroupServiceFactory is IExtensionFactory {
         address indexed tokenAddress
     );
 }
+

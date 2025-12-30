@@ -3,8 +3,8 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../src/ExtensionGroupAction.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
@@ -13,11 +13,11 @@ import {MAX_ORIGIN_SCORE} from "../src/interface/IGroupVerify.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 
 /**
- * @title LOVE20ExtensionGroupActionTest
- * @notice End-to-end test suite for LOVE20ExtensionGroupAction
+ * @title ExtensionGroupActionTest
+ * @notice End-to-end test suite for ExtensionGroupAction
  */
-contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
-    LOVE20ExtensionGroupAction public groupAction;
+contract ExtensionGroupActionTest is BaseGroupTest {
+    ExtensionGroupAction public groupAction;
 
     uint256 public groupId1;
     uint256 public groupId2;
@@ -106,7 +106,7 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
         setUpBase();
 
         // Deploy the actual GroupAction contract using mockGroupActionFactory
-        groupAction = new LOVE20ExtensionGroupAction(
+        groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
             address(groupManager),
@@ -817,10 +817,10 @@ contract LOVE20ExtensionGroupActionTest is BaseGroupTest {
 }
 
 /**
- * @title LOVE20ExtensionGroupActionJoinTokenTest
+ * @title ExtensionGroupActionJoinTokenTest
  * @notice Tests for joinTokenAddress validation and LP token conversion
  */
-contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
+contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
     MockUniswapV2Pair public lpToken;
 
     function setUp() public {
@@ -837,7 +837,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         address invalidToken = address(0x123);
 
         vm.expectRevert(); // Low-level call to non-contract returns no data
-        new LOVE20ExtensionGroupAction(
+        new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
             address(groupManager),
@@ -857,7 +857,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         );
 
         vm.expectRevert(IGroupJoin.InvalidJoinTokenAddress.selector);
-        new LOVE20ExtensionGroupAction(
+        new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
             address(groupManager),
@@ -871,7 +871,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_ValidJoinToken_TokenItself() public {
         // Should not revert
-        LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
+        ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
             address(groupManager),
@@ -901,7 +901,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_ValidJoinToken_LPContainingToken() public {
         // Should not revert
-        LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
+        ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
             address(groupManager),
@@ -926,7 +926,7 @@ contract LOVE20ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_JoinedValue_WithLPToken() public {
         // Deploy action with LP as joinToken
-        LOVE20ExtensionGroupAction action = new LOVE20ExtensionGroupAction(
+        ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
             address(groupManager),

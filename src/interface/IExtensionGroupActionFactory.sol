@@ -5,9 +5,9 @@ import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 
-/// @title ILOVE20ExtensionGroupActionFactory
-/// @notice Interface for LOVE20ExtensionGroupActionFactory
-interface ILOVE20ExtensionGroupActionFactory is IExtensionFactory {
+/// @title IExtensionGroupActionFactory
+/// @notice Interface for ExtensionGroupActionFactory
+interface IExtensionGroupActionFactory is IExtensionFactory {
     // ============ Events ============
 
     event ExtensionCreate(
@@ -33,7 +33,7 @@ interface ILOVE20ExtensionGroupActionFactory is IExtensionFactory {
     /// @return The group address
     function GROUP_ADDRESS() external view returns (address);
 
-    /// @notice Create a new LOVE20ExtensionGroupAction extension
+    /// @notice Create a new ExtensionGroupAction extension
     /// @param tokenAddress_ The token address
     /// @param stakeTokenAddress_ The stake token address
     /// @param joinTokenAddress_ The join token address
@@ -50,3 +50,4 @@ interface ILOVE20ExtensionGroupActionFactory is IExtensionFactory {
         uint256 maxVerifyCapacityFactor_
     ) external returns (address extension);
 }
+

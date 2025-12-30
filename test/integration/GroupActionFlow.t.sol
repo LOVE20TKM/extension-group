@@ -5,8 +5,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../../src/ExtensionGroupAction.sol";
 import {GroupJoin} from "../../src/GroupJoin.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 
@@ -16,7 +16,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
     // Store state for claim verification to reduce stack depth
     uint256 internal _verifyRound;
     uint256 internal _totalReward;
-    LOVE20ExtensionGroupAction internal _ga;
+    ExtensionGroupAction internal _ga;
 
     /// @notice Test complete group action flow
     function test_full_group_action_flow() public {
@@ -61,7 +61,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
 
         h.core_verify_extension(bobGroup1, bobGroup1.groupActionAddress);
 
-        _ga = LOVE20ExtensionGroupAction(bobGroup1.groupActionAddress);
+        _ga = ExtensionGroupAction(bobGroup1.groupActionAddress);
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );

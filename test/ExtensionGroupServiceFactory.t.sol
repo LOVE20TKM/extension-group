@@ -3,20 +3,20 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
-    LOVE20ExtensionGroupServiceFactory
-} from "../src/LOVE20ExtensionGroupServiceFactory.sol";
+    ExtensionGroupServiceFactory
+} from "../src/ExtensionGroupServiceFactory.sol";
 import {
-    ILOVE20ExtensionGroupServiceFactory
-} from "../src/interface/ILOVE20ExtensionGroupServiceFactory.sol";
+    IExtensionGroupServiceFactory
+} from "../src/interface/IExtensionGroupServiceFactory.sol";
 import {
-    LOVE20ExtensionGroupService
-} from "../src/LOVE20ExtensionGroupService.sol";
+    ExtensionGroupService
+} from "../src/ExtensionGroupService.sol";
 import {
-    ILOVE20ExtensionGroupService
-} from "../src/interface/ILOVE20ExtensionGroupService.sol";
+    IExtensionGroupService
+} from "../src/interface/IExtensionGroupService.sol";
 import {
-    LOVE20ExtensionGroupActionFactory
-} from "../src/LOVE20ExtensionGroupActionFactory.sol";
+    ExtensionGroupActionFactory
+} from "../src/ExtensionGroupActionFactory.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {GroupJoin} from "../src/GroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
@@ -25,12 +25,12 @@ import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 
 /**
- * @title LOVE20ExtensionGroupServiceFactoryTest
- * @notice Test suite for LOVE20ExtensionGroupServiceFactory
+ * @title ExtensionGroupServiceFactoryTest
+ * @notice Test suite for ExtensionGroupServiceFactory
  */
-contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
-    LOVE20ExtensionGroupServiceFactory public factory;
-    LOVE20ExtensionGroupActionFactory public actionFactory;
+contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
+    ExtensionGroupServiceFactory public factory;
+    ExtensionGroupActionFactory public actionFactory;
 
     uint256 constant MAX_RECIPIENTS = 100;
 
@@ -44,13 +44,13 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         setUpBase();
 
         // Create new singleton instances for this test (not using BaseGroupTest's instances)
-        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        // because ExtensionGroupActionFactory constructor will initialize them
         GroupManager newGroupManager = new GroupManager();
         GroupJoin newGroupJoin = new GroupJoin();
         GroupVerify newGroupVerify = new GroupVerify();
 
         // Deploy GroupAction factory
-        actionFactory = new LOVE20ExtensionGroupActionFactory(
+        actionFactory = new ExtensionGroupActionFactory(
             address(center),
             address(newGroupManager),
             address(newGroupJoin),
@@ -67,7 +67,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         // Deploy GroupService factory
-        factory = new LOVE20ExtensionGroupServiceFactory(
+        factory = new ExtensionGroupServiceFactory(
             address(actionFactory)
         );
     }
@@ -134,7 +134,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(token)
         );
 
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+        ExtensionGroupService groupService = ExtensionGroupService(
             extension
         );
         assertEq(groupService.factory(), address(factory));
@@ -150,7 +150,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(token)
         );
 
-        LOVE20ExtensionGroupService groupService = LOVE20ExtensionGroupService(
+        ExtensionGroupService groupService = ExtensionGroupService(
             extension
         );
         assertEq(groupService.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
@@ -185,7 +185,7 @@ contract LOVE20ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(token)
         );
 
-        LOVE20ExtensionGroupService ext = LOVE20ExtensionGroupService(
+        ExtensionGroupService ext = ExtensionGroupService(
             extension
         );
 

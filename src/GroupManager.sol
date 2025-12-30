@@ -15,12 +15,10 @@ import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {
-    ILOVE20ExtensionGroupAction
-} from "./interface/ILOVE20ExtensionGroupAction.sol";
+import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
 import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -35,7 +33,7 @@ contract GroupManager is IGroupManager {
 
     // ============ Immutables ============
 
-    ILOVE20ExtensionGroupActionFactory internal _factory;
+    IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     ILOVE20Group internal _group;
     ILOVE20Stake internal _stake;
@@ -86,7 +84,7 @@ contract GroupManager is IGroupManager {
         if (factory_ == address(0)) revert InvalidFactory();
 
         _factoryAddress = factory_;
-        _factory = ILOVE20ExtensionGroupActionFactory(factory_);
+        _factory = IExtensionGroupActionFactory(factory_);
         _center = IExtensionCenter(_factory.center());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _stake = ILOVE20Stake(_center.stakeAddress());
@@ -141,7 +139,7 @@ contract GroupManager is IGroupManager {
             pair.tokenAddress = tokenAddress;
             pair.actionId = actionId;
 
-            ILOVE20ExtensionGroupAction(extension).initializeAction();
+            IExtensionGroupAction(extension).initializeAction();
         } else {
             if (
                 pair.tokenAddress != tokenAddress || pair.actionId != actionId
@@ -167,9 +165,7 @@ contract GroupManager is IGroupManager {
         address actionFactory = IExtension(extensionAddr).factory();
         _prepareExtension(extensionAddr, tokenAddress, actionId);
 
-        ILOVE20ExtensionGroupAction extension = ILOVE20ExtensionGroupAction(
-            extensionAddr
-        );
+        IExtensionGroupAction extension = IExtensionGroupAction(extensionAddr);
         _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extensionAddr][groupId];
@@ -253,9 +249,7 @@ contract GroupManager is IGroupManager {
         }
 
         // All activated groups stake the same fixed amount from config
-        ILOVE20ExtensionGroupAction extConfig = ILOVE20ExtensionGroupAction(
-            extension
-        );
+        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
         uint256 stakedAmount = extConfig.ACTIVATION_STAKE_AMOUNT();
         _totalStaked[extension] -= stakedAmount;
         IERC20(extConfig.STAKE_TOKEN_ADDRESS()).safeTransfer(
@@ -427,9 +421,7 @@ contract GroupManager is IGroupManager {
         uint256 actionId
     ) public view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
-        ILOVE20ExtensionGroupAction extConfig = ILOVE20ExtensionGroupAction(
-            extension
-        );
+        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
         address joinTokenAddress = extConfig.JOIN_TOKEN_ADDRESS();
         if (joinTokenAddress == address(0)) return 0;
 
@@ -466,9 +458,7 @@ contract GroupManager is IGroupManager {
         address owner
     ) public view override returns (uint256) {
         address extension = _center.extension(tokenAddress, actionId);
-        ILOVE20ExtensionGroupAction extConfig = ILOVE20ExtensionGroupAction(
-            extension
-        );
+        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
         return
             _calculateMaxVerifyCapacityByOwner(
                 extension,
@@ -664,9 +654,7 @@ contract GroupManager is IGroupManager {
         address owner,
         uint256 maxVerifyCapacityFactor
     ) internal view returns (uint256) {
-        ILOVE20ExtensionGroupAction extConfig = ILOVE20ExtensionGroupAction(
-            extension
-        );
+        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
         address tokenAddress = extConfig.tokenAddress();
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
         uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
@@ -683,9 +671,7 @@ contract GroupManager is IGroupManager {
         address extension,
         address owner
     ) internal view returns (uint256 staked) {
-        ILOVE20ExtensionGroupAction extConfig = ILOVE20ExtensionGroupAction(
-            extension
-        );
+        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
         // Config is stored in extension, no need to check here
         uint256 nftBalance = _group.balanceOf(owner);
         for (uint256 i; i < nftBalance; ) {

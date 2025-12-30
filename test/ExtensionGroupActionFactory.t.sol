@@ -3,17 +3,17 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
-    LOVE20ExtensionGroupActionFactory
-} from "../src/LOVE20ExtensionGroupActionFactory.sol";
+    ExtensionGroupActionFactory
+} from "../src/ExtensionGroupActionFactory.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "../src/interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "../src/interface/IExtensionGroupActionFactory.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../src/ExtensionGroupAction.sol";
 import {
-    ILOVE20ExtensionGroupAction
-} from "../src/interface/ILOVE20ExtensionGroupAction.sol";
+    IExtensionGroupAction
+} from "../src/interface/IExtensionGroupAction.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {GroupJoin} from "../src/GroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
@@ -23,11 +23,11 @@ import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 
 /**
- * @title LOVE20ExtensionGroupActionFactoryTest
- * @notice Test suite for LOVE20ExtensionGroupActionFactory
+ * @title ExtensionGroupActionFactoryTest
+ * @notice Test suite for ExtensionGroupActionFactory
  */
-contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
-    LOVE20ExtensionGroupActionFactory public factory;
+contract ExtensionGroupActionFactoryTest is BaseGroupTest {
+    ExtensionGroupActionFactory public factory;
     GroupManager public newGroupManager;
     GroupJoin public newGroupJoin;
     GroupVerify public newGroupVerify;
@@ -42,13 +42,13 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
         setUpBase();
 
         // Create new singleton instances for this test (not using BaseGroupTest's instances)
-        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        // because ExtensionGroupActionFactory constructor will initialize them
         newGroupManager = new GroupManager();
         newGroupJoin = new GroupJoin();
         newGroupVerify = new GroupVerify();
 
         // Deploy Factory
-        factory = new LOVE20ExtensionGroupActionFactory(
+        factory = new ExtensionGroupActionFactory(
             address(center),
             address(newGroupManager),
             address(newGroupJoin),
@@ -157,7 +157,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        LOVE20ExtensionGroupAction groupAction = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction groupAction = ExtensionGroupAction(
             extension
         );
         assertEq(groupAction.factory(), address(factory));
@@ -222,7 +222,7 @@ contract LOVE20ExtensionGroupActionFactoryTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        LOVE20ExtensionGroupAction ext = LOVE20ExtensionGroupAction(extension);
+        ExtensionGroupAction ext = ExtensionGroupAction(extension);
 
         // Verify extension token address
         assertEq(ext.tokenAddress(), address(token));

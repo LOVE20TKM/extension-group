@@ -29,22 +29,22 @@ import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 // Local
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {
-    ILOVE20ExtensionGroupAction
-} from "./interface/ILOVE20ExtensionGroupAction.sol";
+    IExtensionGroupAction
+} from "./interface/IExtensionGroupAction.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {
-    ILOVE20ExtensionGroupService
-} from "./interface/ILOVE20ExtensionGroupService.sol";
+    IExtensionGroupService
+} from "./interface/IExtensionGroupService.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-/// @title LOVE20ExtensionGroupService
+/// @title ExtensionGroupService
 /// @notice Extension contract for rewarding group service providers
 /// @dev Service reward = Total service reward × (Account's group action reward / Group action total reward)
-contract LOVE20ExtensionGroupService is
+contract ExtensionGroupService is
     ExtensionBaseJoin,
-    ILOVE20ExtensionGroupService
+    IExtensionGroupService
 {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
@@ -64,7 +64,7 @@ contract LOVE20ExtensionGroupService is
 
     IGroupManager internal immutable _groupManager;
     ILOVE20Group internal immutable _group;
-    ILOVE20ExtensionGroupActionFactory internal immutable _actionFactory;
+    IExtensionGroupActionFactory internal immutable _actionFactory;
 
     // ============ Storage ============
 
@@ -105,7 +105,7 @@ contract LOVE20ExtensionGroupService is
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
 
         // Cache frequently used interfaces
-        _actionFactory = ILOVE20ExtensionGroupActionFactory(
+        _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_
         );
         _groupManager = IGroupManager(_actionFactory.GROUP_MANAGER_ADDRESS());
@@ -483,7 +483,7 @@ contract LOVE20ExtensionGroupService is
                 GROUP_ACTION_TOKEN_ADDRESS,
                 aids[i]
             );
-            address stakeToken = ILOVE20ExtensionGroupAction(ext)
+            address stakeToken = IExtensionGroupAction(ext)
                 .STAKE_TOKEN_ADDRESS();
 
             uint256 staked = account == address(0)
@@ -589,7 +589,7 @@ contract LOVE20ExtensionGroupService is
             round
         );
         for (uint256 i; i < exts.length; ) {
-            ILOVE20ExtensionGroupAction ga = ILOVE20ExtensionGroupAction(
+            IExtensionGroupAction ga = IExtensionGroupAction(
                 exts[i]
             );
             accountReward += ga.generatedRewardByVerifier(round, verifier);
@@ -616,7 +616,7 @@ contract LOVE20ExtensionGroupService is
         address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
         if (ext == address(0)) return 0;
 
-        uint256 groupReward = ILOVE20ExtensionGroupAction(ext)
+        uint256 groupReward = IExtensionGroupAction(ext)
             .generatedRewardByGroupId(round, groupId);
         if (groupReward == 0) return 0;
 
@@ -703,3 +703,4 @@ contract LOVE20ExtensionGroupService is
         }
     }
 }
+

@@ -5,8 +5,8 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../../src/ExtensionGroupAction.sol";
 import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 
@@ -74,7 +74,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         h.core_verify_extension(aliceGroup, extensionAddr);
 
         // Verify state
-        LOVE20ExtensionGroupAction ga = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction ga = ExtensionGroupAction(
             extensionAddr
         );
         IGroupVerify groupVerify = IGroupVerify(
@@ -287,7 +287,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
     // ============ Reward Verification Helpers ============
 
     function _verifyGroup1Rewards(
-        LOVE20ExtensionGroupAction ga,
+        ExtensionGroupAction ga,
         GroupUserParams[3] memory members,
         uint256 verifyRound
     ) internal {
@@ -327,7 +327,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
     }
 
     function _verifyGroup2Rewards(
-        LOVE20ExtensionGroupAction ga,
+        ExtensionGroupAction ga,
         GroupUserParams[3] memory members,
         uint256 verifyRound
     ) internal {
@@ -367,7 +367,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
     }
 
     function _verifyGroup3Rewards(
-        LOVE20ExtensionGroupAction ga,
+        ExtensionGroupAction ga,
         GroupUserParams[3] memory members,
         uint256 verifyRound
     ) internal {
@@ -407,7 +407,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
     }
 
     function _verifyBobTotalGroupRewards(
-        LOVE20ExtensionGroupAction ga,
+        ExtensionGroupAction ga,
         GroupUserParams[3] memory g1Members,
         GroupUserParams[3] memory g2Members,
         uint256 verifyRound

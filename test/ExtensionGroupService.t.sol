@@ -3,14 +3,14 @@ pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
-    LOVE20ExtensionGroupService
-} from "../src/LOVE20ExtensionGroupService.sol";
+    ExtensionGroupService
+} from "../src/ExtensionGroupService.sol";
 import {
-    LOVE20ExtensionGroupAction
-} from "../src/LOVE20ExtensionGroupAction.sol";
+    ExtensionGroupAction
+} from "../src/ExtensionGroupAction.sol";
 import {
-    ILOVE20ExtensionGroupService
-} from "../src/interface/ILOVE20ExtensionGroupService.sol";
+    IExtensionGroupService
+} from "../src/interface/IExtensionGroupService.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {GroupJoin} from "../src/GroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
@@ -24,8 +24,8 @@ import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
 import {
-    LOVE20ExtensionGroupActionFactory
-} from "../src/LOVE20ExtensionGroupActionFactory.sol";
+    ExtensionGroupActionFactory
+} from "../src/ExtensionGroupActionFactory.sol";
 import {MockERC20} from "@extension/test/mocks/MockERC20.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 import {
@@ -36,10 +36,10 @@ import {
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
 
 /**
- * @title LOVE20ExtensionGroupServiceTest
- * @notice Test suite for LOVE20ExtensionGroupService
+ * @title ExtensionGroupServiceTest
+ * @notice Test suite for ExtensionGroupService
  */
-contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
+contract ExtensionGroupServiceTest is BaseGroupTest {
     // Re-declare event for testing (updated with groupId)
     event RecipientsUpdate(
         address indexed tokenAddress,
@@ -50,9 +50,9 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         address[] recipients,
         uint256[] basisPoints
     );
-    LOVE20ExtensionGroupService public groupService;
-    LOVE20ExtensionGroupAction public groupAction;
-    LOVE20ExtensionGroupActionFactory public actionFactory;
+    ExtensionGroupService public groupService;
+    ExtensionGroupAction public groupAction;
+    ExtensionGroupActionFactory public actionFactory;
     MockExtensionFactory public serviceFactory;
     GroupManager public newGroupManager;
     GroupJoin public newGroupJoin;
@@ -68,13 +68,13 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         setUpBase();
 
         // Create new singleton instances for this test (not using BaseGroupTest's instances)
-        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        // because ExtensionGroupActionFactory constructor will initialize them
         newGroupManager = new GroupManager();
         newGroupJoin = new GroupJoin();
         newGroupVerify = new GroupVerify();
 
         // Deploy actionFactory with new singleton instances
-        actionFactory = new LOVE20ExtensionGroupActionFactory(
+        actionFactory = new ExtensionGroupActionFactory(
             address(center),
             address(newGroupManager),
             address(newGroupJoin),
@@ -102,11 +102,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
-        groupAction = LOVE20ExtensionGroupAction(groupActionAddress);
+        groupAction = ExtensionGroupAction(groupActionAddress);
 
         // Deploy GroupService (use actionFactory as GROUP_ACTION_FACTORY_ADDRESS)
         token.approve(address(serviceFactory), type(uint256).max);
-        groupService = new LOVE20ExtensionGroupService(
+        groupService = new ExtensionGroupService(
             address(serviceFactory),
             address(token),
             address(token), // groupActionTokenAddress
@@ -258,7 +258,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         newGroupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
 
         vm.prank(groupOwner1);
-        vm.expectRevert(ILOVE20ExtensionGroupService.NoActiveGroups.selector);
+        vm.expectRevert(IExtensionGroupService.NoActiveGroups.selector);
         groupService.join(new string[](0));
     }
 
@@ -333,7 +333,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         // groupOwner2 tries to set recipients for groupId1 (owned by groupOwner1)
         vm.prank(groupOwner2);
-        vm.expectRevert(ILOVE20ExtensionGroupService.NotGroupOwner.selector);
+        vm.expectRevert(IExtensionGroupService.NotGroupOwner.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -357,7 +357,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(
-            ILOVE20ExtensionGroupService.ArrayLengthMismatch.selector
+            IExtensionGroupService.ArrayLengthMismatch.selector
         );
         groupService.setRecipients(
             ACTION_ID,
@@ -383,7 +383,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(
-            ILOVE20ExtensionGroupService.TooManyRecipients.selector
+            IExtensionGroupService.TooManyRecipients.selector
         );
         groupService.setRecipients(
             ACTION_ID,
@@ -406,7 +406,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(ILOVE20ExtensionGroupService.ZeroAddress.selector);
+        vm.expectRevert(IExtensionGroupService.ZeroAddress.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -428,7 +428,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 0;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(ILOVE20ExtensionGroupService.ZeroBasisPoints.selector);
+        vm.expectRevert(IExtensionGroupService.ZeroBasisPoints.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -453,7 +453,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(
-            ILOVE20ExtensionGroupService.InvalidBasisPoints.selector
+            IExtensionGroupService.InvalidBasisPoints.selector
         );
         groupService.setRecipients(
             ACTION_ID,
@@ -478,7 +478,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         vm.expectRevert(
-            ILOVE20ExtensionGroupService.RecipientCannotBeSelf.selector
+            IExtensionGroupService.RecipientCannotBeSelf.selector
         );
         groupService.setRecipients(
             ACTION_ID,
@@ -714,7 +714,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
 
-        ILOVE20ExtensionGroupService.GroupDistribution[]
+        IExtensionGroupService.GroupDistribution[]
             memory distributions = groupService.rewardDistributionAll(
                 round,
                 groupOwner1
@@ -1036,7 +1036,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
-        LOVE20ExtensionGroupAction groupAction2 = LOVE20ExtensionGroupAction(
+        ExtensionGroupAction groupAction2 = ExtensionGroupAction(
             groupAction2Address
         );
 
@@ -1286,11 +1286,11 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
 }
 
 /**
- * @title LOVE20ExtensionGroupServiceStakeTokenTest
- * @notice Test suite for stakeToken conversion in LOVE20ExtensionGroupService
+ * @title ExtensionGroupServiceStakeTokenTest
+ * @notice Test suite for stakeToken conversion in ExtensionGroupService
  */
-contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
-    LOVE20ExtensionGroupActionFactory public actionFactory;
+contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
+    ExtensionGroupActionFactory public actionFactory;
     MockExtensionFactory public serviceFactory;
     GroupManager public newGroupManager;
     GroupJoin public newGroupJoin;
@@ -1309,13 +1309,13 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         otherToken = new MockERC20();
 
         // Create new singleton instances for this test (not using BaseGroupTest's instances)
-        // because LOVE20ExtensionGroupActionFactory constructor will initialize them
+        // because ExtensionGroupActionFactory constructor will initialize them
         newGroupManager = new GroupManager();
         newGroupJoin = new GroupJoin();
         newGroupVerify = new GroupVerify();
 
         // Deploy actionFactory with new singleton instances
-        actionFactory = new LOVE20ExtensionGroupActionFactory(
+        actionFactory = new ExtensionGroupActionFactory(
             address(center),
             address(newGroupManager),
             address(newGroupJoin),
@@ -1352,8 +1352,8 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
     )
         internal
         returns (
-            LOVE20ExtensionGroupAction groupAction,
-            LOVE20ExtensionGroupService groupService
+            ExtensionGroupAction groupAction,
+            ExtensionGroupService groupService
         )
     {
         // Set unique round for this test to avoid action conflicts
@@ -1373,11 +1373,11 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
-        groupAction = LOVE20ExtensionGroupAction(groupActionAddress);
+        groupAction = ExtensionGroupAction(groupActionAddress);
 
         // Deploy GroupService
         token.approve(address(serviceFactory), type(uint256).max);
-        groupService = new LOVE20ExtensionGroupService(
+        groupService = new ExtensionGroupService(
             address(serviceFactory),
             address(token),
             address(token),
@@ -1423,7 +1423,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         (
             ,
-            LOVE20ExtensionGroupService groupService
+            ExtensionGroupService groupService
         ) = _setupGroupActionAndService(
                 address(token),
                 stakeAmount,
@@ -1490,7 +1490,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         (
             ,
-            LOVE20ExtensionGroupService groupService
+            ExtensionGroupService groupService
         ) = _setupGroupActionAndService(lpToken, lpStakeAmount, 200, 201, 20);
 
         // Setup: mint and approve LP tokens for newGroupManager
@@ -1553,7 +1553,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         (
             ,
-            LOVE20ExtensionGroupService groupService
+            ExtensionGroupService groupService
         ) = _setupGroupActionAndService(
                 address(otherToken),
                 stakeAmount,
@@ -1607,7 +1607,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         // Deploy without creating Uniswap pair
         (
             ,
-            LOVE20ExtensionGroupService groupService
+            ExtensionGroupService groupService
         ) = _setupGroupActionAndService(
                 address(otherToken),
                 stakeAmount,
@@ -1656,7 +1656,7 @@ contract LOVE20ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         (
             ,
-            LOVE20ExtensionGroupService groupService
+            ExtensionGroupService groupService
         ) = _setupGroupActionAndService(
                 address(otherToken),
                 stakeAmount,

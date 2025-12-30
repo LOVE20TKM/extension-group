@@ -4,19 +4,19 @@ pragma solidity =0.8.17;
 import {
     ExtensionFactoryBase
 } from "@extension/src/ExtensionFactoryBase.sol";
-import {LOVE20ExtensionGroupAction} from "./LOVE20ExtensionGroupAction.sol";
+import {ExtensionGroupAction} from "./ExtensionGroupAction.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 
-/// @title LOVE20ExtensionGroupActionFactory
-/// @notice Factory contract for creating LOVE20ExtensionGroupAction instances
-contract LOVE20ExtensionGroupActionFactory is
+/// @title ExtensionGroupActionFactory
+/// @notice Factory contract for creating ExtensionGroupAction instances
+contract ExtensionGroupActionFactory is
     ExtensionFactoryBase,
-    ILOVE20ExtensionGroupActionFactory
+    IExtensionGroupActionFactory
 {
     // ============ Storage ============
 
@@ -54,7 +54,7 @@ contract LOVE20ExtensionGroupActionFactory is
 
     // ============ Factory Functions ============
 
-    /// @notice Create a new LOVE20ExtensionGroupAction extension
+    /// @notice Create a new ExtensionGroupAction extension
     /// @param tokenAddress_ The token address
     /// @param stakeTokenAddress_ The stake token address
     /// @param joinTokenAddress_ The join token address
@@ -71,7 +71,7 @@ contract LOVE20ExtensionGroupActionFactory is
         uint256 maxVerifyCapacityFactor_
     ) external returns (address extension) {
         extension = address(
-            new LOVE20ExtensionGroupAction(
+            new ExtensionGroupAction(
                 address(this),
                 tokenAddress_,
                 GROUP_MANAGER_ADDRESS,
@@ -88,3 +88,4 @@ contract LOVE20ExtensionGroupActionFactory is
         emit ExtensionCreate(extension, tokenAddress_);
     }
 }
+

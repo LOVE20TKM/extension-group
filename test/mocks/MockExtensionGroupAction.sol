@@ -2,14 +2,14 @@
 pragma solidity =0.8.17;
 
 import {IExtension} from "@extension/src/interface/IExtension.sol";
-import {ILOVE20ExtensionGroupAction} from "../../src/interface/ILOVE20ExtensionGroupAction.sol";
+import {IExtensionGroupAction} from "../../src/interface/IExtensionGroupAction.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 
 /**
  * @title MockExtensionGroupAction
- * @dev Mock Extension contract for GroupAction testing that implements ILOVE20ExtensionGroupAction
+ * @dev Mock Extension contract for GroupAction testing that implements IExtensionGroupAction
  */
-contract MockExtensionGroupAction is ExtensionBase, ILOVE20ExtensionGroupAction {
+contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     // ============ Config Immutables ============
     
     address public immutable override STAKE_TOKEN_ADDRESS;
@@ -77,7 +77,7 @@ contract MockExtensionGroupAction is ExtensionBase, ILOVE20ExtensionGroupAction 
         revert("Exit not implemented in mock");
     }
 
-    // ============ ILOVE20ExtensionGroupAction Interface ============
+    // ============ IExtensionGroupAction Interface ============
 
     function burnUnclaimedReward(uint256 /*round*/) external pure override {
         revert("Not implemented in mock");

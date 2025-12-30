@@ -3,11 +3,11 @@ pragma solidity =0.8.17;
 
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
-    ILOVE20ExtensionGroupActionFactory
-} from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {
-    ILOVE20ExtensionGroupAction
-} from "./interface/ILOVE20ExtensionGroupAction.sol";
+    IExtensionGroupAction
+} from "./interface/IExtensionGroupAction.sol";
 import {
     IExtensionCenter
 } from "@extension/src/interface/IExtensionCenter.sol";
@@ -35,7 +35,7 @@ using SafeERC20 for IERC20;
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
     // ============ Immutables ============
 
-    ILOVE20ExtensionGroupActionFactory internal _factory;
+    IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
@@ -87,7 +87,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (factory_ == address(0)) revert InvalidFactory();
 
         _factoryAddress = factory_;
-        _factory = ILOVE20ExtensionGroupActionFactory(factory_);
+        _factory = IExtensionGroupActionFactory(factory_);
         _center = IExtensionCenter(_factory.center());
         _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
@@ -377,7 +377,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address,
         uint256
     ) internal view returns (address) {
-        return ILOVE20ExtensionGroupAction(extension).JOIN_TOKEN_ADDRESS();
+        return IExtensionGroupAction(extension).JOIN_TOKEN_ADDRESS();
     }
 
     function _processJoin(
@@ -444,7 +444,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address account,
         uint256 amount
     ) internal {
-        address joinTokenAddress = ILOVE20ExtensionGroupAction(extension)
+        address joinTokenAddress = IExtensionGroupAction(extension)
             .JOIN_TOKEN_ADDRESS();
         IERC20(joinTokenAddress).safeTransferFrom(
             account,
