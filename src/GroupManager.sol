@@ -10,18 +10,14 @@ import {
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
-import {ILOVE20SLToken} from "@core/interfaces/ILOVE20SLToken.sol";
-import {ILOVE20STToken} from "@core/interfaces/ILOVE20STToken.sol";
-import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {
-    ILOVE20ExtensionFactory
-} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
 import {
     ILOVE20ExtensionGroupActionFactory
 } from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
-import {
-    ILOVE20ExtensionCenter
-} from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {
     ILOVE20ExtensionGroupAction
 } from "./interface/ILOVE20ExtensionGroupAction.sol";
@@ -40,7 +36,7 @@ contract GroupManager is IGroupManager {
     // ============ Immutables ============
 
     ILOVE20ExtensionGroupActionFactory internal _factory;
-    ILOVE20ExtensionCenter internal _center;
+    IExtensionCenter internal _center;
     ILOVE20Group internal _group;
     ILOVE20Stake internal _stake;
     ILOVE20Vote internal _vote;
@@ -91,7 +87,7 @@ contract GroupManager is IGroupManager {
 
         _factoryAddress = factory_;
         _factory = ILOVE20ExtensionGroupActionFactory(factory_);
-        _center = ILOVE20ExtensionCenter(_factory.center());
+        _center = IExtensionCenter(_factory.center());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _stake = ILOVE20Stake(_center.stakeAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
@@ -116,12 +112,10 @@ contract GroupManager is IGroupManager {
         uint256 actionId
     ) internal view returns (address extension) {
         extension = _center.extension(tokenAddress, actionId);
-        ILOVE20Extension extensionContract = ILOVE20Extension(extension);
+        IExtension extensionContract = IExtension(extension);
         if (extension == address(0)) revert NotRegisteredExtension();
         try
-            ILOVE20ExtensionFactory(extensionContract.factory()).exists(
-                extension
-            )
+            IExtensionFactory(extensionContract.factory()).exists(extension)
         returns (bool exists) {
             if (!exists) revert NotRegisteredExtensionInFactory();
         } catch {
@@ -134,49 +128,26 @@ contract GroupManager is IGroupManager {
         if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
     }
 
-    function _checkAndSetExtensionTokenActionPair(
+    /// @dev Prepare extension: check token-action pair and initialize if first use
+    function _prepareExtension(
         address extension,
         address tokenAddress,
         uint256 actionId
     ) internal {
         TokenActionPair storage pair = _extensionTokenActionPair[extension];
-        if (pair.tokenAddress != address(0)) {
-            // Extension has been used before, check if (tokenAddress, actionId) matches
+        bool isFirstUse = pair.tokenAddress == address(0);
+
+        if (isFirstUse) {
+            pair.tokenAddress = tokenAddress;
+            pair.actionId = actionId;
+
+            ILOVE20ExtensionGroupAction(extension).initializeAction();
+        } else {
             if (
                 pair.tokenAddress != tokenAddress || pair.actionId != actionId
             ) {
                 revert ExtensionTokenActionMismatch();
             }
-        } else {
-            // First time using this extension, store the binding
-            pair.tokenAddress = tokenAddress;
-            pair.actionId = actionId;
-        }
-    }
-
-    function _trackExtensionActivationAndInitialize(
-        address actionFactory,
-        address tokenAddress,
-        uint256 groupId,
-        address extension
-    ) internal {
-        _extensionsByActivatedGroupId[actionFactory][tokenAddress][groupId].add(
-            extension
-        );
-        bool isFirstActivation = !_extensionsWithGroupActivation[actionFactory][
-            tokenAddress
-        ].contains(extension);
-        _extensionsWithGroupActivation[actionFactory][tokenAddress].add(
-            extension
-        );
-
-        // Initialize action if this is the first activation for this extension
-        if (isFirstActivation) {
-            // Call initializeAction() on the extension
-            // This will join the action through LOVE20Join if not already joined
-            try
-                ILOVE20ExtensionGroupAction(extension).initializeAction()
-            {} catch {}
         }
     }
 
@@ -192,16 +163,16 @@ contract GroupManager is IGroupManager {
         uint256 maxJoinAmount,
         uint256 maxAccounts_
     ) external override {
-        address extension = _getExtension(tokenAddress, actionId);
-        address actionFactory = ILOVE20Extension(extension).factory();
-        _checkAndSetExtensionTokenActionPair(extension, tokenAddress, actionId);
+        address extensionAddr = _getExtension(tokenAddress, actionId);
+        address actionFactory = IExtension(extensionAddr).factory();
+        _prepareExtension(extensionAddr, tokenAddress, actionId);
 
-        ILOVE20ExtensionGroupAction extConfig = ILOVE20ExtensionGroupAction(
-            extension
+        ILOVE20ExtensionGroupAction extension = ILOVE20ExtensionGroupAction(
+            extensionAddr
         );
         _checkGroupOwner(groupId);
 
-        GroupInfo storage group = _groupInfo[extension][groupId];
+        GroupInfo storage group = _groupInfo[extensionAddr][groupId];
 
         if (group.isActive) revert GroupAlreadyActivated();
         if (maxJoinAmount != 0 && maxJoinAmount < minJoinAmount) {
@@ -209,10 +180,10 @@ contract GroupManager is IGroupManager {
         }
 
         // Transfer stake (all groups stake the same fixed amount)
-        IERC20(extConfig.STAKE_TOKEN_ADDRESS()).safeTransferFrom(
+        IERC20(extension.STAKE_TOKEN_ADDRESS()).safeTransferFrom(
             msg.sender,
             address(this),
-            extConfig.ACTIVATION_STAKE_AMOUNT()
+            extension.ACTIVATION_STAKE_AMOUNT()
         );
 
         // Set group info
@@ -226,15 +197,15 @@ contract GroupManager is IGroupManager {
         group.isActive = true;
         group.deactivatedRound = 0;
 
-        _activeGroupIds[extension].add(groupId);
-        _totalStaked[extension] += extConfig.ACTIVATION_STAKE_AMOUNT();
+        _activeGroupIds[extensionAddr].add(groupId);
+        _totalStaked[extensionAddr] += extension.ACTIVATION_STAKE_AMOUNT();
 
-        // Track extension activation for this groupId and initialize if first activation
-        _trackExtensionActivationAndInitialize(
-            actionFactory,
-            tokenAddress,
-            groupId,
-            extension
+        // Track extension activation
+        _extensionsByActivatedGroupId[actionFactory][tokenAddress][groupId].add(
+            extensionAddr
+        );
+        _extensionsWithGroupActivation[actionFactory][tokenAddress].add(
+            extensionAddr
         );
 
         emit GroupActivate(
@@ -254,7 +225,7 @@ contract GroupManager is IGroupManager {
         uint256 groupId
     ) external override {
         address extension = _getExtension(tokenAddress, actionId);
-        address actionFactory = ILOVE20Extension(extension).factory();
+        address actionFactory = IExtension(extension).factory();
         _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -618,9 +589,7 @@ contract GroupManager is IGroupManager {
         override
         returns (uint256[] memory actionIds_, address[] memory extensions)
     {
-        ILOVE20ExtensionFactory factory = ILOVE20ExtensionFactory(
-            actionFactory
-        );
+        IExtensionFactory factory = IExtensionFactory(actionFactory);
 
         uint256 count = _vote.votedActionIdsCount(tokenAddress, round);
         if (count == 0) return (actionIds_, extensions);

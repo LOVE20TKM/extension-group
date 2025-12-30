@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ExtensionReward} from "@extension/src/base/ExtensionReward.sol";
+import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {
     ILOVE20ExtensionGroupAction
 } from "./interface/ILOVE20ExtensionGroupAction.sol";
@@ -13,16 +13,16 @@ import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {
-    ILOVE20ExtensionFactory,
+    IExtensionFactory,
     DEFAULT_JOIN_AMOUNT
-} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
+} from "@extension/src/interface/IExtensionFactory.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
 /// @title LOVE20ExtensionGroupAction
 /// @notice Extension contract for manual scoring verification in group-based actions
 /// @dev Only implements GroupMint functionality, join/verify are in singleton contracts
 contract LOVE20ExtensionGroupAction is
-    ExtensionReward,
+    ExtensionBase,
     ILOVE20ExtensionGroupAction
 {
     // ============ Immutables ============
@@ -30,7 +30,7 @@ contract LOVE20ExtensionGroupAction is
     IGroupJoin internal immutable _groupJoin;
     IGroupVerify internal immutable _groupVerify;
     IGroupManager internal immutable _groupManager;
-    // Note: _join and _verify are inherited from ExtensionCore via ExtensionReward
+    // Note: _join and _verify are inherited from ExtensionBase
 
     // ============ Config Immutables ============
 
@@ -56,7 +56,7 @@ contract LOVE20ExtensionGroupAction is
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
-    ) ExtensionReward(factory_, tokenAddress_) {
+    ) ExtensionBase(factory_, tokenAddress_) {
         ILOVE20ExtensionGroupActionFactory factory = ILOVE20ExtensionGroupActionFactory(
                 factory_
             );
@@ -64,7 +64,7 @@ contract LOVE20ExtensionGroupAction is
         _groupJoin = IGroupJoin(groupJoinAddress);
         _groupVerify = IGroupVerify(factory.GROUP_VERIFY_ADDRESS());
         _groupManager = IGroupManager(factory.GROUP_MANAGER_ADDRESS());
-        // Note: _join and _verify are already initialized in ExtensionCore
+        // Note: _join and _verify are already initialized in ExtensionBase
 
         // Set GroupJoin as delegate so it can call addAccount/removeAccount on behalf of this extension
         _center.setExtensionDelegate(groupJoinAddress);
@@ -77,18 +77,6 @@ contract LOVE20ExtensionGroupAction is
         MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
 
         _validateJoinToken(joinTokenAddress_, tokenAddress_);
-    }
-
-    // ============ Initialization ============
-
-    /// @notice Initialize action by joining through LOVE20Join
-    /// @dev Called by GroupManager when first group is activated
-    function initializeAction() external {
-        if (initialized) return;
-
-        // Auto-initialize by scanning voted actions to find matching actionId
-        // This will find the actionId, approve tokens, and join
-        _autoInitialize();
     }
 
     // ============ Reward Functions ============

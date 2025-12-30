@@ -36,7 +36,7 @@ import {LOVE20Verify} from "@core/LOVE20Verify.sol";
 import {LOVE20Mint} from "@core/LOVE20Mint.sol";
 
 // Extension center
-import {LOVE20ExtensionCenter} from "@extension/src/LOVE20ExtensionCenter.sol";
+import {ExtensionCenter} from "@extension/src/ExtensionCenter.sol";
 
 // Group contracts
 import {LOVE20Group} from "@group/LOVE20Group.sol";
@@ -120,7 +120,7 @@ contract TestGroupFlowHelper is Test {
 
     // ============ Extension Center ============
 
-    LOVE20ExtensionCenter public extensionCenter;
+    ExtensionCenter public extensionCenter;
 
     // ============ Group Contracts ============
 
@@ -349,7 +349,7 @@ contract TestGroupFlowHelper is Test {
     }
 
     function _deployExtensionCenter() internal {
-        extensionCenter = new LOVE20ExtensionCenter(
+        extensionCenter = new ExtensionCenter(
             address(uniswapV2Factory),
             address(launchContract),
             address(stakeContract),
@@ -1049,7 +1049,7 @@ contract TestGroupFlowHelper is Test {
         return groupManager;
     }
 
-    function getExtensionCenter() public view returns (LOVE20ExtensionCenter) {
+    function getExtensionCenter() public view returns (ExtensionCenter) {
         return extensionCenter;
     }
 

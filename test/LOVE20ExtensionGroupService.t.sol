@@ -17,7 +17,9 @@ import {GroupVerify} from "../src/GroupVerify.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
-import {IJoin} from "@extension/src/interface/base/IJoin.sol";
+import {
+    IExtensionJoin
+} from "@extension/src/interface/IExtensionJoin.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
@@ -303,7 +305,7 @@ contract LOVE20ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IJoin.NotJoined.selector);
+        vm.expectRevert(IExtensionJoin.NotJoined.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,

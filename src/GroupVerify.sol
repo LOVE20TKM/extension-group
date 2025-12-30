@@ -7,8 +7,8 @@ import {
     ILOVE20ExtensionGroupActionFactory
 } from "./interface/ILOVE20ExtensionGroupActionFactory.sol";
 import {
-    ILOVE20ExtensionCenter
-} from "@extension/src/interface/ILOVE20ExtensionCenter.sol";
+    IExtensionCenter
+} from "@extension/src/interface/IExtensionCenter.sol";
 import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -25,7 +25,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     // ============ Immutables ============
 
     ILOVE20ExtensionGroupActionFactory internal _factory;
-    ILOVE20ExtensionCenter internal _center;
+    IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
     ILOVE20Verify internal _verify;
@@ -103,7 +103,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         _factoryAddress = factory_;
         _factory = ILOVE20ExtensionGroupActionFactory(factory_);
-        _center = ILOVE20ExtensionCenter(_factory.center());
+        _center = IExtensionCenter(_factory.center());
         _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _verify = ILOVE20Verify(_center.verifyAddress());

@@ -2,12 +2,12 @@
 pragma solidity =0.8.17;
 
 import {
-    ILOVE20ExtensionFactory
-} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
 
 /// @title ILOVE20ExtensionGroupServiceFactory
 /// @notice Interface for LOVE20ExtensionGroupServiceFactory
-interface ILOVE20ExtensionGroupServiceFactory is ILOVE20ExtensionFactory {
+interface ILOVE20ExtensionGroupServiceFactory is IExtensionFactory {
     // ============ Events ============
 
     event ExtensionCreate(

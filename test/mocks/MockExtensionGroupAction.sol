@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IExtensionCore} from "@extension/src/interface/base/IExtensionCore.sol";
-import {IExtensionReward} from "@extension/src/interface/base/IExtensionReward.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {ILOVE20ExtensionGroupAction} from "../../src/interface/ILOVE20ExtensionGroupAction.sol";
-import {ExtensionCore} from "@extension/src/base/ExtensionCore.sol";
-import {ExtensionReward} from "@extension/src/base/ExtensionReward.sol";
+import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 
 /**
  * @title MockExtensionGroupAction
  * @dev Mock Extension contract for GroupAction testing that implements ILOVE20ExtensionGroupAction
  */
-contract MockExtensionGroupAction is ExtensionReward, ILOVE20ExtensionGroupAction {
+contract MockExtensionGroupAction is ExtensionBase, ILOVE20ExtensionGroupAction {
     // ============ Config Immutables ============
     
     address public immutable override STAKE_TOKEN_ADDRESS;
@@ -28,7 +26,7 @@ contract MockExtensionGroupAction is ExtensionReward, ILOVE20ExtensionGroupActio
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
-    ) ExtensionReward(factory_, tokenAddress_) {
+    ) ExtensionBase(factory_, tokenAddress_) {
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
@@ -62,7 +60,7 @@ contract MockExtensionGroupAction is ExtensionReward, ILOVE20ExtensionGroupActio
     )
         public
         pure
-        override(IExtensionReward, ExtensionReward)
+        override(IExtension, ExtensionBase)
         returns (uint256 reward, bool isMinted)
     {
         return (0, false);
@@ -80,10 +78,6 @@ contract MockExtensionGroupAction is ExtensionReward, ILOVE20ExtensionGroupActio
     }
 
     // ============ ILOVE20ExtensionGroupAction Interface ============
-
-    function initializeAction() external override {
-        // Mock implementation - do nothing
-    }
 
     function burnUnclaimedReward(uint256 /*round*/) external pure override {
         revert("Not implemented in mock");

@@ -2,20 +2,20 @@
 pragma solidity =0.8.17;
 
 import {
-    LOVE20ExtensionFactoryBase
-} from "@extension/src/LOVE20ExtensionFactoryBase.sol";
+    ExtensionFactoryBase
+} from "@extension/src/ExtensionFactoryBase.sol";
 import {LOVE20ExtensionGroupService} from "./LOVE20ExtensionGroupService.sol";
 import {
     ILOVE20ExtensionGroupServiceFactory
 } from "./interface/ILOVE20ExtensionGroupServiceFactory.sol";
 import {
-    ILOVE20ExtensionFactory
-} from "@extension/src/interface/ILOVE20ExtensionFactory.sol";
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
 
 /// @title LOVE20ExtensionGroupServiceFactory
 /// @notice Factory contract for creating LOVE20ExtensionGroupService instances
 contract LOVE20ExtensionGroupServiceFactory is
-    LOVE20ExtensionFactoryBase,
+    ExtensionFactoryBase,
     ILOVE20ExtensionGroupServiceFactory
 {
     // ============ Storage ============
@@ -29,8 +29,8 @@ contract LOVE20ExtensionGroupServiceFactory is
     constructor(
         address groupActionFactory_
     )
-        LOVE20ExtensionFactoryBase(
-            ILOVE20ExtensionFactory(groupActionFactory_).center()
+        ExtensionFactoryBase(
+            IExtensionFactory(groupActionFactory_).center()
         )
     {
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactory_;

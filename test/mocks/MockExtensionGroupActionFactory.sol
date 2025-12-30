@@ -2,8 +2,8 @@
 pragma solidity =0.8.17;
 
 import {
-    LOVE20ExtensionFactoryBase
-} from "@extension/src/LOVE20ExtensionFactoryBase.sol";
+    ExtensionFactoryBase
+} from "@extension/src/ExtensionFactoryBase.sol";
 import {
     ILOVE20ExtensionGroupActionFactory
 } from "../../src/interface/ILOVE20ExtensionGroupActionFactory.sol";
@@ -14,7 +14,7 @@ import {GroupVerify} from "../../src/GroupVerify.sol";
 /// @title MockExtensionGroupActionFactory
 /// @notice Mock factory for testing LOVE20ExtensionGroupAction
 contract MockExtensionGroupActionFactory is
-    LOVE20ExtensionFactoryBase,
+    ExtensionFactoryBase,
     ILOVE20ExtensionGroupActionFactory
 {
     // ============ Storage ============
@@ -32,7 +32,7 @@ contract MockExtensionGroupActionFactory is
         address groupJoinAddress_,
         address groupVerifyAddress_,
         address groupAddress_
-    ) LOVE20ExtensionFactoryBase(center_) {
+    ) ExtensionFactoryBase(center_) {
         GROUP_MANAGER_ADDRESS = groupManagerAddress_;
         GROUP_JOIN_ADDRESS = groupJoinAddress_;
         GROUP_VERIFY_ADDRESS = groupVerifyAddress_;

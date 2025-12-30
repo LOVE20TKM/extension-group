@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ILOVE20Extension} from "@extension/src/interface/ILOVE20Extension.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 
 /// @title ILOVE20ExtensionGroupAction
 /// @notice Interface for group-based action extension with manual scoring
 /// @dev Join and Verify functions are in GroupJoin and GroupVerify singleton contracts
-interface ILOVE20ExtensionGroupAction is ILOVE20Extension {
+interface ILOVE20ExtensionGroupAction is IExtension{
     // ============ Errors ============
 
     error RoundHasVerifiedGroups();
@@ -21,10 +21,6 @@ interface ILOVE20ExtensionGroupAction is ILOVE20Extension {
     );
 
     // ============ Functions ============
-
-    /// @notice Initialize action by joining through LOVE20Join
-    /// @dev Called by GroupManager when first group is activated
-    function initializeAction() external;
 
     /// @notice Burn unclaimed reward when no group submitted verification in a round
     function burnUnclaimedReward(uint256 round) external;

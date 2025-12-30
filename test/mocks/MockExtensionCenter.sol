@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {LOVE20ExtensionCenter} from "@extension/src/LOVE20ExtensionCenter.sol";
+import {ExtensionCenter} from "@extension/src/ExtensionCenter.sol";
 
 /// @title MockExtensionCenter
 /// @notice Test-only ExtensionCenter
-contract MockExtensionCenter is LOVE20ExtensionCenter {
+contract MockExtensionCenter is ExtensionCenter {
     constructor(
         address uniswapV2FactoryAddress_,
         address launchAddress_,
@@ -17,7 +17,7 @@ contract MockExtensionCenter is LOVE20ExtensionCenter {
         address mintAddress_,
         address randomAddress_
     )
-        LOVE20ExtensionCenter(
+        ExtensionCenter(
             uniswapV2FactoryAddress_,
             launchAddress_,
             stakeAddress_,

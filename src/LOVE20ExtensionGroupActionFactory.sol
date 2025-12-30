@@ -2,8 +2,8 @@
 pragma solidity =0.8.17;
 
 import {
-    LOVE20ExtensionFactoryBase
-} from "@extension/src/LOVE20ExtensionFactoryBase.sol";
+    ExtensionFactoryBase
+} from "@extension/src/ExtensionFactoryBase.sol";
 import {LOVE20ExtensionGroupAction} from "./LOVE20ExtensionGroupAction.sol";
 import {
     ILOVE20ExtensionGroupActionFactory
@@ -15,7 +15,7 @@ import {IGroupVerify} from "./interface/IGroupVerify.sol";
 /// @title LOVE20ExtensionGroupActionFactory
 /// @notice Factory contract for creating LOVE20ExtensionGroupAction instances
 contract LOVE20ExtensionGroupActionFactory is
-    LOVE20ExtensionFactoryBase,
+    ExtensionFactoryBase,
     ILOVE20ExtensionGroupActionFactory
 {
     // ============ Storage ============
@@ -45,7 +45,7 @@ contract LOVE20ExtensionGroupActionFactory is
         address groupJoinAddress_,
         address groupVerifyAddress_,
         address groupAddress_
-    ) LOVE20ExtensionFactoryBase(center_) {
+    ) ExtensionFactoryBase(center_) {
         GROUP_MANAGER_ADDRESS = groupManagerAddress_;
         GROUP_JOIN_ADDRESS = groupJoinAddress_;
         GROUP_VERIFY_ADDRESS = groupVerifyAddress_;

@@ -9,10 +9,9 @@ import {
 
 // Extension
 import {
-    LOVE20ExtensionBaseJoin
-} from "@extension/src/LOVE20ExtensionBaseJoin.sol";
-import {Join as JoinBase} from "@extension/src/base/Join.sol";
-import {IJoin} from "@extension/src/interface/base/IJoin.sol";
+    ExtensionBaseJoin
+} from "@extension/src/ExtensionBaseJoin.sol";
+import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
 import {
     RoundHistoryAddressArray
 } from "@extension/src/lib/RoundHistoryAddressArray.sol";
@@ -44,7 +43,7 @@ import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 /// @notice Extension contract for rewarding group service providers
 /// @dev Service reward = Total service reward × (Account's group action reward / Group action total reward)
 contract LOVE20ExtensionGroupService is
-    LOVE20ExtensionBaseJoin,
+    ExtensionBaseJoin,
     ILOVE20ExtensionGroupService
 {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
@@ -92,7 +91,7 @@ contract LOVE20ExtensionGroupService is
         address tokenAddress_,
         address groupActionTokenAddress_,
         address groupActionFactoryAddress_
-    ) LOVE20ExtensionBaseJoin(factory_, tokenAddress_) {
+    ) ExtensionBaseJoin(factory_, tokenAddress_) {
         if (groupActionTokenAddress_ != tokenAddress_) {
             if (
                 !_launch.isLOVE20Token(groupActionTokenAddress_) ||
@@ -118,7 +117,7 @@ contract LOVE20ExtensionGroupService is
     /// @notice Join the service reward action
     function join(
         string[] memory verificationInfos
-    ) public override(IJoin, JoinBase) {
+    ) public override(IExtensionJoin, ExtensionBaseJoin) {
         if (
             !_groupManager.hasActiveGroups(
                 GROUP_ACTION_FACTORY_ADDRESS,

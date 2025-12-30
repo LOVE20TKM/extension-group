@@ -2,12 +2,12 @@
 pragma solidity =0.8.17;
 
 import {
-    ILOVE20ExtensionJoin
-} from "@extension/src/interface/ILOVE20ExtensionJoin.sol";
+    IExtensionJoin
+} from "@extension/src/interface/IExtensionJoin.sol";
 
 /// @title ILOVE20ExtensionGroupService
 /// @notice Interface for group service provider reward extension
-interface ILOVE20ExtensionGroupService is ILOVE20ExtensionJoin {
+interface ILOVE20ExtensionGroupService is IExtensionJoin {
     // ============ Errors ============
 
     error NoActiveGroups();
