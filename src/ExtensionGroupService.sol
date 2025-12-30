@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-// OpenZeppelin
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
-// Extension
 import {ExtensionBaseJoin} from "@extension/src/ExtensionBaseJoin.sol";
 import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
 import {
@@ -20,15 +17,9 @@ import {
 import {
     RoundHistoryUint256Array
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
-
-// Core
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
-
-// Group
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
-
-// Local
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
 import {
@@ -37,50 +28,34 @@ import {
 import {IExtensionGroupService} from "./interface/IExtensionGroupService.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-/// @title ExtensionGroupService
-/// @notice Extension contract for rewarding group service providers
-/// @dev Service reward = Total service reward × (Account's group action reward / Group action total reward)
 contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
 
-    // ============ Constants ============
-
     uint256 public constant BASIS_POINTS_BASE = 1e18;
     uint256 public constant DEFAULT_MAX_RECIPIENTS = 100;
 
-    // ============ Immutables ============
-
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
-
-    // ============ Cached Interfaces ============
 
     ILOVE20Launch internal immutable _launch;
     IGroupManager internal immutable _groupManager;
     ILOVE20Group internal immutable _group;
     IExtensionGroupActionFactory internal immutable _actionFactory;
 
-    // ============ Storage ============
-
-    /// @dev account => actionId => groupId => recipient addresses history
+    // account => actionId => groupId => recipients
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
         internal _recipientsHistory;
-
-    /// @dev account => actionId => groupId => basis points history
+    // account => actionId => groupId => basisPoints
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryUint256Array.History)))
         internal _basisPointsHistory;
-
-    /// @dev account => actionIds with recipients history
+    // account => actionIds
     mapping(address => RoundHistoryUint256Array.History)
         internal _actionIdsWithRecipients;
-
-    /// @dev account => actionId => groupIds with recipients history
+    // account => actionId => groupIds
     mapping(address => mapping(uint256 => RoundHistoryUint256Array.History))
         internal _groupIdsWithRecipients;
-
-    // ============ Constructor ============
 
     constructor(
         address factory_,
@@ -88,7 +63,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         address groupActionTokenAddress_,
         address groupActionFactoryAddress_
     ) ExtensionBaseJoin(factory_, tokenAddress_) {
-        // Cache frequently used interfaces
         _launch = ILOVE20Launch(_center.launchAddress());
 
         if (groupActionTokenAddress_ != tokenAddress_) {
@@ -109,9 +83,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         _group = ILOVE20Group(_actionFactory.GROUP_ADDRESS());
     }
 
-    // ============ Write Functions ============
-
-    /// @notice Join the service reward action
     function join(
         string[] memory verificationInfos
     ) public override(IExtensionJoin, ExtensionBaseJoin) {
@@ -125,14 +96,20 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         super.join(verificationInfos);
     }
 
-    /// @notice Check if account has staked in any valid group action
-    function hasActiveGroups(address account) public view returns (bool) {
-        return
-            _groupManager.hasActiveGroups(
-                GROUP_ACTION_FACTORY_ADDRESS,
-                GROUP_ACTION_TOKEN_ADDRESS,
-                account
-            );
+    function setRecipients(
+        uint256 actionId_,
+        uint256 groupId,
+        address[] calldata addrs,
+        uint256[] calldata basisPoints
+    ) external {
+        if (!_center.isAccountJoined(tokenAddress, actionId, msg.sender))
+            revert NotJoined();
+
+        address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
+        if (!_actionFactory.exists(ext)) revert InvalidExtension();
+        if (_group.ownerOf(groupId) != msg.sender) revert NotGroupOwner();
+
+        _setRecipients(msg.sender, actionId_, groupId, addrs, basisPoints);
     }
 
     function votedGroupActions(
@@ -149,22 +126,205 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         );
     }
 
-    /// @notice Set reward recipients for a specific action and group
-    function setRecipients(
+    function recipients(
+        address groupOwner,
         uint256 actionId_,
         uint256 groupId,
-        address[] calldata addrs,
-        uint256[] calldata basisPoints
-    ) external {
-        if (!_center.isAccountJoined(tokenAddress, actionId, msg.sender))
-            revert NotJoined();
+        uint256 round
+    )
+        external
+        view
+        returns (address[] memory addrs, uint256[] memory basisPoints)
+    {
+        addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
+            round
+        );
+        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
+            .values(round);
+    }
 
-        address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
-        // Verify that the extension is created by the correct factory
-        if (!_actionFactory.exists(ext)) revert InvalidExtension();
-        if (_group.ownerOf(groupId) != msg.sender) revert NotGroupOwner();
+    function recipientsLatest(
+        address groupOwner,
+        uint256 actionId_,
+        uint256 groupId
+    )
+        external
+        view
+        returns (address[] memory addrs, uint256[] memory basisPoints)
+    {
+        addrs = _recipientsHistory[groupOwner][actionId_][groupId]
+            .latestValues();
+        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
+            .latestValues();
+    }
 
-        _setRecipients(msg.sender, actionId_, groupId, addrs, basisPoints);
+    function actionIdsWithRecipients(
+        address account,
+        uint256 round
+    ) external view returns (uint256[] memory) {
+        return _actionIdsWithRecipients[account].values(round);
+    }
+
+    function groupIdsWithRecipients(
+        address account,
+        uint256 actionId_,
+        uint256 round
+    ) external view returns (uint256[] memory) {
+        return _groupIdsWithRecipients[account][actionId_].values(round);
+    }
+
+    function rewardByRecipient(
+        uint256 round,
+        address groupOwner,
+        uint256 actionId_,
+        uint256 groupId,
+        address recipient
+    ) external view returns (uint256) {
+        uint256 groupReward = _calculateGroupServiceReward(
+            round,
+            groupOwner,
+            actionId_,
+            groupId
+        );
+        if (groupReward == 0) return 0;
+
+        address[] memory addrs = _recipientsHistory[groupOwner][actionId_][
+            groupId
+        ].values(round);
+        uint256[] memory bps = _basisPointsHistory[groupOwner][actionId_][
+            groupId
+        ].values(round);
+
+        if (recipient == groupOwner) {
+            (, uint256 distributed) = _calculateRecipientAmounts(
+                groupReward,
+                addrs,
+                bps
+            );
+            return groupReward - distributed;
+        }
+
+        for (uint256 i; i < addrs.length; ) {
+            if (addrs[i] == recipient) {
+                return (groupReward * bps[i]) / BASIS_POINTS_BASE;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        return 0;
+    }
+
+    function rewardDistribution(
+        uint256 round,
+        address groupOwner,
+        uint256 actionId_,
+        uint256 groupId
+    )
+        external
+        view
+        returns (
+            address[] memory addrs,
+            uint256[] memory basisPoints,
+            uint256[] memory amounts,
+            uint256 ownerAmount
+        )
+    {
+        GroupDistribution memory dist = _buildGroupDistribution(
+            round,
+            groupOwner,
+            actionId_,
+            groupId
+        );
+        return (
+            dist.recipients,
+            dist.basisPoints,
+            dist.amounts,
+            dist.ownerAmount
+        );
+    }
+
+    function rewardDistributionAll(
+        uint256 round,
+        address groupOwner
+    ) external view returns (GroupDistribution[] memory distributions) {
+        uint256[] memory aids = _actionIdsWithRecipients[groupOwner].values(
+            round
+        );
+
+        uint256 total;
+        for (uint256 i; i < aids.length; ) {
+            total += _groupIdsWithRecipients[groupOwner][aids[i]]
+                .values(round)
+                .length;
+            unchecked {
+                ++i;
+            }
+        }
+
+        distributions = new GroupDistribution[](total);
+        uint256 idx;
+        for (uint256 i; i < aids.length; ) {
+            uint256[] memory gids = _groupIdsWithRecipients[groupOwner][aids[i]]
+                .values(round);
+            for (uint256 j; j < gids.length; ) {
+                distributions[idx++] = _buildGroupDistribution(
+                    round,
+                    groupOwner,
+                    aids[i],
+                    gids[j]
+                );
+                unchecked {
+                    ++j;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function isJoinedValueCalculated() external pure returns (bool) {
+        return true;
+    }
+
+    function joinedValue() external view returns (uint256) {
+        return _getTotalStaked(address(0));
+    }
+
+    function joinedValueByAccount(
+        address account
+    ) external view returns (uint256) {
+        if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
+        return _getTotalStaked(account);
+    }
+
+    function hasActiveGroups(address account) public view returns (bool) {
+        return
+            _groupManager.hasActiveGroups(
+                GROUP_ACTION_FACTORY_ADDRESS,
+                GROUP_ACTION_TOKEN_ADDRESS,
+                account
+            );
+    }
+
+    function generatedRewardByVerifier(
+        uint256 round,
+        address verifier
+    ) public view returns (uint256 accountReward, uint256 totalReward) {
+        (, address[] memory exts) = _groupManager.votedGroupActions(
+            GROUP_ACTION_FACTORY_ADDRESS,
+            GROUP_ACTION_TOKEN_ADDRESS,
+            round
+        );
+        for (uint256 i; i < exts.length; ) {
+            IExtensionGroupAction ga = IExtensionGroupAction(exts[i]);
+            accountReward += ga.generatedRewardByVerifier(round, verifier);
+            totalReward += ga.reward(round);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function _setRecipients(
@@ -224,7 +384,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         );
     }
 
-    /// @dev Check that address array has no duplicates
     function _checkNoDuplicates(address[] memory addrs) internal pure {
         uint256 len = addrs.length;
         if (len <= 1) return;
@@ -242,176 +401,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
     }
 
-    // ============ View Functions ============
-
-    /// @notice Get effective recipients for a group at a specific round
-    function recipients(
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId,
-        uint256 round
-    )
-        external
-        view
-        returns (address[] memory addrs, uint256[] memory basisPoints)
-    {
-        addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
-            round
-        );
-        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
-            .values(round);
-    }
-
-    /// @notice Get latest recipients for a group
-    function recipientsLatest(
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId
-    )
-        external
-        view
-        returns (address[] memory addrs, uint256[] memory basisPoints)
-    {
-        addrs = _recipientsHistory[groupOwner][actionId_][groupId]
-            .latestValues();
-        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
-            .latestValues();
-    }
-
-    /// @notice Get actionIds that account has set recipients for at a round
-    function actionIdsWithRecipients(
-        address account,
-        uint256 round
-    ) external view returns (uint256[] memory) {
-        return _actionIdsWithRecipients[account].values(round);
-    }
-
-    /// @notice Get groupIds that account has set recipients for at a round under specific actionId
-    function groupIdsWithRecipients(
-        address account,
-        uint256 actionId_,
-        uint256 round
-    ) external view returns (uint256[] memory) {
-        return _groupIdsWithRecipients[account][actionId_].values(round);
-    }
-
-    /// @notice Get reward amount for a specific recipient at a round for a specific group
-    function rewardByRecipient(
-        uint256 round,
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId,
-        address recipient
-    ) external view returns (uint256) {
-        uint256 groupReward = _calculateGroupServiceReward(
-            round,
-            groupOwner,
-            actionId_,
-            groupId
-        );
-        if (groupReward == 0) return 0;
-
-        address[] memory addrs = _recipientsHistory[groupOwner][actionId_][
-            groupId
-        ].values(round);
-        uint256[] memory bps = _basisPointsHistory[groupOwner][actionId_][
-            groupId
-        ].values(round);
-
-        // If recipient is the group owner, return remaining after distribution
-        if (recipient == groupOwner) {
-            (, uint256 distributed) = _calculateRecipientAmounts(
-                groupReward,
-                addrs,
-                bps
-            );
-            return groupReward - distributed;
-        }
-
-        // Find recipient's basis points and calculate their share
-        for (uint256 i; i < addrs.length; ) {
-            if (addrs[i] == recipient) {
-                return (groupReward * bps[i]) / BASIS_POINTS_BASE;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-        return 0;
-    }
-
-    /// @notice Get reward distribution for a specific group at a round
-    function rewardDistribution(
-        uint256 round,
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId
-    )
-        external
-        view
-        returns (
-            address[] memory addrs,
-            uint256[] memory basisPoints,
-            uint256[] memory amounts,
-            uint256 ownerAmount
-        )
-    {
-        GroupDistribution memory dist = _buildGroupDistribution(
-            round,
-            groupOwner,
-            actionId_,
-            groupId
-        );
-        return (
-            dist.recipients,
-            dist.basisPoints,
-            dist.amounts,
-            dist.ownerAmount
-        );
-    }
-
-    /// @notice Get all group distributions for a group owner at a round
-    function rewardDistributionAll(
-        uint256 round,
-        address groupOwner
-    ) external view returns (GroupDistribution[] memory distributions) {
-        uint256[] memory aids = _actionIdsWithRecipients[groupOwner].values(
-            round
-        );
-
-        uint256 total;
-        for (uint256 i; i < aids.length; ) {
-            total += _groupIdsWithRecipients[groupOwner][aids[i]]
-                .values(round)
-                .length;
-            unchecked {
-                ++i;
-            }
-        }
-
-        distributions = new GroupDistribution[](total);
-        uint256 idx;
-        for (uint256 i; i < aids.length; ) {
-            uint256[] memory gids = _groupIdsWithRecipients[groupOwner][aids[i]]
-                .values(round);
-            for (uint256 j; j < gids.length; ) {
-                distributions[idx++] = _buildGroupDistribution(
-                    round,
-                    groupOwner,
-                    aids[i],
-                    gids[j]
-                );
-                unchecked {
-                    ++j;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /// @dev Build a single GroupDistribution struct
     function _buildGroupDistribution(
         uint256 round,
         address groupOwner,
@@ -448,24 +437,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
             );
     }
 
-    // ============ IExtensionJoinedValue Implementation ============
-
-    function isJoinedValueCalculated() external pure returns (bool) {
-        return true;
-    }
-
-    function joinedValue() external view returns (uint256) {
-        return _getTotalStaked(address(0));
-    }
-
-    function joinedValueByAccount(
-        address account
-    ) external view returns (uint256) {
-        if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
-        return _getTotalStaked(account);
-    }
-
-    /// @dev Get total staked from all valid group actions, converted to tokenAddress value
     function _getTotalStaked(
         address account
     ) internal view returns (uint256 total) {
@@ -498,18 +469,14 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
     }
 
-    /// @dev Convert stakeToken amount to tokenAddress value
-    /// Supports: 1) tokenAddress itself, 2) child token, 3) token with pair, 4) LP token
     function _convertToTokenValue(
         address stakeToken,
         uint256 amount
     ) internal view returns (uint256) {
         if (amount == 0) return 0;
 
-        // Case 1: stakeToken is tokenAddress itself
         if (stakeToken == tokenAddress) return amount;
 
-        // Case 2: LP token containing tokenAddress (check first, LP also has pair interface)
         if (
             TokenConversionLib.isLPTokenContainingTarget(
                 stakeToken,
@@ -524,7 +491,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
                 );
         }
 
-        // Case 3 & 4: Child token or any token with direct Uniswap pair to tokenAddress
         return
             TokenConversionLib.convertViaUniswap(
                 _center.uniswapV2FactoryAddress(),
@@ -534,14 +500,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
             );
     }
 
-    // ============ Internal Functions ============
-
-    /// @dev Calculate reward amounts for recipients based on group reward and basis points
-    /// @param groupReward Total reward for the group
-    /// @param addrs Array of recipient addresses
-    /// @param bps Array of basis points corresponding to recipients
-    /// @return amounts Array of reward amounts for each recipient
-    /// @return distributed Total amount distributed to recipients
     function _calculateRecipientAmounts(
         uint256 groupReward,
         address[] memory addrs,
@@ -575,27 +533,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         return (total * accountR) / allR;
     }
 
-    /// @notice Get verifier reward and total reward from all valid group actions
-    function generatedRewardByVerifier(
-        uint256 round,
-        address verifier
-    ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (, address[] memory exts) = _groupManager.votedGroupActions(
-            GROUP_ACTION_FACTORY_ADDRESS,
-            GROUP_ACTION_TOKEN_ADDRESS,
-            round
-        );
-        for (uint256 i; i < exts.length; ) {
-            IExtensionGroupAction ga = IExtensionGroupAction(exts[i]);
-            accountReward += ga.generatedRewardByVerifier(round, verifier);
-            totalReward += ga.reward(round);
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
-    /// @dev Calculate service reward for a specific group
     function _calculateGroupServiceReward(
         uint256 round,
         address groupOwner,
@@ -618,7 +555,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         return (ownerReward * groupReward) / totalReward;
     }
 
-    /// @dev Override to distribute reward to recipients by group
     function _claimReward(
         uint256 round
     ) internal override returns (uint256 amount) {
@@ -637,7 +573,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         emit ClaimReward(tokenAddress, round, actionId, msg.sender, amount);
     }
 
-    /// @dev Distribute reward to recipients and return total distributed amount
     function _distributeToRecipients(
         uint256 round
     ) internal returns (uint256 distributed) {
@@ -659,7 +594,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
     }
 
-    /// @dev Distribute reward for a specific group
     function _distributeForGroup(
         uint256 round,
         uint256 actionId_,

@@ -5,12 +5,8 @@ import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
-import {
-    IExtensionGroupAction
-} from "./interface/IExtensionGroupAction.sol";
-import {
-    IExtensionCenter
-} from "@extension/src/interface/IExtensionCenter.sol";
+import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -29,59 +25,42 @@ using RoundHistoryUint256 for RoundHistoryUint256.History;
 using RoundHistoryAddress for RoundHistoryAddress.History;
 using SafeERC20 for IERC20;
 
-/// @title GroupJoin
-/// @notice Singleton contract handling token-based group joining and exiting
-/// @dev Users call directly, uses extension address from tokenAddress and actionId
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
-    // ============ Immutables ============
-
     IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
     ILOVE20Join internal _join;
 
-    // ============ State ============
-
     address internal _factoryAddress;
     bool internal _initialized;
-
     // extension => account => joinedRound
     mapping(address => mapping(address => uint256))
         internal _joinedRoundByAccount;
-    // extension => account => groupId history
+    // extension => account => groupId
     mapping(address => mapping(address => RoundHistoryUint256.History))
         internal _groupIdHistoryByAccount;
-    // extension => account => amount history
+    // extension => account => amount
     mapping(address => mapping(address => RoundHistoryUint256.History))
         internal _amountHistoryByAccount;
-
-    // extension => groupId => accountCount history
+    // extension => groupId => accountCount
     mapping(address => mapping(uint256 => RoundHistoryUint256.History))
         internal _accountCountByGroupIdHistory;
-    // extension => groupId => index => account history
+    // extension => groupId => index => account
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddress.History)))
         internal _accountByGroupIdAndIndexHistory;
-    // extension => groupId => account => index history
+    // extension => groupId => account => index
     mapping(address => mapping(uint256 => mapping(address => RoundHistoryUint256.History)))
         internal _accountIndexInGroupHistory;
-
-    // extension => groupId => totalJoinedAmount history
+    // extension => groupId => totalJoinedAmount
     mapping(address => mapping(uint256 => RoundHistoryUint256.History))
         internal _totalJoinedAmountHistoryByGroupId;
-    // extension => totalJoinedAmount history
+    // extension => totalJoinedAmount
     mapping(address => RoundHistoryUint256.History)
         internal _totalJoinedAmountHistory;
 
-    // ============ Constructor ============
+    constructor() {}
 
-    constructor() {
-        // Factory will be set via initialize()
-    }
-
-    // ============ Initialization ============
-
-    /// @inheritdoc IGroupJoin
     function initialize(address factory_) external {
         if (_initialized) revert AlreadyInitialized();
         if (factory_ == address(0)) revert InvalidFactory();
@@ -96,48 +75,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _initialized = true;
     }
 
-    // ============ Config Functions ============
-
-    /// @inheritdoc IGroupJoin
     function FACTORY_ADDRESS() external view override returns (address) {
         return _factoryAddress;
     }
 
-    // ============ Modifiers ============
-
-    modifier onlyValidExtension(address tokenAddress, uint256 actionId) {
-        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
-        ActionInfo memory actionInfo = submit.actionInfo(
-            tokenAddress,
-            actionId
-        );
-        address extension = actionInfo.body.whiteListAddress;
-
-        if (!_factory.exists(extension)) {
-            revert InvalidFactory();
-        }
-        _;
-    }
-
-    // ============ Internal Helpers ============
-
-    /// @dev Get extension address from tokenAddress and actionId
-    function _getExtension(
-        address tokenAddress,
-        uint256 actionId
-    ) internal view returns (address extension) {
-        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
-        ActionInfo memory actionInfo = submit.actionInfo(
-            tokenAddress,
-            actionId
-        );
-        extension = actionInfo.body.whiteListAddress;
-        if (extension == address(0)) revert InvalidFactory();
-    }
-
-    // ============ Write Functions ============
-
-    /// @inheritdoc IGroupJoin
     function join(
         address tokenAddress,
         uint256 actionId,
@@ -176,7 +117,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    /// @inheritdoc IGroupJoin
     function exit(
         address tokenAddress,
         uint256 actionId
@@ -195,11 +135,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             .latestValue();
         uint256 currentRound = _join.currentRound();
 
-        // Update state
         _groupIdHistoryByAccount[extension][msg.sender].record(currentRound, 0);
         _amountHistoryByAccount[extension][msg.sender].record(currentRound, 0);
 
-        // Update totalJoinedAmount history
         _totalJoinedAmountHistoryByGroupId[extension][groupId].record(
             currentRound,
             _totalJoinedAmountHistoryByGroupId[extension][groupId]
@@ -214,7 +152,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         delete _joinedRoundByAccount[extension][msg.sender];
         _center.removeAccount(tokenAddress, actionId, msg.sender);
 
-        // Get join token address from GroupManager config
         address joinTokenAddress = _getJoinTokenAddress(
             extension,
             tokenAddress,
@@ -222,7 +159,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
         IERC20 joinToken = IERC20(joinTokenAddress);
 
-        // Transfer tokens back
         joinToken.safeTransfer(msg.sender, amount);
 
         emit Exit(
@@ -235,9 +171,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    // ============ View Functions ============
-
-    /// @inheritdoc IGroupJoin
     function joinInfo(
         address tokenAddress,
         uint256 actionId,
@@ -256,7 +189,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    /// @inheritdoc IGroupJoin
     function accountsByGroupIdCount(
         address tokenAddress,
         uint256 actionId,
@@ -266,7 +198,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _accountCountByGroupIdHistory[extension][groupId].latestValue();
     }
 
-    /// @inheritdoc IGroupJoin
     function accountsByGroupIdAtIndex(
         address tokenAddress,
         uint256 actionId,
@@ -279,7 +210,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 .latestValue();
     }
 
-    /// @inheritdoc IGroupJoin
     function groupIdByAccountByRound(
         address tokenAddress,
         uint256 actionId,
@@ -290,7 +220,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _groupIdHistoryByAccount[extension][account].value(round);
     }
 
-    /// @inheritdoc IGroupJoin
     function totalJoinedAmountByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -302,7 +231,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 .latestValue();
     }
 
-    /// @inheritdoc IGroupJoin
     function totalJoinedAmountByGroupIdByRound(
         address tokenAddress,
         uint256 actionId,
@@ -314,7 +242,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _totalJoinedAmountHistoryByGroupId[extension][groupId].value(round);
     }
 
-    /// @inheritdoc IGroupJoin
     function totalJoinedAmount(
         address tokenAddress,
         uint256 actionId
@@ -323,7 +250,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _totalJoinedAmountHistory[extension].latestValue();
     }
 
-    /// @inheritdoc IGroupJoin
     function totalJoinedAmountByRound(
         address tokenAddress,
         uint256 actionId,
@@ -333,7 +259,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _totalJoinedAmountHistory[extension].value(round);
     }
 
-    /// @inheritdoc IGroupJoin
     function accountCountByGroupIdByRound(
         address tokenAddress,
         uint256 actionId,
@@ -344,7 +269,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _accountCountByGroupIdHistory[extension][groupId].value(round);
     }
 
-    /// @inheritdoc IGroupJoin
     function accountByGroupIdAndIndexByRound(
         address tokenAddress,
         uint256 actionId,
@@ -359,7 +283,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             );
     }
 
-    /// @inheritdoc IGroupJoin
     function amountByAccountByRound(
         address tokenAddress,
         uint256 actionId,
@@ -370,7 +293,32 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _amountHistoryByAccount[extension][account].value(round);
     }
 
-    // ============ Internal Functions ============
+    modifier onlyValidExtension(address tokenAddress, uint256 actionId) {
+        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
+        ActionInfo memory actionInfo = submit.actionInfo(
+            tokenAddress,
+            actionId
+        );
+        address extension = actionInfo.body.whiteListAddress;
+
+        if (!_factory.exists(extension)) {
+            revert InvalidFactory();
+        }
+        _;
+    }
+
+    function _getExtension(
+        address tokenAddress,
+        uint256 actionId
+    ) internal view returns (address extension) {
+        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
+        ActionInfo memory actionInfo = submit.actionInfo(
+            tokenAddress,
+            actionId
+        );
+        extension = actionInfo.body.whiteListAddress;
+        if (extension == address(0)) revert InvalidFactory();
+    }
 
     function _getJoinTokenAddress(
         address extension,
@@ -477,39 +425,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function _handleVerificationInfos(
-        address tokenAddress,
-        uint256 actionId,
-        address account,
-        bool isFirstJoin,
-        uint256 groupId,
-        uint256 currentRound,
-        address extension,
-        string[] memory verificationInfos
-    ) internal {
-        if (isFirstJoin) {
-            _joinedRoundByAccount[extension][account] = currentRound;
-            _groupIdHistoryByAccount[extension][account].record(
-                currentRound,
-                groupId
-            );
-            _addAccountToGroup(extension, currentRound, groupId, account);
-            _center.addAccount(
-                tokenAddress,
-                actionId,
-                account,
-                verificationInfos
-            );
-        } else if (verificationInfos.length > 0) {
-            _center.updateVerificationInfo(
-                tokenAddress,
-                actionId,
-                account,
-                verificationInfos
-            );
-        }
-    }
-
     function _validateJoinAmounts(
         address extension,
         address tokenAddress,
@@ -584,7 +499,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
         ) revert AmountExceedsAccountCap();
 
-        // Check group's max capacity (if set)
         if (maxCapacity > 0) {
             _validateGroupCapacity(extension, groupId, amount, maxCapacity);
         }
@@ -646,7 +560,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         }
     }
 
-    /// @dev Calculate total joined amount for all active groups owned by owner
     function _totalJoinedAmountByOwner(
         address extension,
         address tokenAddress,
@@ -697,7 +610,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 lastIndex = _accountCountByGroupIdHistory[extension][groupId]
             .latestValue() - 1;
 
-        // Swap and pop
         if (index != lastIndex) {
             address lastAccount = _accountByGroupIdAndIndexHistory[extension][
                 groupId

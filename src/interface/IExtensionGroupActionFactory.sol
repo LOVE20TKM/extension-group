@@ -5,42 +5,20 @@ import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 
-/// @title IExtensionGroupActionFactory
-/// @notice Interface for ExtensionGroupActionFactory
 interface IExtensionGroupActionFactory is IExtensionFactory {
-    // ============ Events ============
-
     event ExtensionCreate(
         address indexed extension,
         address indexed tokenAddress
     );
 
-    // ============ View Functions ============
-
-    /// @notice Get the group manager address configured in the factory
-    /// @return The group manager address
     function GROUP_MANAGER_ADDRESS() external view returns (address);
 
-    /// @notice Get the group join address configured in the factory
-    /// @return The group join address
     function GROUP_JOIN_ADDRESS() external view returns (address);
 
-    /// @notice Get the group verify address configured in the factory
-    /// @return The group verify address
     function GROUP_VERIFY_ADDRESS() external view returns (address);
 
-    /// @notice Get the group address configured in the factory
-    /// @return The group address
     function GROUP_ADDRESS() external view returns (address);
 
-    /// @notice Create a new ExtensionGroupAction extension
-    /// @param tokenAddress_ The token address
-    /// @param stakeTokenAddress_ The stake token address
-    /// @param joinTokenAddress_ The join token address
-    /// @param activationStakeAmount_ The activation stake amount
-    /// @param maxJoinAmountRatio_ The max join amount ratio (with 1e18 precision)
-    /// @param maxVerifyCapacityFactor_ The max verify capacity factor (with 1e18 precision)
-    /// @return extension The address of the created extension
     function createExtension(
         address tokenAddress_,
         address stakeTokenAddress_,
@@ -50,4 +28,3 @@ interface IExtensionGroupActionFactory is IExtensionFactory {
         uint256 maxVerifyCapacityFactor_
     ) external returns (address extension);
 }
-

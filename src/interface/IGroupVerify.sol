@@ -1,16 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-// ============ Constants ============
-
 uint256 constant MAX_ORIGIN_SCORE = 100;
+uint256 constant PRECISION = 1e18;
 
-/// @title IGroupVerify
-/// @notice Interface for GroupVerify singleton contract (combines IGroupScore and IGroupDistrust functionality)
-/// @dev Note: Does not inherit IGroupScore directly due to function signature differences (adds tokenAddress and actionId parameters)
 interface IGroupVerify {
-    // ============ Errors ============
-
     error InvalidFactory();
     error AlreadyInitialized();
     error NotVerifier();
@@ -24,8 +18,6 @@ interface IGroupVerify {
     error NotGovernor();
     error DistrustVoteExceedsLimit();
     error InvalidReason();
-
-    // ============ Events ============
 
     event VerifyWithOriginScores(
         address indexed tokenAddress,
@@ -53,22 +45,10 @@ interface IGroupVerify {
         string reason
     );
 
-    // ============ Initialization ============
-
-    /// @notice Initialize the contract with Factory address (can only be called once)
     function initialize(address factory_) external;
 
-    /// @notice Get the Factory address
     function FACTORY_ADDRESS() external view returns (address);
 
-    // ============ Write Functions ============
-
-    /// @notice Verify with origin scores (supports both full and batch submission)
-    /// @param tokenAddress The token address
-    /// @param actionId The action ID
-    /// @param groupId The group ID
-    /// @param startIndex Starting index in the accounts array (0 for first/full submission)
-    /// @param originScores Array of scores for accounts starting at startIndex
     function verifyWithOriginScores(
         address tokenAddress,
         uint256 actionId,
@@ -77,11 +57,6 @@ interface IGroupVerify {
         uint256[] calldata originScores
     ) external;
 
-    /// @notice Set delegated verifier for a group
-    /// @param tokenAddress The token address
-    /// @param actionId The action ID
-    /// @param groupId The group ID
-    /// @param delegatedVerifier The delegated verifier address
     function setGroupDelegatedVerifier(
         address tokenAddress,
         uint256 actionId,
@@ -89,14 +64,6 @@ interface IGroupVerify {
         address delegatedVerifier
     ) external;
 
-    // ============ Write Functions (Distrust) ============
-
-    /// @notice Vote distrust against a group owner
-    /// @param tokenAddress The token address
-    /// @param actionId The action ID
-    /// @param groupOwner The group owner address
-    /// @param amount The amount of distrust votes
-    /// @param reason The reason for distrust
     function distrustVote(
         address tokenAddress,
         uint256 actionId,
@@ -104,8 +71,6 @@ interface IGroupVerify {
         uint256 amount,
         string calldata reason
     ) external;
-
-    // ============ View Functions ============
 
     function originScoreByAccount(
         address tokenAddress,
@@ -216,14 +181,12 @@ interface IGroupVerify {
         uint256 index
     ) external view returns (uint256);
 
-    /// @notice Get verified group IDs for a round
     function verifiedGroupIds(
         address tokenAddress,
         uint256 actionId,
         uint256 round
     ) external view returns (uint256[] memory);
 
-    /// @notice Get total score of all accounts in a group (before distrust and capacity reduction)
     function totalScoreByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -231,16 +194,12 @@ interface IGroupVerify {
         uint256 groupId
     ) external view returns (uint256);
 
-    // ============ View Functions (Distrust) ============
-
-    /// @notice Get total verify votes for an extension in a round
     function totalVerifyVotes(
         address tokenAddress,
         uint256 actionId,
         uint256 round
     ) external view returns (uint256);
 
-    /// @notice Get total distrust votes for a group owner in a round
     function distrustVotesByGroupOwner(
         address tokenAddress,
         uint256 actionId,
@@ -248,7 +207,6 @@ interface IGroupVerify {
         address groupOwner
     ) external view returns (uint256);
 
-    /// @notice Get distrust votes by groupId (convenience method)
     function distrustVotesByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -256,7 +214,6 @@ interface IGroupVerify {
         uint256 groupId
     ) external view returns (uint256);
 
-    /// @notice Get distrust votes by a specific voter for a group owner
     function distrustVotesByVoterByGroupOwner(
         address tokenAddress,
         uint256 actionId,
@@ -265,7 +222,6 @@ interface IGroupVerify {
         address groupOwner
     ) external view returns (uint256);
 
-    /// @notice Get the distrust reason
     function distrustReason(
         address tokenAddress,
         uint256 actionId,

@@ -6,9 +6,7 @@ import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
-import {
-    IExtensionCenter
-} from "@extension/src/interface/IExtensionCenter.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -16,14 +14,9 @@ import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {MAX_ORIGIN_SCORE} from "./interface/IGroupVerify.sol";
+import {MAX_ORIGIN_SCORE, PRECISION} from "./interface/IGroupVerify.sol";
 
-/// @title GroupVerify
-/// @notice Singleton contract handling verification scoring and distrust voting
-/// @dev Users call directly, uses extension address from tokenAddress and actionId
 contract GroupVerify is IGroupVerify, ReentrancyGuard {
-    // ============ Immutables ============
-
     IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
@@ -31,12 +24,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ILOVE20Verify internal _verify;
     IGroupJoin internal _groupJoin;
 
-    // ============ State ============
-
     address internal _factoryAddress;
     bool internal _initialized;
 
-    // extension => groupId => delegated verifier address
+    // extension => groupId => delegatedVerifier
     mapping(address => mapping(uint256 => address))
         internal _delegatedVerifierByGroupId;
     // extension => groupId => group owner at the time of delegation
@@ -77,7 +68,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
         internal _capacityReductionByGroupId;
 
-    // Distrust state (from LOVE20GroupDistrust)
     // extension => round => groupOwner => total distrust votes
     mapping(address => mapping(uint256 => mapping(address => uint256)))
         internal _distrustVotesByGroupOwner;
@@ -88,15 +78,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     mapping(address => mapping(uint256 => mapping(address => mapping(address => string))))
         internal _distrustReason;
 
-    // ============ Constructor ============
-
-    constructor() {
-        // Factory will be set via initialize()
-    }
-
-    // ============ Initialization ============
-
-    /// @inheritdoc IGroupVerify
     function initialize(address factory_) external {
         if (_initialized) revert AlreadyInitialized();
         if (factory_ == address(0)) revert InvalidFactory();
@@ -112,14 +93,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _initialized = true;
     }
 
-    // ============ Config Functions ============
-
-    /// @inheritdoc IGroupVerify
     function FACTORY_ADDRESS() external view override returns (address) {
         return _factoryAddress;
     }
-
-    // ============ Modifiers ============
 
     modifier onlyValidExtension(address tokenAddress, uint256 actionId) {
         ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
@@ -146,9 +122,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _;
     }
 
-    // ============ Internal Helpers ============
-
-    /// @dev Get extension address from tokenAddress and actionId
     function _getExtension(
         address tokenAddress,
         uint256 actionId
@@ -162,9 +135,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (extension == address(0)) revert InvalidFactory();
     }
 
-    // ============ Write Functions ============
-
-    /// @inheritdoc IGroupVerify
     function setGroupDelegatedVerifier(
         address tokenAddress,
         uint256 actionId,
@@ -185,7 +155,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
     }
 
-    /// @inheritdoc IGroupVerify
     function verifyWithOriginScores(
         address tokenAddress,
         uint256 actionId,
@@ -199,6 +168,17 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _checkVerifier(extension, groupId);
         if (_isVerified[extension][currentRound][groupId]) {
             revert AlreadyVerified();
+        }
+
+        if (
+            _groupJoin.accountCountByGroupIdByRound(
+                tokenAddress,
+                actionId,
+                groupId,
+                currentRound
+            ) == 0
+        ) {
+            revert NoDataForRound();
         }
 
         _processVerificationBatch(
@@ -236,12 +216,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
                 currentRound
             ];
 
-        // Validate start index matches verified count (sequential verification)
         if (startIndex != verifiedCount[groupId]) {
             revert InvalidStartIndex();
         }
 
-        // Get account count from GroupJoin
         uint256 accountCount = _groupJoin.accountCountByGroupIdByRound(
             tokenAddress,
             actionId,
@@ -252,7 +230,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             revert ScoresExceedAccountCount();
         }
 
-        // Process scores
         uint256 batchScore = _processScores(
             extension,
             tokenAddress,
@@ -283,7 +260,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
 
         if (isComplete) {
-            _finalizeVerificationComplete(
+            _finalizeVerification(
                 extension,
                 tokenAddress,
                 actionId,
@@ -294,27 +271,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
     }
 
-    function _finalizeVerificationComplete(
-        address extension,
-        address tokenAddress,
-        uint256 actionId,
-        uint256 currentRound,
-        uint256 groupId,
-        uint256 totalScore
-    ) internal {
-        address groupOwner = _group.ownerOf(groupId);
-        _finalizeVerification(
-            extension,
-            tokenAddress,
-            actionId,
-            currentRound,
-            groupId,
-            groupOwner,
-            totalScore
-        );
-    }
-
-    /// @inheritdoc IGroupVerify
     function distrustVote(
         address tokenAddress,
         uint256 actionId,
@@ -344,7 +300,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address voter = msg.sender;
         uint256 currentRound = _verify.currentRound();
 
-        // Check voter has voted for GroupAction (extension)
         uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
             tokenAddress,
             currentRound,
@@ -354,7 +309,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         if (verifyVotes == 0) revert NotGovernor();
 
-        // Check accumulated votes don't exceed verify votes
         mapping(address => uint256)
             storage voterVotes = _distrustVotesByVoterByGroupOwner[extension][
                 currentRound
@@ -365,7 +319,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         if (bytes(reason).length == 0) revert InvalidReason();
 
-        // Record vote
         voterVotes[groupOwner] += amount;
         _distrustVotesByGroupOwner[extension][currentRound][
             groupOwner
@@ -382,7 +335,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             reason
         );
 
-        // Update distrust for all active groups owned by this owner
         _updateDistrustForOwnerGroups(
             extension,
             tokenAddress,
@@ -392,9 +344,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
     }
 
-    // ============ View Functions ============
-
-    /// @inheritdoc IGroupVerify
     function originScoreByAccount(
         address tokenAddress,
         uint256 actionId,
@@ -405,7 +354,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _originScoreByAccount[extension][round][account];
     }
 
-    /// @inheritdoc IGroupVerify
     function scoreByAccount(
         address tokenAddress,
         uint256 actionId,
@@ -423,7 +371,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             );
     }
 
-    /// @inheritdoc IGroupVerify
     function scoreByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -434,7 +381,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _scoreByGroupId[extension][round][groupId];
     }
 
-    /// @inheritdoc IGroupVerify
     function capacityReductionByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -445,7 +391,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _capacityReductionByGroupId[extension][round][groupId];
     }
 
-    /// @inheritdoc IGroupVerify
     function score(
         address tokenAddress,
         uint256 actionId,
@@ -455,7 +400,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _score[extension][round];
     }
 
-    /// @inheritdoc IGroupVerify
     function delegatedVerifierByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -468,7 +412,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _delegatedVerifierByGroupId[extension][groupId];
     }
 
-    /// @inheritdoc IGroupVerify
     function canVerify(
         address tokenAddress,
         uint256 actionId,
@@ -483,7 +426,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return account == groupOwner || isValidDelegatedVerifier;
     }
 
-    /// @inheritdoc IGroupVerify
     function verifiedAccountCount(
         address tokenAddress,
         uint256 actionId,
@@ -494,7 +436,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiedAccountCount[extension][round][groupId];
     }
 
-    /// @inheritdoc IGroupVerify
     function isVerified(
         address tokenAddress,
         uint256 actionId,
@@ -505,7 +446,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _isVerified[extension][round][groupId];
     }
 
-    /// @inheritdoc IGroupVerify
     function verifiers(
         address tokenAddress,
         uint256 actionId,
@@ -515,7 +455,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiers[extension][round];
     }
 
-    /// @inheritdoc IGroupVerify
     function verifiersCount(
         address tokenAddress,
         uint256 actionId,
@@ -525,7 +464,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiers[extension][round].length;
     }
 
-    /// @inheritdoc IGroupVerify
     function verifiersAtIndex(
         address tokenAddress,
         uint256 actionId,
@@ -536,7 +474,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiers[extension][round][index];
     }
 
-    /// @inheritdoc IGroupVerify
     function verifierByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -547,7 +484,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifierByGroupId[extension][round][groupId];
     }
 
-    /// @inheritdoc IGroupVerify
     function groupIdsByVerifier(
         address tokenAddress,
         uint256 actionId,
@@ -558,7 +494,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupIdsByVerifier[extension][round][verifier];
     }
 
-    /// @inheritdoc IGroupVerify
     function groupIdsByVerifierCount(
         address tokenAddress,
         uint256 actionId,
@@ -569,7 +504,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupIdsByVerifier[extension][round][verifier].length;
     }
 
-    /// @inheritdoc IGroupVerify
     function groupIdsByVerifierAtIndex(
         address tokenAddress,
         uint256 actionId,
@@ -581,7 +515,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupIdsByVerifier[extension][round][verifier][index];
     }
 
-    /// @inheritdoc IGroupVerify
     function verifiedGroupIds(
         address tokenAddress,
         uint256 actionId,
@@ -591,7 +524,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiedGroupIds[extension][round];
     }
 
-    /// @inheritdoc IGroupVerify
     function totalScoreByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -602,9 +534,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _totalScoreByGroupId[extension][round][groupId];
     }
 
-    // ============ View Functions (Distrust) ============
-
-    /// @inheritdoc IGroupVerify
     function totalVerifyVotes(
         address tokenAddress,
         uint256 actionId,
@@ -620,7 +549,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             );
     }
 
-    /// @inheritdoc IGroupVerify
     function distrustVotesByGroupOwner(
         address tokenAddress,
         uint256 actionId,
@@ -631,7 +559,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _distrustVotesByGroupOwner[extension][round][groupOwner];
     }
 
-    /// @inheritdoc IGroupVerify
     function distrustVotesByGroupId(
         address tokenAddress,
         uint256 actionId,
@@ -643,7 +570,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _distrustVotesByGroupOwner[extension][round][groupOwner];
     }
 
-    /// @inheritdoc IGroupVerify
     function distrustVotesByVoterByGroupOwner(
         address tokenAddress,
         uint256 actionId,
@@ -658,7 +584,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             ];
     }
 
-    /// @inheritdoc IGroupVerify
     function distrustReason(
         address tokenAddress,
         uint256 actionId,
@@ -668,41 +593,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) external view override returns (string memory) {
         address extension = _getExtension(tokenAddress, actionId);
         return _distrustReason[extension][round][voter][groupOwner];
-    }
-
-    // ============ Internal Functions ============
-
-    function _checkVerifierAndData(
-        address extension,
-        address tokenAddress,
-        uint256 actionId,
-        uint256 currentRound,
-        uint256 groupId
-    ) internal view returns (address groupOwner) {
-        groupOwner = _group.ownerOf(groupId);
-
-        bool isValidDelegatedVerifier = msg.sender ==
-            _delegatedVerifierByGroupId[extension][groupId] &&
-            _delegatedVerifierOwnerByGroupId[extension][groupId] == groupOwner;
-        if (msg.sender != groupOwner && !isValidDelegatedVerifier) {
-            revert NotVerifier();
-        }
-
-        if (_isVerified[extension][currentRound][groupId]) {
-            revert AlreadyVerified();
-        }
-
-        // Check if group has members at this round
-        if (
-            _groupJoin.accountCountByGroupIdByRound(
-                tokenAddress,
-                actionId,
-                groupId,
-                currentRound
-            ) == 0
-        ) {
-            revert NoDataForRound();
-        }
     }
 
     function _processScores(
@@ -743,10 +633,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 actionId,
         uint256 currentRound,
         uint256 groupId,
-        address groupOwner,
         uint256 totalScore
     ) internal {
-        // Calculate and store capacity reduction factor
+        address groupOwner = _group.ownerOf(groupId);
         uint256 capacityReduction = _calculateCapacityReduction(
             extension,
             tokenAddress,
@@ -762,7 +651,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         // Record verifier (NFT owner, not delegated verifier)
         _verifierByGroupId[extension][currentRound][groupId] = groupOwner;
 
-        // Add verifier to list if first verified group for this verifier
         if (
             _groupIdsByVerifier[extension][currentRound][groupOwner].length == 0
         ) {
@@ -772,7 +660,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         _totalScoreByGroupId[extension][currentRound][groupId] = totalScore;
 
-        // Calculate group score (with distrust and capacity reduction)
         uint256 groupScore = _calculateGroupScore(
             extension,
             tokenAddress,
@@ -816,7 +703,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address groupOwner,
         uint256 currentGroupId
     ) internal view returns (uint256) {
-        // Sum capacity from already verified groups by this verifier
         uint256 verifiedCapacity = 0;
         uint256[] storage verifierGroupIds = _groupIdsByVerifier[extension][
             round
@@ -836,12 +722,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             groupOwner
         );
 
-        // Calculate remaining capacity
         uint256 remainingCapacity = maxVerifyCapacity > verifiedCapacity
             ? maxVerifyCapacity - verifiedCapacity
             : 0;
 
-        // No remaining capacity - verification fails
         if (remainingCapacity == 0) {
             revert NoRemainingVerifyCapacity();
         }
@@ -854,13 +738,11 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
                 round
             );
 
-        // Within capacity - no reduction (factor = 1e18)
         if (remainingCapacity >= currentGroupCapacity) {
-            return 1e18;
+            return PRECISION;
         }
 
-        // Exceeds capacity - apply reduction
-        return (remainingCapacity * 1e18) / currentGroupCapacity;
+        return (remainingCapacity * PRECISION) / currentGroupCapacity;
     }
 
     function _calculateGroupScore(
@@ -890,14 +772,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round
         ][groupId];
 
-        // Apply both distrust ratio and capacity reduction
         if (total == 0) {
-            return (groupAmount * capacityReduction) / 1e18;
+            return (groupAmount * capacityReduction) / PRECISION;
         }
         return
-            (groupAmount * (total - distrustVotes) * capacityReduction) /
-            total /
-            1e18;
+            (((groupAmount * (total - distrustVotes)) / total) *
+                capacityReduction) / PRECISION;
     }
 
     function _updateDistrustForOwnerGroups(
@@ -967,15 +847,14 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         uint256 capacityReduction = capacityReductionMap[groupId];
 
-        // Apply both distrust ratio and capacity reduction
         uint256 newScore;
         if (total == 0) {
-            newScore = (groupAmount * capacityReduction) / 1e18;
+            newScore = (groupAmount * capacityReduction) / PRECISION;
         } else {
             newScore =
-                (groupAmount * (total - distrustVotes) * capacityReduction) /
-                total /
-                1e18;
+                (((groupAmount * (total - distrustVotes)) / total) *
+                    capacityReduction) /
+                PRECISION;
         }
 
         scoreMap[groupId] = newScore;

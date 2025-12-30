@@ -2,9 +2,7 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
-import {
-    ExtensionGroupAction
-} from "../src/ExtensionGroupAction.sol";
+import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
@@ -109,7 +107,6 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(groupManager),
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -121,7 +118,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         // because groupAction.factory() returns mockGroupActionFactory
         token.mint(address(this), 1e18);
         token.approve(address(mockGroupActionFactory), type(uint256).max);
-        mockGroupActionFactory.registerExtensionForTesting(address(groupAction), address(token));
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction),
+            address(token)
+        );
 
         // Setup group owners
         groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
@@ -840,7 +840,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(groupManager),
             address(token), // stakeToken
             invalidToken, // invalid joinToken
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -860,7 +859,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(groupManager),
             address(token),
             address(badLp), // LP doesn't contain token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -874,7 +872,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(groupManager),
             address(token),
             address(token), // joinToken = token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -904,7 +901,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(groupManager),
             address(token),
             address(lpToken), // LP containing token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -929,7 +925,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(groupManager),
             address(token),
             address(lpToken),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -941,7 +936,10 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // because action.factory() returns mockGroupActionFactory
         token.mint(address(this), 1e18);
         token.approve(address(mockGroupActionFactory), type(uint256).max);
-        mockGroupActionFactory.registerExtensionForTesting(address(action), address(token));
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(action),
+            address(token)
+        );
 
         // Setup group owner
         uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "TestGroup");

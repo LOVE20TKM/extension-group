@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    IExtensionJoin
-} from "@extension/src/interface/IExtensionJoin.sol";
+import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
 
-/// @title IExtensionGroupService
-/// @notice Interface for group service provider reward extension
 interface IExtensionGroupService is IExtensionJoin {
-    // ============ Errors ============
-
     error NoActiveGroups();
     error InvalidBasisPoints();
     error TooManyRecipients();
@@ -22,8 +16,6 @@ interface IExtensionGroupService is IExtensionJoin {
     error NotGroupOwner();
     error RecipientCannotBeSelf();
 
-    // ============ Events ============
-
     event RecipientsUpdate(
         address indexed tokenAddress,
         uint256 round,
@@ -33,8 +25,6 @@ interface IExtensionGroupService is IExtensionJoin {
         address[] recipients,
         uint256[] basisPoints
     );
-
-    // ============ Structs ============
 
     struct GroupDistribution {
         uint256 actionId;
@@ -46,17 +36,11 @@ interface IExtensionGroupService is IExtensionJoin {
         uint256 ownerAmount;
     }
 
-    // ============ Constants ============
-
     function BASIS_POINTS_BASE() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
 
-    // ============ Immutables ============
-
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
-
-    // ============ View Functions ============
 
     function votedGroupActions(
         uint256 round
@@ -130,8 +114,6 @@ interface IExtensionGroupService is IExtensionJoin {
         address verifier
     ) external view returns (uint256 accountReward, uint256 totalReward);
 
-    // ============ Write Functions ============
-
     function setRecipients(
         uint256 actionId,
         uint256 groupId,
@@ -139,4 +121,3 @@ interface IExtensionGroupService is IExtensionJoin {
         uint256[] calldata basisPoints
     ) external;
 }
-

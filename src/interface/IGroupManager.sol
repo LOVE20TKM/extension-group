@@ -2,8 +2,6 @@
 pragma solidity =0.8.17;
 
 interface IGroupManager {
-    // ============ Errors ============
-
     error NotRegisteredExtension();
     error GroupNotFound();
     error GroupAlreadyActivated();
@@ -17,8 +15,6 @@ interface IGroupManager {
     error NotRegisteredExtensionInFactory();
     error AlreadyInitialized();
     error InvalidFactory();
-
-    // ============ Events ============
 
     event GroupActivate(
         address indexed tokenAddress,
@@ -48,10 +44,6 @@ interface IGroupManager {
         uint256 newMaxAccounts
     );
 
-    // ============ Structs ============
-
-    // Config is now stored in ExtensionGroupAction
-
     struct GroupInfo {
         uint256 groupId;
         string description;
@@ -74,13 +66,7 @@ interface IGroupManager {
     /// @notice Returns the precision constant (1e18) used for ratio and factor calculations
     function PRECISION() external view returns (uint256);
 
-    // ============ Initialization ============
-
-    /// @notice Initialize the contract with factory address
-    /// @param factory_ The factory address
     function initialize(address factory_) external;
-
-    // ============ Write Functions ============
 
     function activateGroup(
         address tokenAddress,
@@ -109,8 +95,6 @@ interface IGroupManager {
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
     ) external;
-
-    // ============ View Functions ============
 
     function groupInfo(
         address tokenAddress,
@@ -159,8 +143,6 @@ interface IGroupManager {
         uint256 groupId
     ) external view returns (bool);
 
-    // ============ Capacity View Functions ============
-
     function calculateJoinMaxAmount(
         address tokenAddress,
         uint256 actionId
@@ -182,8 +164,6 @@ interface IGroupManager {
         address tokenAddress,
         uint256 actionId
     ) external view returns (uint256);
-
-    // ============ Extension Activation View Functions ============
 
     function actionIdsByGroupId(
         address actionFactory,
@@ -229,11 +209,6 @@ interface IGroupManager {
         view
         returns (uint256[] memory actionIds_, address[] memory extensions);
 
-    /// @notice Check if account has any active groups with actions
-    /// @param actionFactory The action factory address
-    /// @param tokenAddress The token address
-    /// @param account The account to check
-    /// @return True if account has at least one group with actions
     function hasActiveGroups(
         address actionFactory,
         address tokenAddress,

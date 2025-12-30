@@ -2,9 +2,7 @@
 pragma solidity =0.8.17;
 
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
-import {
-    IExtensionGroupAction
-} from "./interface/IExtensionGroupAction.sol";
+import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
@@ -18,21 +16,10 @@ import {
 } from "@extension/src/interface/IExtensionFactory.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-/// @title ExtensionGroupAction
-/// @notice Extension contract for manual scoring verification in group-based actions
-/// @dev Only implements GroupMint functionality, join/verify are in singleton contracts
-contract ExtensionGroupAction is
-    ExtensionBase,
-    IExtensionGroupAction
-{
-    // ============ Immutables ============
-
+contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     IGroupJoin internal immutable _groupJoin;
     IGroupVerify internal immutable _groupVerify;
     IGroupManager internal immutable _groupManager;
-    // Note: _join and _verify are inherited from ExtensionBase
-
-    // ============ Config Immutables ============
 
     address public immutable override STAKE_TOKEN_ADDRESS;
     address public immutable override JOIN_TOKEN_ADDRESS;
@@ -40,17 +27,12 @@ contract ExtensionGroupAction is
     uint256 public immutable override MAX_JOIN_AMOUNT_RATIO;
     uint256 public immutable override MAX_VERIFY_CAPACITY_FACTOR;
 
-    // ============ State ============
-
-    /// @dev round => burned amount
+    // round => burned amount
     mapping(uint256 => uint256) internal _burnedReward;
-
-    // ============ Constructor ============
 
     constructor(
         address factory_,
         address tokenAddress_,
-        address, // groupManagerAddress_ (unused, retrieved from factory)
         address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
@@ -58,18 +40,14 @@ contract ExtensionGroupAction is
         uint256 maxVerifyCapacityFactor_
     ) ExtensionBase(factory_, tokenAddress_) {
         IExtensionGroupActionFactory factory = IExtensionGroupActionFactory(
-                factory_
-            );
+            factory_
+        );
         address groupJoinAddress = factory.GROUP_JOIN_ADDRESS();
         _groupJoin = IGroupJoin(groupJoinAddress);
         _groupVerify = IGroupVerify(factory.GROUP_VERIFY_ADDRESS());
         _groupManager = IGroupManager(factory.GROUP_MANAGER_ADDRESS());
-        // Note: _join and _verify are already initialized in ExtensionBase
-
-        // Set GroupJoin as delegate so it can call addAccount/removeAccount on behalf of this extension
         _center.setExtensionDelegate(groupJoinAddress);
 
-        // Store config as immutable
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
@@ -79,9 +57,6 @@ contract ExtensionGroupAction is
         _validateJoinToken(joinTokenAddress_, tokenAddress_);
     }
 
-    // ============ Reward Functions ============
-
-    /// @notice Burn unclaimed reward when no group submitted verification in a round
     function burnUnclaimedReward(uint256 round) external override {
         if (round >= _verify.currentRound()) revert RoundNotFinished();
 
@@ -109,7 +84,6 @@ contract ExtensionGroupAction is
         }
     }
 
-    /// @notice Get generated reward for a group in a round
     function generatedRewardByGroupId(
         uint256 round,
         uint256 groupId
@@ -117,7 +91,6 @@ contract ExtensionGroupAction is
         return _calculateRewardByGroupId(round, groupId);
     }
 
-    /// @notice Get generated reward for a verifier in a round
     function generatedRewardByVerifier(
         uint256 round,
         address verifier
@@ -132,8 +105,6 @@ contract ExtensionGroupAction is
             amount += _calculateRewardByGroupId(round, groupIds[i]);
         }
     }
-
-    // ============ IExtensionJoinedValue Implementation ============
 
     function isJoinedValueCalculated() external view returns (bool) {
         return JOIN_TOKEN_ADDRESS != tokenAddress;
@@ -158,9 +129,6 @@ contract ExtensionGroupAction is
         return _convertToTokenValue(amount);
     }
 
-    // ============ Internal Functions ============
-
-    /// @dev Calculate reward for an account in a specific round
     function _calculateReward(
         uint256 round,
         address account
@@ -214,7 +182,6 @@ contract ExtensionGroupAction is
         return (totalReward * groupScore) / totalScore;
     }
 
-    /// @dev Convert joinToken amount to tokenAddress value
     function _convertToTokenValue(
         uint256 amount
     ) internal view returns (uint256) {
@@ -228,14 +195,12 @@ contract ExtensionGroupAction is
             );
     }
 
-    /// @dev Validate joinToken: must be tokenAddress or LP containing tokenAddress
     function _validateJoinToken(
         address joinTokenAddress_,
         address tokenAddress_
     ) private view {
         if (joinTokenAddress_ == tokenAddress_) return;
 
-        // Must be LP token containing tokenAddress
         if (
             !TokenConversionLib.isLPTokenContainingTarget(
                 joinTokenAddress_,
@@ -246,4 +211,3 @@ contract ExtensionGroupAction is
         }
     }
 }
-
