@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Deploy all contracts to anvil in the correct order
+# Deploy all contracts to Anvil in the correct order
 # Usage: bash deploy_all_to_anvil.sh
 
 set -e
@@ -35,7 +35,7 @@ exit [lindex \$result 3]
 EOF
 }
 
-# 同步地址文件从子模块到主项目（部署后使用）
+# Sync address files from submodule to main project (used after deploy)
 sync_to_main_project() {
     local submodule_dir="$1"
     local network="$2"
@@ -48,10 +48,10 @@ sync_to_main_project() {
         return 0
     fi
     
-    # 创建主项目网络目录（如果不存在）
+    # Create the main project network directory if it doesn't exist
     mkdir -p "$main_network_dir"
     
-    # 只同步地址文件（address*.params），不包括配置文件（LOVE20.params, WETH.params 等）
+    # Only sync address files (address*.params), not config files such as LOVE20.params, WETH.params, etc.
     for file in "$submodule_network_dir"/address*.params; do
         if [ -f "$file" ]; then
             local filename=$(basename "$file")
@@ -61,11 +61,11 @@ sync_to_main_project() {
     done
 }
 
-# 同步地址文件从主项目到子模块（部署前使用）
+# Sync address files from main project to submodule (used before deploy)
 sync_from_main_project() {
     local submodule_dir="$1"
     local network="$2"
-    local files_to_sync="$3"  # 空格分隔的文件名列表，如 "address.params address.extension.center.params"
+    local files_to_sync="$3"  # Space-separated file name list, e.g., "address.params address.extension.center.params"
     
     local submodule_network_dir="$submodule_dir/script/network/$network"
     local main_network_dir="$PROJECT_ROOT/script/network/$network"
@@ -75,10 +75,10 @@ sync_from_main_project() {
         return 0
     fi
     
-    # 创建子模块网络目录（如果不存在）
+    # Create the submodule network directory if it doesn't exist
     mkdir -p "$submodule_network_dir"
     
-    # 同步指定的文件
+    # Sync the specified files
     for filename in $files_to_sync; do
         local main_file="$main_network_dir/$filename"
         if [ -f "$main_file" ]; then
@@ -90,7 +90,7 @@ sync_from_main_project() {
     done
 }
 
-# 同步必要的配置文件从主项目到子模块（部署前使用）
+# Sync required config files from main project to submodule (used before deploy)
 sync_config_files() {
     local submodule_dir="$1"
     local network="$2"
@@ -103,10 +103,10 @@ sync_config_files() {
         return 0
     fi
     
-    # 创建子模块网络目录（如果不存在）
+    # Create the submodule network directory if it doesn't exist
     mkdir -p "$submodule_network_dir"
     
-    # 同步必要的配置文件（如果子模块中没有）
+    # Sync required config files if they do not exist in the submodule
     for filename in ".account" "network.params"; do
         local main_file="$main_network_dir/$filename"
         local submodule_file="$submodule_network_dir/$filename"
@@ -127,50 +127,50 @@ echo "[Step 1/4] Deploying Core contracts..."
 cd "$PROJECT_ROOT/lib/extension/lib/core/script/deploy"
 run_with_password "one_click_deploy.sh" "$KEYSTORE_PASSWORD"
 cd "$PROJECT_ROOT"
-# 部署后：同步 Core 的地址文件到主项目
+# After deploy: sync Core address files to main project
 echo "  Syncing Core deployment addresses to main project..."
 sync_to_main_project "$PROJECT_ROOT/lib/extension/lib/core" "$network"
 
 # Step 2: Deploy Extension Center
 echo ""
 echo "[Step 2/4] Deploying Extension Center..."
-# 部署前：从主项目同步必要的配置文件和 Step 1 的地址文件到 Extension 子模块目录
+# Before deploy: sync required config files and Step 1 address files from main project to Extension submodule
 echo "  Syncing dependencies from main project to Extension submodule..."
 sync_config_files "$PROJECT_ROOT/lib/extension" "$network"
 sync_from_main_project "$PROJECT_ROOT/lib/extension" "$network" "address.params"
 cd "$PROJECT_ROOT/lib/extension/script/deploy"
 run_with_password "one_click_deploy.sh" "$KEYSTORE_PASSWORD"
 cd "$PROJECT_ROOT"
-# 部署后：同步 Extension Center 的地址文件到主项目
+# After deploy: sync Extension Center address files to main project
 echo "  Syncing Extension Center deployment addresses to main project..."
 sync_to_main_project "$PROJECT_ROOT/lib/extension" "$network"
 
 # Step 3: Deploy Group
 echo ""
 echo "[Step 3/4] Deploying Group..."
-# 部署前：从主项目同步必要的配置文件和 Step 1 的地址文件到 Group 子模块目录
+# Before deploy: sync required config files and Step 1 address files from main project to Group submodule
 echo "  Syncing dependencies from main project to Group submodule..."
 sync_config_files "$PROJECT_ROOT/lib/group" "$network"
 sync_from_main_project "$PROJECT_ROOT/lib/group" "$network" "address.params"
 cd "$PROJECT_ROOT/lib/group/script/deploy"
 run_with_password "one_click_deploy.sh" "$KEYSTORE_PASSWORD"
 cd "$PROJECT_ROOT"
-# 部署后：同步 Group 的地址文件到主项目
+# After deploy: sync Group address files to main project
 echo "  Syncing Group deployment addresses to main project..."
 sync_to_main_project "$PROJECT_ROOT/lib/group" "$network"
 
 # Step 4: Deploy Group Extension
 echo ""
 echo "[Step 4/4] Deploying Group Extension..."
-# 部署前：从主项目同步所有依赖的地址文件到主项目 script/deploy 目录（如果需要）
-# 注意：Step 4 在主项目目录运行，所以不需要同步到子模块
-# 但为了确保文件存在，可以验证一下
+# Before deploy: sync all dependent address files to main project script/deploy directory (if needed)
+# Note: Step 4 runs in main project directory, so no sync to submodule is required
+# But to be sure, dependencies in main project can be checked
 echo "  Verifying dependencies in main project..."
 cd "$PROJECT_ROOT/script/deploy"
 source 00_init.sh anvil
 bash one_click_deploy.sh anvil
 cd "$PROJECT_ROOT"
-# Step 4 在主项目目录，地址文件直接写入主项目，不需要同步
+# Step 4 writes address files directly to main project, no sync needed
 
 echo ""
 echo "========================================="
