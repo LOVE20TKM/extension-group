@@ -2,12 +2,8 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
-import {
-    ExtensionGroupService
-} from "../src/ExtensionGroupService.sol";
-import {
-    ExtensionGroupAction
-} from "../src/ExtensionGroupAction.sol";
+import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
+import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {
     IExtensionGroupService
 } from "../src/interface/IExtensionGroupService.sol";
@@ -17,9 +13,7 @@ import {GroupVerify} from "../src/GroupVerify.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
-import {
-    IExtensionJoin
-} from "@extension/src/interface/IExtensionJoin.sol";
+import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
@@ -356,9 +350,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(
-            IExtensionGroupService.ArrayLengthMismatch.selector
-        );
+        vm.expectRevert(IExtensionGroupService.ArrayLengthMismatch.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -382,9 +374,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         }
 
         vm.prank(groupOwner1);
-        vm.expectRevert(
-            IExtensionGroupService.TooManyRecipients.selector
-        );
+        vm.expectRevert(IExtensionGroupService.TooManyRecipients.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -452,9 +442,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[1] = 5e17; // 50% - total > 100%
 
         vm.prank(groupOwner1);
-        vm.expectRevert(
-            IExtensionGroupService.InvalidBasisPoints.selector
-        );
+        vm.expectRevert(IExtensionGroupService.InvalidBasisPoints.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -477,9 +465,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(
-            IExtensionGroupService.RecipientCannotBeSelf.selector
-        );
+        vm.expectRevert(IExtensionGroupService.RecipientCannotBeSelf.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -766,6 +752,145 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         // Non-joined account
         uint256 user2Value = groupService.joinedValueByAccount(user2);
         assertEq(user2Value, 0);
+    }
+
+    function test_JoinedValue_IncludesAllActions_NotJustVoted() public {
+        // Setup first action (ACTION_ID = 0) with voting
+        uint256 actionId1 = ACTION_ID;
+        // Note: groupId1 and groupId2 are already activated in ACTION_ID during setUp
+        // So we have activation stake for ACTION_ID
+
+        // Setup second action (ACTION_ID = 1) without voting
+        uint256 actionId2 = 1;
+        address groupAction2Address = actionFactory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+        submit.setActionInfo(address(token), actionId2, groupAction2Address);
+        token.mint(groupAction2Address, 1e18);
+
+        // Add actionId2 to votedActionIds (required for activation) but don't set votes
+        uint256 currentRound = join.currentRound();
+        vote.setVotedActionIds(address(token), currentRound, actionId2);
+        // Don't call vote.setVotesNumByActionId for actionId2, so it has 0 votes
+
+        // Create a new group for groupOwner2 to activate in action2
+        uint256 groupId3 = group.mint(groupOwner2, "TestGroup3");
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(newGroupManager)
+        );
+        vm.prank(groupOwner2);
+        newGroupManager.activateGroup(
+            address(token),
+            actionId2,
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // Verify joinedValue includes both actions (not just voted one)
+        // Note: action1 has 2 activated groups (groupId1, groupId2), action2 has 1 (groupId3)
+        uint256 joinedVal = groupService.joinedValue();
+        uint256 expectedTotal = newGroupManager.totalStaked(
+            address(token),
+            actionId1
+        ) + newGroupManager.totalStaked(address(token), actionId2);
+        assertEq(
+            joinedVal,
+            expectedTotal,
+            "joinedValue should include all actions, not just voted ones"
+        );
+        assertTrue(joinedVal > 0, "joinedVal should be greater than 0");
+        // Verify action2's stake is included (1 activation stake)
+        assertEq(
+            newGroupManager.totalStaked(address(token), actionId2),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            "action2 should have 1 activation stake"
+        );
+    }
+
+    function test_JoinedValueByAccount_IncludesAllActions_NotJustVoted()
+        public
+    {
+        // Setup first action (ACTION_ID = 0) with voting
+        // Note: groupOwner1's groupId1 is already activated in ACTION_ID during setUp
+        uint256 actionId1 = ACTION_ID;
+
+        // Setup second action (ACTION_ID = 1) without voting
+        uint256 actionId2 = 1;
+        address groupAction2Address = actionFactory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+        submit.setActionInfo(address(token), actionId2, groupAction2Address);
+        token.mint(groupAction2Address, 1e18);
+
+        // Add actionId2 to votedActionIds (required for activation) but don't set votes
+        uint256 currentRound = join.currentRound();
+        vote.setVotedActionIds(address(token), currentRound, actionId2);
+        // Don't call vote.setVotesNumByActionId for actionId2, so it has 0 votes
+
+        // Create a new group for groupOwner1 to activate in action2
+        uint256 groupId3 = group.mint(groupOwner1, "TestGroup3");
+        token.mint(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT);
+        vm.prank(groupOwner1);
+        token.approve(address(newGroupManager), GROUP_ACTIVATION_STAKE_AMOUNT);
+        vm.prank(groupOwner1);
+        newGroupManager.activateGroup(
+            address(token),
+            actionId2,
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // Join service
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Verify joinedValueByAccount includes both actions
+        uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
+        uint256 expectedTotal = newGroupManager.totalStakedByActionIdByOwner(
+            address(token),
+            actionId1,
+            groupOwner1
+        ) +
+            newGroupManager.totalStakedByActionIdByOwner(
+                address(token),
+                actionId2,
+                groupOwner1
+            );
+        assertEq(
+            ownerValue,
+            expectedTotal,
+            "joinedValueByAccount should include all actions, not just voted ones"
+        );
+        // Verify groupOwner1 has stake in action2
+        assertEq(
+            newGroupManager.totalStakedByActionIdByOwner(
+                address(token),
+                actionId2,
+                groupOwner1
+            ),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            "groupOwner1 should have stake in action2"
+        );
     }
 
     // ============ Event Tests ============
@@ -1421,16 +1546,13 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
     function test_JoinedValue_StakeTokenEqualsTokenAddress() public {
         uint256 stakeAmount = 1000e18;
 
-        (
-            ,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(token),
-                stakeAmount,
-                100,
-                101,
-                10
-            );
+        (, ExtensionGroupService groupService) = _setupGroupActionAndService(
+            address(token),
+            stakeAmount,
+            100,
+            101,
+            10
+        );
 
         // Setup user and activate group
         setupUser(groupOwner1, stakeAmount, address(newGroupManager));
@@ -1488,10 +1610,13 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         uint256 lpStakeAmount = 10e18;
 
-        (
-            ,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(lpToken, lpStakeAmount, 200, 201, 20);
+        (, ExtensionGroupService groupService) = _setupGroupActionAndService(
+            lpToken,
+            lpStakeAmount,
+            200,
+            201,
+            20
+        );
 
         // Setup: mint and approve LP tokens for newGroupManager
         MockUniswapV2Pair(lpToken).mint(groupOwner1, 20e18);
@@ -1551,16 +1676,13 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         uint256 stakeAmount = 100e18;
 
-        (
-            ,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(otherToken),
-                stakeAmount,
-                300,
-                301,
-                30
-            );
+        (, ExtensionGroupService groupService) = _setupGroupActionAndService(
+            address(otherToken),
+            stakeAmount,
+            300,
+            301,
+            30
+        );
 
         // Setup: mint and approve otherToken for newGroupManager
         otherToken.mint(groupOwner1, 200e18);
@@ -1605,16 +1727,13 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         uint256 stakeAmount = 100e18;
 
         // Deploy without creating Uniswap pair
-        (
-            ,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(otherToken),
-                stakeAmount,
-                400,
-                401,
-                40
-            );
+        (, ExtensionGroupService groupService) = _setupGroupActionAndService(
+            address(otherToken),
+            stakeAmount,
+            400,
+            401,
+            40
+        );
 
         // Setup: mint and approve otherToken for newGroupManager
         otherToken.mint(groupOwner1, 200e18);
@@ -1654,16 +1773,13 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         uint256 stakeAmount = 100e18;
 
-        (
-            ,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(otherToken),
-                stakeAmount,
-                500,
-                501,
-                50
-            );
+        (, ExtensionGroupService groupService) = _setupGroupActionAndService(
+            address(otherToken),
+            stakeAmount,
+            500,
+            501,
+            50
+        );
 
         // Mint enough tokens for activation stake (stakeAmount is 100e18, but we need more for safety)
         otherToken.mint(groupOwner1, stakeAmount * 3); // 300e18 to be safe

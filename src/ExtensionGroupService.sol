@@ -440,13 +440,11 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     function _getTotalStaked(
         address account
     ) internal view returns (uint256 total) {
-        (uint256[] memory aids, address[] memory exts) = _groupManager
-            .votedGroupActions(
-                GROUP_ACTION_FACTORY_ADDRESS,
-                GROUP_ACTION_TOKEN_ADDRESS,
-                _join.currentRound()
-            );
-        for (uint256 i; i < exts.length; ) {
+        uint256[] memory aids = _groupManager.actionIds(
+            GROUP_ACTION_FACTORY_ADDRESS,
+            GROUP_ACTION_TOKEN_ADDRESS
+        );
+        for (uint256 i; i < aids.length; ) {
             address ext = _center.extension(
                 GROUP_ACTION_TOKEN_ADDRESS,
                 aids[i]

@@ -4,12 +4,8 @@ pragma solidity =0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
-import {
-    ExtensionGroupAction
-} from "../../src/ExtensionGroupAction.sol";
-import {
-    ExtensionGroupService
-} from "../../src/ExtensionGroupService.sol";
+import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
+import {ExtensionGroupService} from "../../src/ExtensionGroupService.sol";
 import {
     IExtensionGroupService
 } from "../../src/interface/IExtensionGroupService.sol";
@@ -52,6 +48,38 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         bobGroup1.groupServiceAddress = aliceGroup.groupServiceAddress;
         bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
         h.group_service_join(bobGroup1);
+
+        // Verify joinedValue after join
+        ExtensionGroupService gs = ExtensionGroupService(
+            aliceGroup.groupServiceAddress
+        );
+        uint256 joinedVal = gs.joinedValue();
+        uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
+            h.firstTokenAddress(),
+            bobGroup1.groupActionId
+        );
+        assertEq(
+            joinedVal,
+            expectedJoinedVal,
+            "joinedValue should match totalStaked from groupManager"
+        );
+
+        // Verify joinedValueByAccount for Bob
+        uint256 bobJoinedVal = gs.joinedValueByAccount(
+            bobGroup1.flow.userAddress
+        );
+        uint256 expectedBobJoinedVal = h
+            .getGroupManager()
+            .totalStakedByActionIdByOwner(
+                h.firstTokenAddress(),
+                bobGroup1.groupActionId,
+                bobGroup1.flow.userAddress
+            );
+        assertEq(
+            bobJoinedVal,
+            expectedBobJoinedVal,
+            "joinedValueByAccount for Bob should match"
+        );
 
         // Bob sets recipients for his service reward distribution
         _setServiceRecipients();
@@ -420,6 +448,38 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         bobGroup2.groupServiceActionId = aliceGroup.groupServiceActionId;
         h.group_service_join(bobGroup1);
 
+        // Verify joinedValue after join (should include both groups)
+        ExtensionGroupService gs = ExtensionGroupService(
+            aliceGroup.groupServiceAddress
+        );
+        uint256 joinedVal = gs.joinedValue();
+        uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
+            h.firstTokenAddress(),
+            bobGroup1.groupActionId
+        );
+        assertEq(
+            joinedVal,
+            expectedJoinedVal,
+            "joinedValue should match totalStaked from groupManager"
+        );
+
+        // Verify joinedValueByAccount for Bob (should include both groups)
+        uint256 bobJoinedVal = gs.joinedValueByAccount(
+            bobGroup1.flow.userAddress
+        );
+        uint256 expectedBobJoinedVal = h
+            .getGroupManager()
+            .totalStakedByActionIdByOwner(
+                h.firstTokenAddress(),
+                bobGroup1.groupActionId,
+                bobGroup1.flow.userAddress
+            );
+        assertEq(
+            bobJoinedVal,
+            expectedBobJoinedVal,
+            "joinedValueByAccount for Bob should match"
+        );
+
         // Set different recipients for different groups
         // Group1: 30% to member3, 20% to member4
         address[] memory recipients1 = new address[](2);
@@ -466,16 +526,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // === Claim Phase ===
         h.next_phase();
 
-        ExtensionGroupService gs = ExtensionGroupService(
-            aliceGroup.groupServiceAddress
-        );
-
         // Verify rewardDistributionAll returns both groups
-        IExtensionGroupService.GroupDistribution[]
-            memory distributions = gs.rewardDistributionAll(
-                verifyRound,
-                bobGroup1.flow.userAddress
-            );
+        IExtensionGroupService.GroupDistribution[] memory distributions = gs
+            .rewardDistributionAll(verifyRound, bobGroup1.flow.userAddress);
         assertEq(distributions.length, 2, "Should have 2 group distributions");
 
         // Record balances before claim
@@ -543,5 +596,151 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             expectedBob,
             "Bob should receive remaining"
         );
+    }
+
+    /// @notice Test joinedValue includes all actions, not just voted ones
+    function test_joinedValue_includes_all_actions_not_just_voted() public {
+        // 1. Create and submit first group action by bob (with voting)
+        bobGroup1.groupActionAddress = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = bobGroup1.groupActionId;
+        h.vote(bobGroup1.flow);
+
+        // 2. Create and submit second group action by alice (with voting - needed for activation)
+        aliceGroup.groupActionAddress = h.group_action_create(aliceGroup);
+        aliceGroup.groupActionId = h.submit_group_action(aliceGroup);
+        aliceGroup.flow.actionId = aliceGroup.groupActionId;
+        h.vote(aliceGroup.flow); // Vote for alice's action too
+
+        // 3. Activate both group actions in join phase
+        h.next_phase();
+        h.group_activate(bobGroup1);
+        h.group_activate(aliceGroup);
+
+        // 4. Move to next vote phase so bob can submit group service
+        h.next_phase(); // Verify phase
+        h.next_phase(); // Back to vote phase
+
+        // 5. Re-submit and vote for both actions in this round
+        bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = bobGroup1.groupActionId;
+        h.vote(bobGroup1.flow);
+
+        // 6. Alice submits and votes for group service (using her staked governance)
+        aliceGroup.groupServiceAddress = h.group_service_create(
+            aliceGroup,
+            h.firstTokenAddress()
+        );
+        aliceGroup.groupServiceActionId = h.submit_group_service_action(
+            aliceGroup
+        );
+        aliceGroup.flow.actionId = aliceGroup.groupServiceActionId;
+        h.vote(aliceGroup.flow);
+
+        // 7. Move to join phase and bob joins service
+        h.next_phase();
+        bobGroup1.groupServiceAddress = aliceGroup.groupServiceAddress;
+        bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
+        h.group_service_join(bobGroup1);
+
+        // 8. Verify joinedValue includes both actions
+        ExtensionGroupService gs = ExtensionGroupService(
+            aliceGroup.groupServiceAddress
+        );
+        uint256 joinedVal = gs.joinedValue();
+        uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
+            h.firstTokenAddress(),
+            bobGroup1.groupActionId
+        ) +
+            h.getGroupManager().totalStaked(
+                h.firstTokenAddress(),
+                aliceGroup.groupActionId
+            );
+        assertEq(
+            joinedVal,
+            expectedJoinedVal,
+            "joinedValue should include all actions (both have groups activated)"
+        );
+        assertTrue(joinedVal > 0, "joinedValue should be greater than 0");
+    }
+
+    /// @notice Test joinedValueByAccount includes all actions, not just voted ones
+    function test_joinedValueByAccount_includes_all_actions_not_just_voted()
+        public
+    {
+        // 1. Create and submit first group action by bob (with voting)
+        bobGroup1.groupActionAddress = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = bobGroup1.groupActionId;
+        h.vote(bobGroup1.flow);
+
+        // 2. Create and submit second group action by alice (with voting - needed for activation)
+        aliceGroup.groupActionAddress = h.group_action_create(aliceGroup);
+        aliceGroup.groupActionId = h.submit_group_action(aliceGroup);
+        aliceGroup.flow.actionId = aliceGroup.groupActionId;
+        h.vote(aliceGroup.flow);
+
+        // 3. Activate both group actions and bob's second group in alice's action
+        h.next_phase();
+        h.group_activate(bobGroup1);
+        h.group_activate(aliceGroup);
+
+        // Bob also activates his second group (bobGroup2) in alice's action
+        // This way bob has groups in both actions
+        bobGroup2.groupActionAddress = aliceGroup.groupActionAddress;
+        bobGroup2.groupActionId = aliceGroup.groupActionId;
+        h.group_activate(bobGroup2);
+
+        // 4. Move to next vote phase so alice can submit group service
+        h.next_phase(); // Verify phase
+        h.next_phase(); // Back to vote phase
+
+        // 5. Re-submit and vote for bob's action in this round
+        bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = bobGroup1.groupActionId;
+        h.vote(bobGroup1.flow);
+
+        // 6. Alice submits and votes for group service
+        aliceGroup.groupServiceAddress = h.group_service_create(
+            aliceGroup,
+            h.firstTokenAddress()
+        );
+        aliceGroup.groupServiceActionId = h.submit_group_service_action(
+            aliceGroup
+        );
+        aliceGroup.flow.actionId = aliceGroup.groupServiceActionId;
+        h.vote(aliceGroup.flow);
+
+        // 7. Move to join phase and bob joins service
+        h.next_phase();
+        bobGroup1.groupServiceAddress = aliceGroup.groupServiceAddress;
+        bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
+        h.group_service_join(bobGroup1);
+
+        // 8. Verify joinedValueByAccount includes both actions
+        ExtensionGroupService gs = ExtensionGroupService(
+            aliceGroup.groupServiceAddress
+        );
+        uint256 bobJoinedVal = gs.joinedValueByAccount(
+            bobGroup1.flow.userAddress
+        );
+        uint256 expectedBobJoinedVal = h
+            .getGroupManager()
+            .totalStakedByActionIdByOwner(
+                h.firstTokenAddress(),
+                bobGroup1.groupActionId,
+                bobGroup1.flow.userAddress
+            ) +
+            h.getGroupManager().totalStakedByActionIdByOwner(
+                h.firstTokenAddress(),
+                aliceGroup.groupActionId,
+                bobGroup1.flow.userAddress
+            );
+        assertEq(
+            bobJoinedVal,
+            expectedBobJoinedVal,
+            "joinedValueByAccount should include all actions"
+        );
+        assertTrue(bobJoinedVal > 0, "bobJoinedVal should be greater than 0");
     }
 }
