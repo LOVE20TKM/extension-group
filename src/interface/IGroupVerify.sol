@@ -194,12 +194,6 @@ interface IGroupVerify {
         uint256 groupId
     ) external view returns (uint256);
 
-    function totalVerifyVotes(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 round
-    ) external view returns (uint256);
-
     function distrustVotesByGroupOwner(
         address tokenAddress,
         uint256 actionId,

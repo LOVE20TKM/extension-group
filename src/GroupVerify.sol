@@ -11,6 +11,7 @@ import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
+import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
@@ -22,6 +23,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
     ILOVE20Verify internal _verify;
+    ILOVE20Vote internal _vote;
     IGroupJoin internal _groupJoin;
 
     address internal _factoryAddress;
@@ -88,6 +90,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _verify = ILOVE20Verify(_center.verifyAddress());
+        _vote = ILOVE20Vote(_center.voteAddress());
         _groupJoin = IGroupJoin(_factory.GROUP_JOIN_ADDRESS());
 
         _initialized = true;
@@ -534,21 +537,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _totalScoreByGroupId[extension][round][groupId];
     }
 
-    function totalVerifyVotes(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 round
-    ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
-        return
-            _verify.scoreByActionIdByAccount(
-                tokenAddress,
-                round,
-                actionId,
-                extension
-            );
-    }
-
     function distrustVotesByGroupOwner(
         address tokenAddress,
         uint256 actionId,
@@ -762,12 +750,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
-        uint256 total = _verify.scoreByActionIdByAccount(
-            tokenAddress,
-            round,
-            actionId,
-            extension
-        );
+        uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
         uint256 capacityReduction = _capacityReductionByGroupId[extension][
             round
         ][groupId];
@@ -790,12 +773,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
-        uint256 total = _verify.scoreByActionIdByAccount(
-            tokenAddress,
-            round,
-            actionId,
-            extension
-        );
+        uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
 
         uint256[] storage groupIds = _groupIdsByVerifier[extension][round][
             groupOwner
