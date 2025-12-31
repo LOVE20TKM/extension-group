@@ -3,9 +3,7 @@ pragma solidity =0.8.17;
 
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
-import {
-    ExtensionGroupAction
-} from "../../src/ExtensionGroupAction.sol";
+import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 
@@ -194,9 +192,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.next_phase();
         h.group_activate(bobGroup1);
 
-        ExtensionGroupAction groupAction = ExtensionGroupAction(
-            extensionAddr
-        );
+        ExtensionGroupAction groupAction = ExtensionGroupAction(extensionAddr);
 
         // Initial joined value should be 0
         assertEq(
@@ -235,7 +231,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             "Member2 joined value mismatch"
         );
         assertFalse(
-            groupAction.isJoinedValueCalculated(),
+            groupAction.isJoinedValueConverted(),
             "Should not be calculated when joinToken == tokenAddress"
         );
     }

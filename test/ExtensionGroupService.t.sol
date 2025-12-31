@@ -717,8 +717,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
     // ============ IExtensionJoinedValue Tests ============
 
-    function test_IsJoinedValueCalculated() public view {
-        assertTrue(groupService.isJoinedValueCalculated());
+    function test_isJoinedValueConverted() public view {
+        assertTrue(groupService.isJoinedValueConverted());
     }
 
     function test_JoinedValue() public {

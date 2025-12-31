@@ -284,7 +284,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
     }
 
-    function isJoinedValueCalculated() external pure returns (bool) {
+    function isJoinedValueConverted() external pure returns (bool) {
         return true;
     }
 

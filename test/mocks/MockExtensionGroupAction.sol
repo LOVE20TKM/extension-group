@@ -2,7 +2,9 @@
 pragma solidity =0.8.17;
 
 import {IExtension} from "@extension/src/interface/IExtension.sol";
-import {IExtensionGroupAction} from "../../src/interface/IExtensionGroupAction.sol";
+import {
+    IExtensionGroupAction
+} from "../../src/interface/IExtensionGroupAction.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 
 /**
@@ -11,7 +13,7 @@ import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
  */
 contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     // ============ Config Immutables ============
-    
+
     address public immutable override STAKE_TOKEN_ADDRESS;
     address public immutable override JOIN_TOKEN_ADDRESS;
     uint256 public immutable override ACTIVATION_STAKE_AMOUNT;
@@ -40,7 +42,7 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         actionId = actionId_;
     }
 
-    function isJoinedValueCalculated() external pure returns (bool) {
+    function isJoinedValueConverted() external pure returns (bool) {
         return true;
     }
 
@@ -97,4 +99,3 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         return 0;
     }
 }
-

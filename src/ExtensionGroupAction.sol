@@ -106,7 +106,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         }
     }
 
-    function isJoinedValueCalculated() external view returns (bool) {
+    function isJoinedValueConverted() external view returns (bool) {
         return JOIN_TOKEN_ADDRESS != tokenAddress;
     }
 

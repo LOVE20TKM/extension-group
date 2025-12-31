@@ -456,9 +456,9 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
     // ============ IExtensionJoinedValue Tests ============
 
-    function test_IsJoinedValueCalculated() public view {
+    function test_isJoinedValueConverted() public view {
         // joinToken == tokenAddress, so no conversion needed
-        assertFalse(groupAction.isJoinedValueCalculated());
+        assertFalse(groupAction.isJoinedValueConverted());
     }
 
     function test_JoinedValue() public {
@@ -893,7 +893,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token),
             "tokenAddress mismatch"
         );
-        assertFalse(action.isJoinedValueCalculated());
+        assertFalse(action.isJoinedValueConverted());
     }
 
     function test_ValidJoinToken_LPContainingToken() public {
@@ -917,7 +917,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Get joinTokenAddress from extension config
         address joinTokenAddress = action.JOIN_TOKEN_ADDRESS();
         assertEq(joinTokenAddress, address(lpToken));
-        assertTrue(action.isJoinedValueCalculated());
+        assertTrue(action.isJoinedValueConverted());
     }
 
     function test_JoinedValue_WithLPToken() public {
