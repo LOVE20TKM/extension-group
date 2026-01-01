@@ -84,7 +84,7 @@ contract GroupManager is IGroupManager {
         uint256 minJoinAmount,
         uint256 maxJoinAmount,
         uint256 maxAccounts_
-    ) external override {
+    ) external override onlyGroupOwner(groupId) {
         address extensionAddr = _center.registerActionIfNeeded(
             tokenAddress,
             actionId
@@ -93,7 +93,6 @@ contract GroupManager is IGroupManager {
         _prepareExtension(extensionAddr, tokenAddress, actionId);
 
         IExtensionGroupAction extension = IExtensionGroupAction(extensionAddr);
-        _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extensionAddr][groupId];
 
@@ -143,10 +142,9 @@ contract GroupManager is IGroupManager {
         address tokenAddress,
         uint256 actionId,
         uint256 groupId
-    ) external override {
+    ) external override onlyGroupOwner(groupId) {
         address extension = _center.extension(tokenAddress, actionId);
         address actionFactory = IExtension(extension).factory();
-        _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
 
@@ -196,9 +194,8 @@ contract GroupManager is IGroupManager {
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
-    ) external override {
+    ) external override onlyGroupOwner(groupId) {
         address extension = _center.extension(tokenAddress, actionId);
-        _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
@@ -539,8 +536,9 @@ contract GroupManager is IGroupManager {
         return actionIds_;
     }
 
-    function _checkGroupOwner(uint256 groupId) internal view {
+    modifier onlyGroupOwner(uint256 groupId) {
         if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
+        _;
     }
 
     function _prepareExtension(
