@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 import {MockExtensionGroupAction} from "./mocks/MockExtensionGroupAction.sol";
 
@@ -190,11 +191,10 @@ contract GroupManagerTest is BaseGroupTest {
         submit.setActionInfo(address(token2), ACTION_ID_1, address(extension1));
 
         // Second activation with same extension but different tokenAddress should revert
-        // Note: This will fail at config check since extension1's config uses token, not token2
-        // But the uniqueness check should happen first, so we expect ExtensionTokenActionMismatch
+        // ExtensionCenter.registerActionIfNeeded checks first and reverts with ActionAlreadyBoundToOtherAction
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(
-            IGroupManager.ExtensionTokenActionMismatch.selector
+            IExtensionCenter.ActionAlreadyBoundToOtherAction.selector
         );
         groupManager.activateGroup(
             address(token2),
@@ -241,9 +241,10 @@ contract GroupManagerTest is BaseGroupTest {
         submit.setActionInfo(address(token), ACTION_ID_2, address(extension1));
 
         // Second activation with same extension but different actionId should revert
+        // ExtensionCenter.registerActionIfNeeded checks first and reverts with ActionAlreadyBoundToOtherAction
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(
-            IGroupManager.ExtensionTokenActionMismatch.selector
+            IExtensionCenter.ActionAlreadyBoundToOtherAction.selector
         );
         groupManager.activateGroup(
             address(token),
@@ -357,10 +358,11 @@ contract GroupManagerTest is BaseGroupTest {
         groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId1);
 
         // Try to activate with different actionId should still revert
+        // ExtensionCenter.registerActionIfNeeded checks first and reverts with ActionAlreadyBoundToOtherAction
         submit.setActionInfo(address(token), ACTION_ID_2, address(extension1));
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(
-            IGroupManager.ExtensionTokenActionMismatch.selector
+            IExtensionCenter.ActionAlreadyBoundToOtherAction.selector
         );
         groupManager.activateGroup(
             address(token),
@@ -647,10 +649,15 @@ contract GroupManagerTest is BaseGroupTest {
             uint256 maxAccounts,
             bool isActive,
             ,
+
         ) = groupManager.groupInfo(address(token), ACTION_ID_1, groupId);
 
         assertEq(groupId_, groupId, "GroupId should match");
-        assertEq(description, "Updated Description", "Description should be updated");
+        assertEq(
+            description,
+            "Updated Description",
+            "Description should be updated"
+        );
         assertEq(maxCapacity, 200, "MaxCapacity should be updated");
         assertEq(minJoinAmount, 2e18, "MinJoinAmount should be updated");
         assertEq(maxJoinAmount, 3e18, "MaxJoinAmount should be updated");
@@ -812,7 +819,11 @@ contract GroupManagerTest is BaseGroupTest {
         assertEq(maxJoinAmount, 2e18, "MaxJoinAmount should match");
         assertEq(maxAccounts, 10, "MaxAccounts should match");
         assertTrue(isActive, "Group should be active");
-        assertEq(activatedRound, join.currentRound(), "ActivatedRound should match");
+        assertEq(
+            activatedRound,
+            join.currentRound(),
+            "ActivatedRound should match"
+        );
         assertEq(deactivatedRound, 0, "DeactivatedRound should be 0");
     }
 

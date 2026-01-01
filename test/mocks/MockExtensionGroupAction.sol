@@ -6,6 +6,8 @@ import {
     IExtensionGroupAction
 } from "../../src/interface/IExtensionGroupAction.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
+import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
+import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 
 /**
  * @title MockExtensionGroupAction
@@ -42,17 +44,27 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         actionId = actionId_;
     }
 
-    function isJoinedValueConverted() external pure returns (bool) {
+    function isJoinedValueConverted()
+        external
+        pure
+        override(ExtensionCore, IExtensionCore)
+        returns (bool)
+    {
         return true;
     }
 
-    function joinedValue() external pure returns (uint256) {
+    function joinedValue()
+        external
+        pure
+        override(ExtensionCore, IExtensionCore)
+        returns (uint256)
+    {
         return 0;
     }
 
     function joinedValueByAccount(
         address /*account*/
-    ) external pure returns (uint256) {
+    ) external pure override(ExtensionCore, IExtensionCore) returns (uint256) {
         return 0;
     }
 

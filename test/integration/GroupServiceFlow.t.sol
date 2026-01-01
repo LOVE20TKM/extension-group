@@ -613,6 +613,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.vote(aliceGroup.flow); // Vote for alice's action too
 
         // 3. Activate both group actions in join phase
+        // Save original actionIds for expected value calculation (groups are activated with these actionIds)
+        uint256 originalBobActionId = bobGroup1.groupActionId;
+        uint256 originalAliceActionId = aliceGroup.groupActionId;
         h.next_phase();
         h.group_activate(bobGroup1);
         h.group_activate(aliceGroup);
@@ -622,6 +625,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.next_phase(); // Back to vote phase
 
         // 5. Re-submit and vote for both actions in this round
+        // Note: This creates new actionIds, but groups are still linked to original actionIds
         bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = bobGroup1.groupActionId;
         h.vote(bobGroup1.flow);
@@ -648,13 +652,14 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             aliceGroup.groupServiceAddress
         );
         uint256 joinedVal = gs.joinedValue();
+        // Use original actionIds for expected value calculation since groups were activated with those
         uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
             h.firstTokenAddress(),
-            bobGroup1.groupActionId
+            originalBobActionId
         ) +
             h.getGroupManager().totalStaked(
                 h.firstTokenAddress(),
-                aliceGroup.groupActionId
+                originalAliceActionId
             );
         assertEq(
             joinedVal,
@@ -681,6 +686,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.vote(aliceGroup.flow);
 
         // 3. Activate both group actions and bob's second group in alice's action
+        // Save original actionIds for expected value calculation (groups are activated with these actionIds)
+        uint256 originalBobActionId = bobGroup1.groupActionId;
+        uint256 originalAliceActionId = aliceGroup.groupActionId;
         h.next_phase();
         h.group_activate(bobGroup1);
         h.group_activate(aliceGroup);
@@ -696,6 +704,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.next_phase(); // Back to vote phase
 
         // 5. Re-submit and vote for bob's action in this round
+        // Note: This creates a new actionId, but groups are still linked to original actionId
         bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = bobGroup1.groupActionId;
         h.vote(bobGroup1.flow);
@@ -724,16 +733,17 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 bobJoinedVal = gs.joinedValueByAccount(
             bobGroup1.flow.userAddress
         );
+        // Use original actionIds for expected value calculation since groups were activated with those
         uint256 expectedBobJoinedVal = h
             .getGroupManager()
             .totalStakedByActionIdByOwner(
                 h.firstTokenAddress(),
-                bobGroup1.groupActionId,
+                originalBobActionId,
                 bobGroup1.flow.userAddress
             ) +
             h.getGroupManager().totalStakedByActionIdByOwner(
                 h.firstTokenAddress(),
-                aliceGroup.groupActionId,
+                originalAliceActionId,
                 bobGroup1.flow.userAddress
             );
         assertEq(

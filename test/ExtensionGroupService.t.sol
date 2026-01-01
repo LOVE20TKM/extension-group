@@ -1210,8 +1210,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Add an actionId with extension not registered in factory
+        // Use address(token) as invalid extension - it's a contract but doesn't implement factory()
+        // This allows ExtensionCenter's try-catch to properly handle the error
         uint256 invalidActionId = 200;
-        address invalidExtension = address(0x999);
+        address invalidExtension = address(token);
         submit.setActionInfo(address(token), invalidActionId, invalidExtension);
         vote.setVotedActionIds(
             address(token),

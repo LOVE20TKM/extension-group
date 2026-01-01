@@ -85,7 +85,10 @@ contract GroupManager is IGroupManager {
         uint256 maxJoinAmount,
         uint256 maxAccounts_
     ) external override {
-        address extensionAddr = _getExtension(tokenAddress, actionId);
+        address extensionAddr = _center.registerActionIfNeeded(
+            tokenAddress,
+            actionId
+        );
         address actionFactory = IExtension(extensionAddr).factory();
         _prepareExtension(extensionAddr, tokenAddress, actionId);
 
@@ -141,7 +144,7 @@ contract GroupManager is IGroupManager {
         uint256 actionId,
         uint256 groupId
     ) external override {
-        address extension = _getExtension(tokenAddress, actionId);
+        address extension = _center.extension(tokenAddress, actionId);
         address actionFactory = IExtension(extension).factory();
         _checkGroupOwner(groupId);
 
@@ -194,7 +197,7 @@ contract GroupManager is IGroupManager {
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
     ) external override {
-        address extension = _getExtension(tokenAddress, actionId);
+        address extension = _center.extension(tokenAddress, actionId);
         _checkGroupOwner(groupId);
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -534,23 +537,6 @@ contract GroupManager is IGroupManager {
         }
 
         return actionIds_;
-    }
-
-    function _getExtension(
-        address tokenAddress,
-        uint256 actionId
-    ) internal view returns (address extension) {
-        extension = _center.extension(tokenAddress, actionId);
-        IExtension extensionContract = IExtension(extension);
-        if (extension == address(0)) revert NotRegisteredExtension();
-        try
-            IExtensionFactory(extensionContract.factory()).exists(extension)
-        returns (bool exists) {
-            if (!exists) revert NotRegisteredExtensionInFactory();
-        } catch {
-            revert NotRegisteredExtensionInFactory();
-        }
-        return extension;
     }
 
     function _checkGroupOwner(uint256 groupId) internal view {

@@ -2,6 +2,8 @@
 pragma solidity =0.8.17;
 
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
+import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
+import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
 import {
     IExtensionGroupActionFactory
@@ -106,11 +108,21 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         }
     }
 
-    function isJoinedValueConverted() external view returns (bool) {
+    function isJoinedValueConverted()
+        external
+        view
+        override(ExtensionCore, IExtensionCore)
+        returns (bool)
+    {
         return JOIN_TOKEN_ADDRESS != tokenAddress;
     }
 
-    function joinedValue() external view returns (uint256) {
+    function joinedValue()
+        external
+        view
+        override(ExtensionCore, IExtensionCore)
+        returns (uint256)
+    {
         uint256 totalAmount = _groupJoin.totalJoinedAmount(
             tokenAddress,
             actionId
@@ -120,7 +132,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
 
     function joinedValueByAccount(
         address account
-    ) external view returns (uint256) {
+    ) external view override(ExtensionCore, IExtensionCore) returns (uint256) {
         (, uint256 amount, ) = _groupJoin.joinInfo(
             tokenAddress,
             actionId,

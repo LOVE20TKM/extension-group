@@ -6,6 +6,8 @@ import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ExtensionBaseJoin} from "@extension/src/ExtensionBaseJoin.sol";
+import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
+import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
 import {
     IExtensionFactory
@@ -284,17 +286,27 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
     }
 
-    function isJoinedValueConverted() external pure returns (bool) {
+    function isJoinedValueConverted()
+        external
+        pure
+        override(ExtensionCore, IExtensionCore)
+        returns (bool)
+    {
         return true;
     }
 
-    function joinedValue() external view returns (uint256) {
+    function joinedValue()
+        external
+        view
+        override(ExtensionCore, IExtensionCore)
+        returns (uint256)
+    {
         return _getTotalStaked(address(0));
     }
 
     function joinedValueByAccount(
         address account
-    ) external view returns (uint256) {
+    ) external view override(ExtensionCore, IExtensionCore) returns (uint256) {
         if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
         return _getTotalStaked(account);
     }
