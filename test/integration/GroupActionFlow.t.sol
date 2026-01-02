@@ -67,16 +67,14 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             groupJoin.totalJoinedAmount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId
+                bobGroup1.groupActionAddress
             ),
             30e18,
             "Total joined mismatch"
         );
         assertEq(
             groupJoin.accountsByGroupIdCount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 bobGroup1.groupId
             ),
             2,

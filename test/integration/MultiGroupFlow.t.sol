@@ -85,8 +85,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             groupVerify.verifiersCount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 verifyRound
             ),
             2,
@@ -94,8 +93,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             groupJoin.accountsByGroupIdCount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 bobGroup1.groupId
             ),
             3,
@@ -103,8 +101,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             groupJoin.accountsByGroupIdCount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 bobGroup2.groupId
             ),
             3,
@@ -112,8 +109,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             groupJoin.accountsByGroupIdCount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 aliceGroup.groupId
             ),
             3,
@@ -187,8 +183,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         uint256 round = h.verifyContract().currentRound();
         assertEq(
             groupVerifyContract.verifiersCount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 round
             ),
             2,
@@ -524,14 +519,12 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
         uint256 reduction1 = groupVerifyContract2.capacityReductionByGroupId(
-            bobGroup1.flow.tokenAddress,
-            bobGroup1.groupActionId,
+            bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup1.groupId
         );
         uint256 reduction2 = groupVerifyContract2.capacityReductionByGroupId(
-            bobGroup1.flow.tokenAddress,
-            bobGroup1.groupActionId,
+            bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup2.groupId
         );
@@ -542,8 +535,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         // Verify group scores match joined amounts (no reduction applied)
         assertEq(
             groupVerifyContract2.scoreByGroupId(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 verifyRound,
                 bobGroup1.groupId
             ),
@@ -552,8 +544,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             groupVerifyContract2.scoreByGroupId(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 verifyRound,
                 bobGroup2.groupId
             ),

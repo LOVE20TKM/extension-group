@@ -14,6 +14,7 @@ interface IGroupManager {
     error NotRegisteredExtensionInFactory();
     error AlreadyInitialized();
     error InvalidFactory();
+    error ExtensionNotInitialized();
 
     event GroupActivate(
         address indexed tokenAddress,

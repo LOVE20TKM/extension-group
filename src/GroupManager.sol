@@ -74,10 +74,12 @@ contract GroupManager is IGroupManager {
         uint256 minJoinAmount,
         uint256 maxJoinAmount,
         uint256 maxAccounts_
-    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
-        if (!IExtension(extension).initialized()) {
-            IExtensionGroupAction(extension).initializeAction();
-        }
+    )
+        external
+        override
+        onlyGroupOwner(groupId)
+        onlyValidExtensionAndAutoInitialize(extension)
+    {
         address tokenAddress = IExtension(extension).tokenAddress();
         uint256 actionId = IExtension(extension).actionId();
 
@@ -126,7 +128,12 @@ contract GroupManager is IGroupManager {
     function deactivateGroup(
         address extension,
         uint256 groupId
-    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
+    )
+        external
+        override
+        onlyGroupOwner(groupId)
+        onlyValidExtensionAndAutoInitialize(extension)
+    {
         address tokenAddress = IExtension(extension).tokenAddress();
         uint256 actionId = IExtension(extension).actionId();
 
@@ -174,7 +181,12 @@ contract GroupManager is IGroupManager {
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
-    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
+    )
+        external
+        override
+        onlyGroupOwner(groupId)
+        onlyValidExtensionAndAutoInitialize(extension)
+    {
         address tokenAddress = IExtension(extension).tokenAddress();
         uint256 actionId = IExtension(extension).actionId();
 
@@ -444,10 +456,11 @@ contract GroupManager is IGroupManager {
         _;
     }
 
-    modifier onlyValidExtension(address extension) {
-        if (!_factory.exists(extension))
+    modifier onlyValidExtensionAndAutoInitialize(address extension) {
+        if (!_factory.exists(extension)) {
             revert NotRegisteredExtensionInFactory();
-
+        }
+        IExtension(extension).initializeIfNeeded();
         _;
     }
 

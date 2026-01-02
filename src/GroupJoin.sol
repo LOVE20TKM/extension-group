@@ -6,8 +6,8 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
@@ -80,20 +80,15 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     }
 
     function join(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 amount,
         string[] memory verificationInfos
-    )
-        external
-        override
-        nonReentrant
-        onlyValidExtension(tokenAddress, actionId)
-    {
+    ) external override nonReentrant onlyValidExtension(extension) {
         if (amount == 0) revert JoinAmountZero();
 
-        address extension = _getExtension(tokenAddress, actionId);
+        address tokenAddress = IExtension(extension).tokenAddress();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _join.currentRound();
 
         _processJoin(
@@ -118,15 +113,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     }
 
     function exit(
-        address tokenAddress,
-        uint256 actionId
-    )
-        external
-        override
-        nonReentrant
-        onlyValidExtension(tokenAddress, actionId)
-    {
-        address extension = _getExtension(tokenAddress, actionId);
+        address extension
+    ) external override nonReentrant onlyValidExtension(extension) {
+        address tokenAddress = IExtension(extension).tokenAddress();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 groupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();
         if (groupId == 0) revert NotInGroup();
@@ -172,8 +162,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     }
 
     function joinInfo(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account
     )
         external
@@ -181,7 +170,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         override
         returns (uint256 joinedRound, uint256 amount, uint256 groupId)
     {
-        address extension = _getExtension(tokenAddress, actionId);
         return (
             _joinedRoundByAccount[extension][account],
             _amountHistoryByAccount[extension][account].latestValue(),
@@ -190,93 +178,75 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     }
 
     function accountsByGroupIdCount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _accountCountByGroupIdHistory[extension][groupId].latestValue();
     }
 
     function accountsByGroupIdAtIndex(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 index
     ) external view override returns (address) {
-        address extension = _getExtension(tokenAddress, actionId);
         return
             _accountByGroupIdAndIndexHistory[extension][groupId][index]
                 .latestValue();
     }
 
     function groupIdByAccountByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _groupIdHistoryByAccount[extension][account].value(round);
     }
 
     function totalJoinedAmountByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return
             _totalJoinedAmountHistoryByGroupId[extension][groupId]
                 .latestValue();
     }
 
     function totalJoinedAmountByGroupIdByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return
             _totalJoinedAmountHistoryByGroupId[extension][groupId].value(round);
     }
 
     function totalJoinedAmount(
-        address tokenAddress,
-        uint256 actionId
+        address extension
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _totalJoinedAmountHistory[extension].latestValue();
     }
 
     function totalJoinedAmountByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _totalJoinedAmountHistory[extension].value(round);
     }
 
     function accountCountByGroupIdByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _accountCountByGroupIdHistory[extension][groupId].value(round);
     }
 
     function accountByGroupIdAndIndexByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 index,
         uint256 round
     ) external view override returns (address) {
-        address extension = _getExtension(tokenAddress, actionId);
         return
             _accountByGroupIdAndIndexHistory[extension][groupId][index].value(
                 round
@@ -284,40 +254,21 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     }
 
     function amountByAccountByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _amountHistoryByAccount[extension][account].value(round);
     }
 
-    modifier onlyValidExtension(address tokenAddress, uint256 actionId) {
-        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
-        ActionInfo memory actionInfo = submit.actionInfo(
-            tokenAddress,
-            actionId
-        );
-        address extension = actionInfo.body.whiteListAddress;
-
+    modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
             revert InvalidFactory();
         }
+        if (!IExtension(extension).initialized()) {
+            revert ExtensionNotInitialized();
+        }
         _;
-    }
-
-    function _getExtension(
-        address tokenAddress,
-        uint256 actionId
-    ) internal view returns (address extension) {
-        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
-        ActionInfo memory actionInfo = submit.actionInfo(
-            tokenAddress,
-            actionId
-        );
-        extension = actionInfo.body.whiteListAddress;
-        if (extension == address(0)) revert InvalidFactory();
     }
 
     function _getJoinTokenAddress(

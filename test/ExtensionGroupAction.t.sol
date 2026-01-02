@@ -172,8 +172,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount1,
             new string[](0)
@@ -181,8 +180,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user2);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount2,
             new string[](0)
@@ -190,15 +188,11 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Verify join state
         assertEq(
-            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
+            groupJoin.totalJoinedAmount(address(groupAction)),
             joinAmount1 + joinAmount2
         );
         assertEq(
-            groupJoin.accountsByGroupIdCount(
-                address(token),
-                ACTION_ID,
-                groupId1
-            ),
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
             2
         );
 
@@ -209,8 +203,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -220,8 +213,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 round = verify.currentRound();
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round,
                 user1
             ),
@@ -229,8 +221,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round,
                 user2
             ),
@@ -239,18 +230,14 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // 4. User exits
         vm.prank(user1);
-        groupJoin.exit(address(token), ACTION_ID);
+        groupJoin.exit(address(groupAction));
 
         assertEq(
-            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
+            groupJoin.totalJoinedAmount(address(groupAction)),
             joinAmount2
         );
         assertEq(
-            groupJoin.accountsByGroupIdCount(
-                address(token),
-                ACTION_ID,
-                groupId1
-            ),
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
             1
         );
     }
@@ -278,8 +265,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         vm.expectRevert(IGroupJoin.CannotJoinDeactivatedGroup.selector);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -291,8 +277,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.setGroupDelegatedVerifier(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             delegatedVerifier
         );
@@ -303,8 +288,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -316,8 +300,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(delegatedVerifier);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -326,8 +309,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 round = verify.currentRound();
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round,
                 user1
             ),
@@ -342,8 +324,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -354,8 +335,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -367,8 +347,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
         uint256 scoreBefore = groupVerify.scoreByGroupId(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             round,
             groupId1
         );
@@ -376,16 +355,14 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         // Cast distrust vote
         vm.prank(governor, governor);
         groupVerify.distrustVote(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupOwner1,
             50e18,
             "Bad behavior"
         );
 
         uint256 scoreAfter = groupVerify.scoreByGroupId(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             round,
             groupId1
         );
@@ -400,8 +377,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -409,8 +385,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user2);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId2,
             joinAmount,
             new string[](0)
@@ -421,8 +396,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -430,18 +404,14 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner2);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId2,
             0,
             scores
         );
 
         uint256 round = verify.currentRound();
-        assertEq(
-            groupVerify.verifiersCount(address(token), ACTION_ID, round),
-            2
-        );
+        assertEq(groupVerify.verifiersCount(address(groupAction), round), 2);
     }
 
     // ============ IExtensionJoinedValue Tests ============
@@ -459,8 +429,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount1,
             new string[](0)
@@ -468,8 +437,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user2);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId2,
             joinAmount2,
             new string[](0)
@@ -484,8 +452,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -500,15 +467,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
     function test_ImplementsGroupInterfaces() public view {
         // Contract should properly implement the interfaces
         assertTrue(
-            groupVerify.canVerify(
-                address(token),
-                ACTION_ID,
-                groupOwner1,
-                groupId1
-            )
+            groupVerify.canVerify(address(groupAction), groupOwner1, groupId1)
         );
         assertFalse(
-            groupVerify.canVerify(address(token), ACTION_ID, user1, groupId1)
+            groupVerify.canVerify(address(groupAction), user1, groupId1)
         );
     }
 
@@ -521,43 +483,31 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         // First join
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
         );
 
-        assertEq(
-            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
-            joinAmount
-        );
+        assertEq(groupJoin.totalJoinedAmount(address(groupAction)), joinAmount);
 
         // Exit
         vm.prank(user1);
-        groupJoin.exit(address(token), ACTION_ID);
+        groupJoin.exit(address(groupAction));
 
-        assertEq(groupJoin.totalJoinedAmount(address(token), ACTION_ID), 0);
+        assertEq(groupJoin.totalJoinedAmount(address(groupAction)), 0);
 
         // Rejoin (possibly different group)
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId2,
             joinAmount,
             new string[](0)
         );
 
-        assertEq(
-            groupJoin.totalJoinedAmount(address(token), ACTION_ID),
-            joinAmount
-        );
-        (, , uint256 groupId) = groupJoin.joinInfo(
-            address(token),
-            ACTION_ID,
-            user1
-        );
+        assertEq(groupJoin.totalJoinedAmount(address(groupAction)), joinAmount);
+        (, , uint256 groupId) = groupJoin.joinInfo(address(groupAction), user1);
         assertEq(groupId, groupId2);
     }
 
@@ -567,8 +517,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -579,8 +528,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -588,7 +536,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
         assertEq(
-            groupVerify.scoreByAccount(address(token), ACTION_ID, round, user1),
+            groupVerify.scoreByAccount(address(groupAction), round, user1),
             0
         );
     }
@@ -599,8 +547,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -611,8 +558,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -621,8 +567,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 round = verify.currentRound();
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round,
                 user1
             ),
@@ -678,8 +623,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -687,11 +631,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Verify join was successful
         assertEq(
-            groupJoin.accountsByGroupIdCount(
-                address(token),
-                ACTION_ID,
-                groupId1
-            ),
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
             1
         );
 
@@ -709,17 +649,13 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         // This should succeed since we're within capacity
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
         );
 
-        assertEq(
-            groupVerify.verifiersCount(address(token), ACTION_ID, round),
-            1
-        );
+        assertEq(groupVerify.verifiersCount(address(groupAction), round), 1);
     }
 
     // ============ Cross-Round Tests ============
@@ -730,8 +666,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user1);
         groupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             joinAmount,
             new string[](0)
@@ -747,8 +682,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores
@@ -761,8 +695,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         // Scores should be specific to round
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round1,
                 user1
             ),
@@ -770,8 +703,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round2,
                 user1
             ),
@@ -784,8 +716,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1);
         groupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             0,
             scores2
@@ -793,8 +724,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         assertEq(
             groupVerify.originScoreByAccount(
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 round2,
                 user1
             ),
@@ -975,13 +905,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         lpToken.approve(address(groupJoin), type(uint256).max);
 
         vm.prank(user1);
-        groupJoin.join(
-            address(token),
-            ACTION_ID,
-            groupId,
-            lpAmount,
-            new string[](0)
-        );
+        groupJoin.join(address(action), groupId, lpAmount, new string[](0));
 
         // Calculate expected value:
         // tokenReserve = 1000e18 (token is token0)

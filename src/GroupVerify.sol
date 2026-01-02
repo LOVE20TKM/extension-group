@@ -6,8 +6,8 @@ import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
@@ -100,51 +100,29 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _factoryAddress;
     }
 
-    modifier onlyValidExtension(address tokenAddress, uint256 actionId) {
-        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
-        ActionInfo memory actionInfo = submit.actionInfo(
-            tokenAddress,
-            actionId
-        );
-        address extension = actionInfo.body.whiteListAddress;
-
+    modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
             revert InvalidFactory();
+        }
+        if (!IExtension(extension).initialized()) {
+            revert ExtensionNotInitialized();
         }
         _;
     }
 
-    modifier onlyGroupOwner(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    ) {
-        address extension = _getExtension(tokenAddress, actionId);
+    modifier onlyGroupOwner(address extension, uint256 groupId) {
         if (_group.ownerOf(groupId) != msg.sender)
             revert IGroupManager.OnlyGroupOwner();
         _;
     }
 
-    function _getExtension(
-        address tokenAddress,
-        uint256 actionId
-    ) internal view returns (address extension) {
-        ILOVE20Submit submit = ILOVE20Submit(_center.submitAddress());
-        ActionInfo memory actionInfo = submit.actionInfo(
-            tokenAddress,
-            actionId
-        );
-        extension = actionInfo.body.whiteListAddress;
-        if (extension == address(0)) revert InvalidFactory();
-    }
-
     function setGroupDelegatedVerifier(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         address delegatedVerifier
-    ) external override onlyGroupOwner(tokenAddress, actionId, groupId) {
-        address extension = _getExtension(tokenAddress, actionId);
+    ) external override onlyGroupOwner(extension, groupId) {
+        address tokenAddress = IExtension(extension).tokenAddress();
+        uint256 actionId = IExtension(extension).actionId();
         _delegatedVerifierByGroupId[extension][groupId] = delegatedVerifier;
         _delegatedVerifierOwnerByGroupId[extension][
             groupId
@@ -159,13 +137,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function verifyWithOriginScores(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 startIndex,
         uint256[] calldata originScores
-    ) external override onlyValidExtension(tokenAddress, actionId) {
-        address extension = _getExtension(tokenAddress, actionId);
+    ) external override onlyValidExtension(extension) {
+        address tokenAddress = IExtension(extension).tokenAddress();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _verify.currentRound();
 
         _checkVerifier(extension, groupId);
@@ -175,8 +153,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         if (
             _groupJoin.accountCountByGroupIdByRound(
-                tokenAddress,
-                actionId,
+                extension,
                 groupId,
                 currentRound
             ) == 0
@@ -224,8 +201,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
 
         uint256 accountCount = _groupJoin.accountCountByGroupIdByRound(
-            tokenAddress,
-            actionId,
+            extension,
             groupId,
             currentRound
         );
@@ -235,8 +211,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         uint256 batchScore = _processScores(
             extension,
-            tokenAddress,
-            actionId,
             currentRound,
             groupId,
             startIndex,
@@ -265,8 +239,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (isComplete) {
             _finalizeVerification(
                 extension,
-                tokenAddress,
-                actionId,
                 currentRound,
                 groupId,
                 finalBatchScore
@@ -275,13 +247,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function distrustVote(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address groupOwner,
         uint256 amount,
         string calldata reason
-    ) external override onlyValidExtension(tokenAddress, actionId) {
-        address extension = _getExtension(tokenAddress, actionId);
+    ) external override onlyValidExtension(extension) {
+        address tokenAddress = IExtension(extension).tokenAddress();
+        uint256 actionId = IExtension(extension).actionId();
         _processDistrustVote(
             extension,
             tokenAddress,
@@ -348,67 +320,48 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function originScoreByAccount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address account
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _originScoreByAccount[extension][round][account];
     }
 
     function scoreByAccount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address account
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
-        return
-            _calculateScoreByAccount(
-                extension,
-                tokenAddress,
-                actionId,
-                round,
-                account
-            );
+        return _calculateScoreByAccount(extension, round, account);
     }
 
     function scoreByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _scoreByGroupId[extension][round][groupId];
     }
 
     function capacityReductionByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _capacityReductionByGroupId[extension][round][groupId];
     }
 
     function score(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _score[extension][round];
     }
 
     function delegatedVerifierByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) external view override returns (address) {
-        address extension = _getExtension(tokenAddress, actionId);
         address groupOwner = _group.ownerOf(groupId);
         if (_delegatedVerifierOwnerByGroupId[extension][groupId] != groupOwner)
             return address(0);
@@ -416,12 +369,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function canVerify(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account,
         uint256 groupId
     ) external view override returns (bool) {
-        address extension = _getExtension(tokenAddress, actionId);
         address groupOwner = _group.ownerOf(groupId);
         bool isValidDelegatedVerifier = account ==
             _delegatedVerifierByGroupId[extension][groupId] &&
@@ -430,142 +381,114 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function verifiedAccountCount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _verifiedAccountCount[extension][round][groupId];
     }
 
     function isVerified(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (bool) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _isVerified[extension][round][groupId];
     }
 
     function verifiers(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round
     ) external view override returns (address[] memory) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _verifiers[extension][round];
     }
 
     function verifiersCount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _verifiers[extension][round].length;
     }
 
     function verifiersAtIndex(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 index
     ) external view override returns (address) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _verifiers[extension][round][index];
     }
 
     function verifierByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (address) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _verifierByGroupId[extension][round][groupId];
     }
 
     function groupIdsByVerifier(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address verifier
     ) external view override returns (uint256[] memory) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _groupIdsByVerifier[extension][round][verifier];
     }
 
     function groupIdsByVerifierCount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address verifier
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _groupIdsByVerifier[extension][round][verifier].length;
     }
 
     function groupIdsByVerifierAtIndex(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address verifier,
         uint256 index
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _groupIdsByVerifier[extension][round][verifier][index];
     }
 
     function verifiedGroupIds(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round
     ) external view override returns (uint256[] memory) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _verifiedGroupIds[extension][round];
     }
 
     function totalScoreByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _totalScoreByGroupId[extension][round][groupId];
     }
 
     function distrustVotesByGroupOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address groupOwner
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _distrustVotesByGroupOwner[extension][round][groupOwner];
     }
 
     function distrustVotesByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
         address groupOwner = _group.ownerOf(groupId);
-        address extension = _getExtension(tokenAddress, actionId);
         return _distrustVotesByGroupOwner[extension][round][groupOwner];
     }
 
     function distrustVotesByVoterByGroupOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address voter,
         address groupOwner
     ) external view override returns (uint256) {
-        address extension = _getExtension(tokenAddress, actionId);
         return
             _distrustVotesByVoterByGroupOwner[extension][round][voter][
                 groupOwner
@@ -573,20 +496,16 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function distrustReason(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round,
         address voter,
         address groupOwner
     ) external view override returns (string memory) {
-        address extension = _getExtension(tokenAddress, actionId);
         return _distrustReason[extension][round][voter][groupOwner];
     }
 
     function _processScores(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 currentRound,
         uint256 groupId,
         uint256 startIndex,
@@ -595,8 +514,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         for (uint256 i = 0; i < originScores.length; i++) {
             if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
             address account = _groupJoin.accountByGroupIdAndIndexByRound(
-                tokenAddress,
-                actionId,
+                extension,
                 groupId,
                 startIndex + i,
                 currentRound
@@ -607,8 +525,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             totalScore +=
                 originScores[i] *
                 _groupJoin.amountByAccountByRound(
-                    tokenAddress,
-                    actionId,
+                    extension,
                     account,
                     currentRound
                 );
@@ -617,8 +534,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     function _finalizeVerification(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 currentRound,
         uint256 groupId,
         uint256 totalScore
@@ -626,8 +541,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address groupOwner = _group.ownerOf(groupId);
         uint256 capacityReduction = _calculateCapacityReduction(
             extension,
-            tokenAddress,
-            actionId,
             currentRound,
             groupOwner,
             groupId
@@ -650,8 +563,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         uint256 groupScore = _calculateGroupScore(
             extension,
-            tokenAddress,
-            actionId,
             currentRound,
             groupId
         );
@@ -664,8 +575,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     function _calculateScoreByAccount(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 round,
         address account
     ) internal view returns (uint256) {
@@ -675,8 +584,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (originScoreVal == 0) return 0;
 
         uint256 amount = _groupJoin.amountByAccountByRound(
-            tokenAddress,
-            actionId,
+            extension,
             account,
             round
         );
@@ -685,8 +593,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     function _calculateCapacityReduction(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 round,
         address groupOwner,
         uint256 currentGroupId
@@ -697,8 +603,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         ][groupOwner];
         for (uint256 i = 0; i < verifierGroupIds.length; i++) {
             verifiedCapacity += _groupJoin.totalJoinedAmountByGroupIdByRound(
-                tokenAddress,
-                actionId,
+                extension,
                 verifierGroupIds[i],
                 round
             );
@@ -719,8 +624,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         uint256 currentGroupCapacity = _groupJoin
             .totalJoinedAmountByGroupIdByRound(
-                tokenAddress,
-                actionId,
+                extension,
                 currentGroupId,
                 round
             );
@@ -734,21 +638,20 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     function _calculateGroupScore(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 round,
         uint256 groupId
     ) internal view returns (uint256) {
         address groupOwner = _group.ownerOf(groupId);
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
-            tokenAddress,
-            actionId,
+            extension,
             groupId,
             round
         );
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
+        address tokenAddress = IExtension(extension).tokenAddress();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
         uint256 capacityReduction = _capacityReductionByGroupId[extension][
             round
@@ -791,8 +694,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             totalScore = _updateGroupScore(
                 scoreMap,
                 capacityReductionMap,
-                tokenAddress,
-                actionId,
+                extension,
                 groupId,
                 round,
                 total,
@@ -807,8 +709,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     function _updateGroupScore(
         mapping(uint256 => uint256) storage scoreMap,
         mapping(uint256 => uint256) storage capacityReductionMap,
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 round,
         uint256 total,
@@ -817,8 +718,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) internal returns (uint256) {
         uint256 oldScore = scoreMap[groupId];
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
-            tokenAddress,
-            actionId,
+            extension,
             groupId,
             round
         );

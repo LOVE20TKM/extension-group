@@ -14,6 +14,7 @@ interface IGroupJoin {
     error CannotJoinDeactivatedGroup();
     error InvalidFactory();
     error AlreadyInitialized();
+    error ExtensionNotInitialized();
 
     event Join(
         address indexed tokenAddress,
@@ -37,18 +38,16 @@ interface IGroupJoin {
     function FACTORY_ADDRESS() external view returns (address);
 
     function join(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 amount,
         string[] memory verificationInfos
     ) external;
 
-    function exit(address tokenAddress, uint256 actionId) external;
+    function exit(address extension) external;
 
     function joinInfo(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account
     )
         external
@@ -56,67 +55,57 @@ interface IGroupJoin {
         returns (uint256 joinedRound, uint256 amount, uint256 groupId);
 
     function accountsByGroupIdCount(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) external view returns (uint256);
 
     function accountsByGroupIdAtIndex(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 index
     ) external view returns (address);
 
     function groupIdByAccountByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account,
         uint256 round
     ) external view returns (uint256);
 
     function totalJoinedAmountByGroupId(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) external view returns (uint256);
 
     function totalJoinedAmountByGroupIdByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 round
     ) external view returns (uint256);
 
     function totalJoinedAmount(
-        address tokenAddress,
-        uint256 actionId
+        address extension
     ) external view returns (uint256);
 
     function totalJoinedAmountByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 round
     ) external view returns (uint256);
 
     function accountCountByGroupIdByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 round
     ) external view returns (uint256);
 
     function accountByGroupIdAndIndexByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         uint256 index,
         uint256 round
     ) external view returns (address);
 
     function amountByAccountByRound(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address account,
         uint256 round
     ) external view returns (uint256);

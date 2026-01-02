@@ -821,8 +821,7 @@ contract TestGroupFlowHelper is Test {
         );
         token.approve(address(groupJoinContract), member.joinAmount);
         groupJoinContract.join(
-            tokenAddress,
-            groupOwner.groupActionId,
+            groupOwner.groupActionAddress,
             groupOwner.groupId,
             member.joinAmount,
             new string[](0)
@@ -839,8 +838,7 @@ contract TestGroupFlowHelper is Test {
             groupActionFactory.GROUP_VERIFY_ADDRESS()
         );
         groupVerifyContract.verifyWithOriginScores(
-            groupOwner.flow.tokenAddress,
-            groupOwner.groupActionId,
+            groupOwner.groupActionAddress,
             groupOwner.groupId,
             0,
             scores
@@ -856,10 +854,7 @@ contract TestGroupFlowHelper is Test {
         GroupJoin groupJoinContract = GroupJoin(
             groupActionFactory.GROUP_JOIN_ADDRESS()
         );
-        groupJoinContract.exit(
-            member.flow.tokenAddress,
-            groupOwner.groupActionId
-        );
+        groupJoinContract.exit(groupOwner.groupActionAddress);
         vm.stopPrank();
     }
 
@@ -944,8 +939,7 @@ contract TestGroupFlowHelper is Test {
             groupActionFactory.GROUP_VERIFY_ADDRESS()
         );
         groupVerifyContract.distrustVote(
-            voter.flow.tokenAddress,
-            voter.groupActionId,
+            voter.groupActionAddress,
             target.flow.userAddress,
             amount,
             reason

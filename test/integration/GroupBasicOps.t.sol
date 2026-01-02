@@ -79,8 +79,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         assertEq(
             groupVerify.originScoreByAccount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 round1,
                 member1().userAddress
             ),
@@ -100,8 +99,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 6. Verify scores are round-specific
         assertEq(
             groupVerify.originScoreByAccount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 round1,
                 member1().userAddress
             ),
@@ -110,8 +108,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         assertEq(
             groupVerify.originScoreByAccount(
-                bobGroup1.flow.tokenAddress,
-                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress,
                 round2,
                 member1().userAddress
             ),
@@ -145,8 +142,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         (uint256 joinedRound, , ) = groupJoin.joinInfo(
-            bobGroup1.flow.tokenAddress,
-            bobGroup1.groupActionId,
+            bobGroup1.groupActionAddress,
             member1().userAddress
         );
         assertTrue(joinedRound > 0, "Should be joined");
@@ -156,8 +152,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // Verify exited
         (joinedRound, , ) = groupJoin.joinInfo(
-            bobGroup1.flow.tokenAddress,
-            bobGroup1.groupActionId,
+            bobGroup1.groupActionAddress,
             member1().userAddress
         );
         assertEq(joinedRound, 0, "Should not be joined after exit");
@@ -169,8 +164,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // Verify rejoined
         uint256 amount;
         (joinedRound, amount, ) = groupJoin.joinInfo(
-            bobGroup1.flow.tokenAddress,
-            bobGroup1.groupActionId,
+            bobGroup1.groupActionAddress,
             member1().userAddress
         );
         assertTrue(joinedRound > 0, "Should be joined after rejoin");

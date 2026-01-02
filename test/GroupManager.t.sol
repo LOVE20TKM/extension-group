@@ -72,7 +72,7 @@ contract GroupManagerTest is BaseGroupTest {
         submit.setActionInfo(address(token), ACTION_ID_2, address(extension2));
         submit.setActionInfo(address(token2), ACTION_ID_1, address(extension1));
 
-        // Prepare extension initialization so initializeAction() can find the actionId
+        // Prepare extension initialization so initializeIfNeeded() can find the actionId
         prepareExtensionInit(address(extension1), address(token), ACTION_ID_1);
         prepareExtensionInit(address(extension2), address(token), ACTION_ID_2);
         prepareExtensionInit(address(extension1), address(token2), ACTION_ID_1);

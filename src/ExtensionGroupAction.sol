@@ -63,8 +63,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         if (round >= _verify.currentRound()) revert RoundNotFinished();
 
         uint256[] memory verifiedGroupIds = _groupVerify.verifiedGroupIds(
-            tokenAddress,
-            actionId,
+            address(this),
             round
         );
         if (verifiedGroupIds.length > 0) {
@@ -98,8 +97,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         address verifier
     ) external view override returns (uint256 amount) {
         uint256[] memory groupIds = _groupVerify.groupIdsByVerifier(
-            tokenAddress,
-            actionId,
+            address(this),
             round,
             verifier
         );
@@ -123,21 +121,14 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         override(ExtensionCore, IExtensionCore)
         returns (uint256)
     {
-        uint256 totalAmount = _groupJoin.totalJoinedAmount(
-            tokenAddress,
-            actionId
-        );
+        uint256 totalAmount = _groupJoin.totalJoinedAmount(address(this));
         return _convertToTokenValue(totalAmount);
     }
 
     function joinedValueByAccount(
         address account
     ) external view override(ExtensionCore, IExtensionCore) returns (uint256) {
-        (, uint256 amount, ) = _groupJoin.joinInfo(
-            tokenAddress,
-            actionId,
-            account
-        );
+        (, uint256 amount, ) = _groupJoin.joinInfo(address(this), account);
         return _convertToTokenValue(amount);
     }
 
@@ -146,16 +137,14 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         address account
     ) internal view override returns (uint256) {
         uint256 accountScore = _groupVerify.scoreByAccount(
-            tokenAddress,
-            actionId,
+            address(this),
             round,
             account
         );
         if (accountScore == 0) return 0;
 
         uint256 groupId = _groupJoin.groupIdByAccountByRound(
-            tokenAddress,
-            actionId,
+            address(this),
             account,
             round
         );
@@ -165,8 +154,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         if (groupReward == 0) return 0;
 
         uint256 groupTotalScore = _groupVerify.totalScoreByGroupId(
-            tokenAddress,
-            actionId,
+            address(this),
             round,
             groupId
         );
@@ -182,12 +170,11 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         uint256 totalReward = reward(round);
         if (totalReward == 0) return 0;
 
-        uint256 totalScore = _groupVerify.score(tokenAddress, actionId, round);
+        uint256 totalScore = _groupVerify.score(address(this), round);
         if (totalScore == 0) return 0;
 
         uint256 groupScore = _groupVerify.scoreByGroupId(
-            tokenAddress,
-            actionId,
+            address(this),
             round,
             groupId
         );

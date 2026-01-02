@@ -171,8 +171,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(member);
         newGroupJoin.join(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId,
             amount,
             new string[](0)
@@ -184,8 +183,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         vm.prank(owner);
         newGroupVerify.verifyWithOriginScores(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId,
             0,
             scores
@@ -750,7 +748,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
     function test_JoinedValue_IncludesAllActions_NotJustVoted() public {
         // Setup first action (ACTION_ID = 0) with voting
-        uint256 actionId1 = ACTION_ID;
         // Note: groupId1 and groupId2 are already activated in ACTION_ID during setUp
         // So we have activation stake for ACTION_ID
 
@@ -815,7 +812,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
     {
         // Setup first action (ACTION_ID = 0) with voting
         // Note: groupOwner1's groupId1 is already activated in ACTION_ID during setUp
-        uint256 actionId1 = ACTION_ID;
 
         // Setup second action (ACTION_ID = 1) without voting
         uint256 actionId2 = 1;
@@ -1617,8 +1613,7 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         setupUser(user1, 100e18, address(newGroupJoin));
         vm.prank(user1);
         newGroupJoin.join(
-            address(token),
-            100, // Use actionId 100 that was set up in _setupGroupActionAndService
+            address(groupAction),
             groupId1,
             50e18,
             new string[](0)
