@@ -113,19 +113,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         _setRecipients(msg.sender, actionId_, groupId, addrs, basisPoints);
     }
 
-    function votedGroupActions(
-        uint256 round
-    )
-        external
-        view
-        returns (uint256[] memory actionIds, address[] memory extensions)
-    {
-        (actionIds, extensions) = _groupManager.votedGroupActions(
-            GROUP_ACTION_TOKEN_ADDRESS,
-            round
-        );
-    }
-
     function recipients(
         address groupOwner,
         uint256 actionId_,
@@ -318,7 +305,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (, address[] memory exts) = _groupManager.votedGroupActions(
+        (, address[] memory exts) = _actionFactory.votedGroupActions(
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );

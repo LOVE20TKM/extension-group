@@ -283,4 +283,171 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         assertEq(extension, expectedExtension);
     }
+
+    // ============ VotedGroupActions Tests ============
+
+    function test_VotedGroupActions_Empty() public view {
+        uint256 emptyRound = 999;
+        (uint256[] memory aids, address[] memory exts) = factory
+            .votedGroupActions(address(token), emptyRound);
+
+        assertEq(exts.length, 0);
+        assertEq(aids.length, 0);
+    }
+
+    function test_VotedGroupActions_SingleValid() public {
+        token.approve(address(factory), 1e18);
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId = 0;
+        prepareExtensionInit(extension, address(token), actionId);
+
+        uint256 round = join.currentRound();
+        (uint256[] memory aids, address[] memory exts) = factory
+            .votedGroupActions(address(token), round);
+
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], extension);
+        assertEq(aids[0], actionId);
+    }
+
+    function test_VotedGroupActions_MultipleValid() public {
+        token.approve(address(factory), 2e18);
+        address ext1 = factory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        MockGroupToken token2 = new MockGroupToken();
+        token2.mint(address(this), 1e18);
+        token2.approve(address(factory), 1e18);
+        address ext2 = factory.createExtension(
+            address(token2),
+            address(token2),
+            address(token2),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId1 = 0;
+        uint256 actionId2 = 1;
+        prepareExtensionInit(ext1, address(token), actionId1);
+        prepareExtensionInit(ext2, address(token2), actionId2);
+
+        uint256 round = join.currentRound();
+        (uint256[] memory aids, address[] memory exts) = factory
+            .votedGroupActions(address(token), round);
+
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], ext1);
+        assertEq(aids[0], actionId1);
+    }
+
+    function test_VotedGroupActions_FiltersInvalidExtension() public {
+        token.approve(address(factory), 1e18);
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId1 = 0;
+        prepareExtensionInit(extension, address(token), actionId1);
+
+        // Add an actionId with extension not registered in factory
+        uint256 invalidActionId = 200;
+        address invalidExtension = address(token); // Not registered in Factory
+        submit.setActionInfo(address(token), invalidActionId, invalidExtension);
+        vote.setVotedActionIds(
+            address(token),
+            join.currentRound(),
+            invalidActionId
+        );
+
+        uint256 round = join.currentRound();
+        (uint256[] memory aids, address[] memory exts) = factory
+            .votedGroupActions(address(token), round);
+
+        // Should only return the valid one (registered in Factory)
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], extension);
+        assertEq(aids[0], actionId1);
+    }
+
+    function test_VotedGroupActions_FiltersZeroExtension() public {
+        token.approve(address(factory), 1e18);
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId1 = 0;
+        prepareExtensionInit(extension, address(token), actionId1);
+
+        // Add an actionId with zero extension address
+        uint256 zeroActionId = 300;
+        submit.setActionInfo(address(token), zeroActionId, address(0));
+        vote.setVotedActionIds(address(token), join.currentRound(), zeroActionId);
+
+        uint256 round = join.currentRound();
+        (uint256[] memory aids, address[] memory exts) = factory
+            .votedGroupActions(address(token), round);
+
+        // Should only return the valid one (non-zero extension registered in Factory)
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], extension);
+        assertEq(aids[0], actionId1);
+    }
+
+    function test_VotedGroupActions_WorksBeforeCenterRegistration() public {
+        // Test that votedGroupActions works even when action is not registered in Center
+        // It gets extension from submit.actionInfo.whiteListAddress
+        token.approve(address(factory), 1e18);
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        // Set actionInfo with whiteListAddress but don't register in Center
+        uint256 actionId = 500;
+        submit.setActionInfo(address(token), actionId, extension);
+        vote.setVotedActionIds(address(token), join.currentRound(), actionId);
+
+        uint256 round = join.currentRound();
+        (uint256[] memory aids, address[] memory exts) = factory
+            .votedGroupActions(address(token), round);
+
+        // Should find the extension even though it's not registered in Center
+        assertEq(exts.length, 1);
+        assertEq(aids.length, 1);
+        assertEq(exts[0], extension);
+        assertEq(aids[0], actionId);
+    }
 }

@@ -170,14 +170,6 @@ interface IGroupManager {
         uint256 index
     ) external view returns (uint256);
 
-    function votedGroupActions(
-        address tokenAddress,
-        uint256 round
-    )
-        external
-        view
-        returns (uint256[] memory actionIds_, address[] memory extensions);
-
     function hasActiveGroups(
         address tokenAddress,
         address account

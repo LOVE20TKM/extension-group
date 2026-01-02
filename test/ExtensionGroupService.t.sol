@@ -1110,12 +1110,15 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
     }
 
     // ============ votedGroupActions Tests ============
+    // Note: votedGroupActions is now implemented in ExtensionGroupActionFactory
+    // It gets extension from submit.actionInfo.whiteListAddress and checks
+    // if the extension exists in Factory using _isExtension mapping
 
     function test_votedGroupActions_Empty() public view {
         // Use a round that has no voted actionIds
         uint256 emptyRound = 999;
-        (uint256[] memory aids, address[] memory exts) = groupService
-            .votedGroupActions(emptyRound);
+        (uint256[] memory aids, address[] memory exts) = actionFactory
+            .votedGroupActions(address(token), emptyRound);
 
         assertEq(exts.length, 0);
         assertEq(aids.length, 0);
@@ -1125,8 +1128,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         uint256 round = verify.currentRound();
-        (uint256[] memory aids, address[] memory exts) = groupService
-            .votedGroupActions(round);
+        (uint256[] memory aids, address[] memory exts) = actionFactory
+            .votedGroupActions(address(token), round);
 
         assertEq(exts.length, 1);
         assertEq(aids.length, 1);
@@ -1176,8 +1179,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         uint256 round = verify.currentRound();
-        (uint256[] memory aids, address[] memory exts) = groupService
-            .votedGroupActions(round);
+        (uint256[] memory aids, address[] memory exts) = actionFactory
+            .votedGroupActions(address(token), round);
 
         assertEq(exts.length, 2);
         assertEq(aids.length, 2);
@@ -1197,8 +1200,9 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Add an actionId with extension not registered in factory
-        // Use address(token) as invalid extension - it's a contract but doesn't implement factory()
-        // This allows ExtensionCenter's try-catch to properly handle the error
+        // The implementation now gets extension from submit.actionInfo.whiteListAddress
+        // and checks if it exists in Factory using _isExtension mapping
+        // Use address(token) as invalid extension - it's not registered in Factory
         uint256 invalidActionId = 200;
         address invalidExtension = address(token);
         submit.setActionInfo(address(token), invalidActionId, invalidExtension);
@@ -1209,10 +1213,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         );
 
         uint256 round = verify.currentRound();
-        (uint256[] memory aids, address[] memory exts) = groupService
-            .votedGroupActions(round);
+        (uint256[] memory aids, address[] memory exts) = actionFactory
+            .votedGroupActions(address(token), round);
 
-        // Should only return the valid one
+        // Should only return the valid one (registered in Factory)
         assertEq(exts.length, 1);
         assertEq(aids.length, 1);
         assertEq(exts[0], address(groupAction));
@@ -1222,20 +1226,21 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
     function test_votedGroupActions_FiltersZeroExtension() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
-        // Add an actionId with zero extension address
+        // Add an actionId with zero extension address (whiteListAddress = address(0))
+        // The implementation checks if ext != address(0) before checking Factory
         uint256 zeroActionId = 300;
+        submit.setActionInfo(address(token), zeroActionId, address(0));
         vote.setVotedActionIds(
             address(token),
             verify.currentRound(),
             zeroActionId
         );
-        // Don't set extension, so it will be address(0)
 
         uint256 round = verify.currentRound();
-        (uint256[] memory aids, address[] memory exts) = groupService
-            .votedGroupActions(round);
+        (uint256[] memory aids, address[] memory exts) = actionFactory
+            .votedGroupActions(address(token), round);
 
-        // Should only return the valid one
+        // Should only return the valid one (non-zero extension registered in Factory)
         assertEq(exts.length, 1);
         assertEq(aids.length, 1);
         assertEq(exts[0], address(groupAction));
@@ -1246,8 +1251,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         uint256 round1 = verify.currentRound();
-        (uint256[] memory aids1, address[] memory exts1) = groupService
-            .votedGroupActions(round1);
+        (uint256[] memory aids1, address[] memory exts1) = actionFactory
+            .votedGroupActions(address(token), round1);
 
         assertEq(exts1.length, 1);
         assertEq(aids1.length, 1);
@@ -1256,8 +1261,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         advanceRound();
 
         uint256 round2 = verify.currentRound();
-        (uint256[] memory aids2, address[] memory exts2) = groupService
-            .votedGroupActions(round2);
+        (uint256[] memory aids2, address[] memory exts2) = actionFactory
+            .votedGroupActions(address(token), round2);
 
         // Round2 should have no valid actions (no voted actionIds in round2)
         assertEq(exts2.length, 0);
@@ -1267,9 +1272,58 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         (
             uint256[] memory aids1Again,
             address[] memory exts1Again
-        ) = groupService.votedGroupActions(round1);
+        ) = actionFactory.votedGroupActions(address(token), round1);
         assertEq(exts1Again.length, 1);
         assertEq(aids1Again.length, 1);
+    }
+
+    function test_votedGroupActions_WorksBeforeCenterRegistration() public {
+        // Test that votedGroupActions works even when action is not registered in Center
+        // This is the key improvement: it gets extension from submit.actionInfo.whiteListAddress
+        // instead of center.extension(), so it works before Center registration
+
+        // Create a new extension through Factory
+        token.mint(address(this), 1e18);
+        token.approve(address(actionFactory), type(uint256).max);
+        address newExtension = actionFactory.createExtension(
+            address(token),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        // Set actionInfo with whiteListAddress pointing to the extension
+        // But don't register it in Center (don't call center.registerActionIfNeeded)
+        uint256 newActionId = 500;
+        submit.setActionInfo(address(token), newActionId, newExtension);
+        vote.setVotedActionIds(
+            address(token),
+            verify.currentRound(),
+            newActionId
+        );
+
+        // Verify that votedGroupActions can find it even though it's not in Center
+        uint256 round = verify.currentRound();
+        (uint256[] memory aids, address[] memory exts) = actionFactory
+            .votedGroupActions(address(token), round);
+
+        // Should include the new extension because it's in Factory and whiteListAddress is set
+        bool found = false;
+        for (uint256 i; i < exts.length; ) {
+            if (exts[i] == newExtension && aids[i] == newActionId) {
+                found = true;
+                break;
+            }
+            unchecked {
+                ++i;
+            }
+        }
+        assertTrue(
+            found,
+            "New extension should be found via submit.actionInfo"
+        );
     }
 
     // ============ generatedRewardByVerifier Tests ============

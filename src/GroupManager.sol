@@ -292,45 +292,6 @@ contract GroupManager is IGroupManager {
         return _groupInfo[extension][groupId].isActive;
     }
 
-    function votedGroupActions(
-        address tokenAddress,
-        uint256 round
-    )
-        external
-        view
-        override
-        returns (uint256[] memory actionIds_, address[] memory extensions)
-    {
-        uint256 count = _vote.votedActionIdsCount(tokenAddress, round);
-        if (count == 0) return (actionIds_, extensions);
-
-        extensions = new address[](count);
-        actionIds_ = new uint256[](count);
-        uint256 valid;
-
-        for (uint256 i; i < count; ) {
-            uint256 aid = _vote.votedActionIdsAtIndex(tokenAddress, round, i);
-            address ext = _center.extension(tokenAddress, aid);
-            if (ext != address(0) && _activeGroupIds[ext].length() > 0) {
-                extensions[valid] = ext;
-                actionIds_[valid] = aid;
-                unchecked {
-                    ++valid;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        if (valid == 0) return (actionIds_, extensions);
-
-        assembly {
-            mstore(extensions, valid)
-            mstore(actionIds_, valid)
-        }
-    }
-
     function hasActiveGroups(
         address tokenAddress,
         address account

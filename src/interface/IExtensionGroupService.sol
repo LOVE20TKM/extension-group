@@ -42,13 +42,6 @@ interface IExtensionGroupService is IExtensionJoin {
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
 
-    function votedGroupActions(
-        uint256 round
-    )
-        external
-        view
-        returns (uint256[] memory actionIds, address[] memory extensions);
-
     function actionIdsWithRecipients(
         address account,
         uint256 round
