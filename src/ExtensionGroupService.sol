@@ -90,7 +90,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     ) public override(IExtensionJoin, ExtensionBaseJoin) {
         if (
             !_groupManager.hasActiveGroups(
-                GROUP_ACTION_FACTORY_ADDRESS,
                 GROUP_ACTION_TOKEN_ADDRESS,
                 msg.sender
             )
@@ -122,7 +121,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         returns (uint256[] memory actionIds, address[] memory extensions)
     {
         (actionIds, extensions) = _groupManager.votedGroupActions(
-            GROUP_ACTION_FACTORY_ADDRESS,
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
@@ -313,11 +311,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
 
     function hasActiveGroups(address account) public view returns (bool) {
         return
-            _groupManager.hasActiveGroups(
-                GROUP_ACTION_FACTORY_ADDRESS,
-                GROUP_ACTION_TOKEN_ADDRESS,
-                account
-            );
+            _groupManager.hasActiveGroups(GROUP_ACTION_TOKEN_ADDRESS, account);
     }
 
     function generatedRewardByVerifier(
@@ -325,7 +319,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
         (, address[] memory exts) = _groupManager.votedGroupActions(
-            GROUP_ACTION_FACTORY_ADDRESS,
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
@@ -453,7 +446,6 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         address account
     ) internal view returns (uint256 total) {
         uint256[] memory aids = _groupManager.actionIds(
-            GROUP_ACTION_FACTORY_ADDRESS,
             GROUP_ACTION_TOKEN_ADDRESS
         );
         for (uint256 i; i < aids.length; ) {
@@ -465,12 +457,8 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
                 .STAKE_TOKEN_ADDRESS();
 
             uint256 staked = account == address(0)
-                ? _groupManager.totalStaked(GROUP_ACTION_TOKEN_ADDRESS, aids[i])
-                : _groupManager.totalStakedByActionIdByOwner(
-                    GROUP_ACTION_TOKEN_ADDRESS,
-                    aids[i],
-                    account
-                );
+                ? _groupManager.totalStaked(ext)
+                : _groupManager.totalStakedByActionIdByOwner(ext, account);
 
             total += _convertToTokenValue(stakeToken, staked);
             unchecked {

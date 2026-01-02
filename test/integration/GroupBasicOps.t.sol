@@ -25,8 +25,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         assertTrue(
             h.getGroupManager().isGroupActive(
-                h.firstTokenAddress(),
-                actionId,
+                bobGroup1.groupActionAddress,
                 bobGroup1.groupId
             ),
             "Group should be active"
@@ -39,8 +38,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 3. Verify deactivation
         assertFalse(
             h.getGroupManager().isGroupActive(
-                h.firstTokenAddress(),
-                actionId,
+                bobGroup1.groupActionAddress,
                 bobGroup1.groupId
             ),
             "Group should be deactivated"
@@ -253,7 +251,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 2. Verify actionId is tracked for this groupId
         uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
-            address(h.groupActionFactory()),
             h.firstTokenAddress(),
             bobGroup1.groupId
         );
@@ -263,7 +260,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 3. Verify count
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup1.groupId
             ),
@@ -274,7 +270,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 4. Verify at index
         assertEq(
             h.getGroupManager().actionIdsByGroupIdAtIndex(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup1.groupId,
                 0
@@ -314,7 +309,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 3. Verify both actionIds are tracked for this groupId
         uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
-            address(h.groupActionFactory()),
             h.firstTokenAddress(),
             sharedGroupId
         );
@@ -342,7 +336,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 2. Verify actionId is tracked
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup1.groupId
             ),
@@ -357,7 +350,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 4. Verify actionId is removed
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup1.groupId
             ),
@@ -365,7 +357,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             "Should have 0 actionIds after deactivate"
         );
         uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
-            address(h.groupActionFactory()),
             h.firstTokenAddress(),
             bobGroup1.groupId
         );
@@ -387,7 +378,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 2. Verify actionId is tracked
         uint256[] memory actionIds_ = h.getGroupManager().actionIds(
-            address(h.groupActionFactory()),
             h.firstTokenAddress()
         );
         assertEq(actionIds_.length, 1, "Should have 1 actionId");
@@ -396,7 +386,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 3. Verify count
         assertEq(
             h.getGroupManager().actionIdsCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress()
             ),
             1,
@@ -406,7 +395,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 4. Verify at index
         assertEq(
             h.getGroupManager().actionIdsAtIndex(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 0
             ),
@@ -441,7 +429,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 3. Verify both actionIds are tracked
         uint256[] memory actionIds_ = h.getGroupManager().actionIds(
-            address(h.groupActionFactory()),
             h.firstTokenAddress()
         );
         assertEq(actionIds_.length, 2, "Should have 2 actionIds");
@@ -468,7 +455,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 2. Verify actionId is tracked
         assertEq(
             h.getGroupManager().actionIdsCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress()
             ),
             1,
@@ -482,14 +468,12 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 4. Verify actionId is removed
         assertEq(
             h.getGroupManager().actionIdsCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress()
             ),
             0,
             "Should have 0 actionIds after deactivate"
         );
         uint256[] memory actionIds_ = h.getGroupManager().actionIds(
-            address(h.groupActionFactory()),
             h.firstTokenAddress()
         );
         assertEq(actionIds_.length, 0, "ActionIds array should be empty");
@@ -522,7 +506,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 3. Verify both actionIds are tracked globally
         assertEq(
             h.getGroupManager().actionIdsCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress()
             ),
             2,
@@ -532,7 +515,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 4. Verify each groupId has its actionId
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup1.groupId
             ),
@@ -541,7 +523,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup2.groupId
             ),
@@ -556,7 +537,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 6. Verify group1 has no actionIds, but actionId1 still tracked globally (if it has other groups)
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup1.groupId
             ),
@@ -566,7 +546,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // ActionId1 should be removed from global set since it has no more active groups
         assertEq(
             h.getGroupManager().actionIdsCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress()
             ),
             1,
@@ -580,7 +559,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 8. Verify all actionIds removed
         assertEq(
             h.getGroupManager().actionIdsCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress()
             ),
             0,
@@ -588,7 +566,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         assertEq(
             h.getGroupManager().actionIdsByGroupIdCount(
-                address(h.groupActionFactory()),
                 h.firstTokenAddress(),
                 bobGroup2.groupId
             ),

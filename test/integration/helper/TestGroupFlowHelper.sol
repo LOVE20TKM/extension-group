@@ -52,12 +52,8 @@ import {
 import {
     ExtensionGroupServiceFactory
 } from "../../../src/ExtensionGroupServiceFactory.sol";
-import {
-    ExtensionGroupAction
-} from "../../../src/ExtensionGroupAction.sol";
-import {
-    ExtensionGroupService
-} from "../../../src/ExtensionGroupService.sol";
+import {ExtensionGroupAction} from "../../../src/ExtensionGroupAction.sol";
+import {ExtensionGroupService} from "../../../src/ExtensionGroupService.sol";
 
 // Precompiled bytecode
 import {PrecompiledBytecodes} from "../../artifacts/PrecompiledBytecodes.sol";
@@ -785,8 +781,7 @@ contract TestGroupFlowHelper is Test {
         vm.startPrank(user.flow.userAddress, user.flow.userAddress);
         token.approve(address(groupManager), user.stakeAmount);
         groupManager.activateGroup(
-            tokenAddress,
-            user.groupActionId,
+            user.groupActionAddress,
             user.groupId,
             user.groupDescription,
             user.maxCapacity,
@@ -871,8 +866,7 @@ contract TestGroupFlowHelper is Test {
     function group_deactivate(GroupUserParams memory groupOwner) public {
         vm.prank(groupOwner.flow.userAddress, groupOwner.flow.userAddress);
         groupManager.deactivateGroup(
-            groupOwner.flow.tokenAddress,
-            groupOwner.groupActionId,
+            groupOwner.groupActionAddress,
             groupOwner.groupId
         );
     }
@@ -976,7 +970,7 @@ contract TestGroupFlowHelper is Test {
 
         // Build scores array - give full score to extension account
         uint256[] memory scores = new uint256[](accounts.length);
-        
+
         // For group actions, if accounts is empty, we need to handle it differently
         // The verify function will call prepareRandomAccountsIfNeeded again internally,
         // so we need to ensure the scores array matches what verify will get
@@ -989,7 +983,7 @@ contract TestGroupFlowHelper is Test {
             vm.stopPrank();
             return;
         }
-        
+
         for (uint256 i = 0; i < accounts.length; i++) {
             if (accounts[i] == extensionAddress) {
                 scores[i] = 100;
@@ -1057,4 +1051,3 @@ contract TestGroupFlowHelper is Test {
         return group;
     }
 }
-

@@ -26,8 +26,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 IGroupManager.groupInfo.selector,
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 groupId
             )
         );
@@ -44,8 +43,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 IGroupManager.groupInfo.selector,
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 groupId
             )
         );
@@ -62,8 +60,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 IGroupManager.groupInfo.selector,
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 groupId
             )
         );
@@ -82,8 +79,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         (bool ok, bytes memory data) = address(groupManager).staticcall(
             abi.encodeWithSelector(
                 IGroupManager.groupInfo.selector,
-                address(token),
-                ACTION_ID,
+                address(groupAction),
                 groupId
             )
         );
@@ -144,8 +140,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             "Group1",
             0, // maxCapacity (0 = use owner's theoretical max)
@@ -156,8 +151,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId2,
             "Group2",
             0, // maxCapacity (0 = use owner's theoretical max)
@@ -262,9 +256,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
     }
 
     function test_GroupActivationAndDeactivation() public {
-        assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID, groupId1)
-        );
+        assertTrue(groupManager.isGroupActive(address(groupAction), groupId1));
 
         advanceRound();
         // Setup actionIds for new round
@@ -275,11 +267,9 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
 
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID, groupId1);
+        groupManager.deactivateGroup(address(groupAction), groupId1);
 
-        assertFalse(
-            groupManager.isGroupActive(address(token), ACTION_ID, groupId1)
-        );
+        assertFalse(groupManager.isGroupActive(address(groupAction), groupId1));
 
         // Cannot join deactivated group
         uint256 joinAmount = 10e18;
@@ -647,8 +637,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.updateGroupInfo(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupId1,
             newDesc,
             0, // newMaxCapacity
@@ -672,13 +661,11 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Get max verify capacity for owner
         uint256 maxCapacity = groupManager.maxVerifyCapacityByOwner(
-            address(token),
-            ACTION_ID,
+            address(groupAction),
             groupOwner1
         );
         uint256 maxPerAccount = groupManager.calculateJoinMaxAmount(
-            address(token),
-            ACTION_ID
+            address(groupAction)
         );
         assertTrue(maxCapacity > 0, "maxCapacity should be > 0");
         assertTrue(maxPerAccount > 0, "maxPerAccount should be > 0");
@@ -953,8 +940,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         );
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID,
+            address(action),
             groupId,
             "Group",
             0,
@@ -969,8 +955,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
         // Calculate max join amount based on LP token totalSupply
         uint256 maxJoinAmount = groupManager.calculateJoinMaxAmount(
-            address(token),
-            ACTION_ID
+            address(action)
         );
 
         // Use a join amount that's within the limit (use 80% of max to be safe)
@@ -979,8 +964,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             // If maxJoinAmount is too small, mint more LP tokens
             lpToken.mint(address(this), 10000e18);
             maxJoinAmount = groupManager.calculateJoinMaxAmount(
-                address(token),
-                ACTION_ID
+                address(action)
             );
             lpAmount = (maxJoinAmount * 80) / 100;
         }

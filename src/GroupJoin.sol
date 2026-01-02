@@ -346,8 +346,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         _validateJoinAmounts(
             extension,
-            tokenAddress,
-            actionId,
             groupId,
             amount,
             isFirstJoin,
@@ -427,8 +425,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function _validateJoinAmounts(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 groupId,
         uint256 amount,
         bool isFirstJoin,
@@ -437,27 +433,17 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) internal view {
         _validateGroupInfo(
             extension,
-            tokenAddress,
-            actionId,
             groupId,
             amount,
             isFirstJoin,
             joinedGroupId,
             newTotal
         );
-        _validateOwnerCapacity(
-            extension,
-            tokenAddress,
-            actionId,
-            groupId,
-            amount
-        );
+        _validateOwnerCapacity(extension, groupId, amount);
     }
 
     function _validateGroupInfo(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 groupId,
         uint256 amount,
         bool isFirstJoin,
@@ -477,7 +463,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             bool isActive,
             ,
 
-        ) = _groupManager.groupInfo(tokenAddress, actionId, groupId);
+        ) = _groupManager.groupInfo(extension, groupId);
 
         if (!isActive) revert CannotJoinDeactivatedGroup();
 
@@ -494,10 +480,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
             revert AmountExceedsAccountCap();
         }
-        if (
-            newTotal >
-            _groupManager.calculateJoinMaxAmount(tokenAddress, actionId)
-        ) revert AmountExceedsAccountCap();
+        if (newTotal > _groupManager.calculateJoinMaxAmount(extension))
+            revert AmountExceedsAccountCap();
 
         if (maxCapacity > 0) {
             _validateGroupCapacity(extension, groupId, amount, maxCapacity);
@@ -538,21 +522,16 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function _validateOwnerCapacity(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 groupId,
         uint256 amount
     ) internal view {
         address groupOwner = _group.ownerOf(groupId);
         uint256 ownerTotalJoined = _totalJoinedAmountByOwner(
             extension,
-            tokenAddress,
-            actionId,
             groupOwner
         );
         uint256 ownerMaxVerifyCapacity = _groupManager.maxVerifyCapacityByOwner(
-            tokenAddress,
-            actionId,
+            extension,
             groupOwner
         );
         if (ownerTotalJoined + amount > ownerMaxVerifyCapacity) {
@@ -562,13 +541,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function _totalJoinedAmountByOwner(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         address owner
     ) internal view returns (uint256 total) {
         uint256[] memory ownerGroupIds = _groupManager.activeGroupIdsByOwner(
-            tokenAddress,
-            actionId,
+            extension,
             owner
         );
         for (uint256 i = 0; i < ownerGroupIds.length; i++) {

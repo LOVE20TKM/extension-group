@@ -705,8 +705,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
 
         uint256 maxVerifyCapacity = _groupManager.maxVerifyCapacityByOwner(
-            tokenAddress,
-            actionId,
+            extension,
             groupOwner
         );
 

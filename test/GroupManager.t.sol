@@ -24,8 +24,9 @@ contract GroupManagerTest is BaseGroupTest {
         setUpBase();
 
         // Create mock extensions with proper factory setup and config
+        // Use mockGroupActionFactory since groupManager uses it
         extension1 = new MockExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
@@ -34,7 +35,7 @@ contract GroupManagerTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
         extension2 = new MockExtensionGroupAction(
-            address(mockFactory),
+            address(mockGroupActionFactory),
             address(token),
             address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
@@ -45,11 +46,17 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Approve factory to transfer tokens for registration
         // DEFAULT_JOIN_AMOUNT is typically 1e18
-        token.approve(address(mockFactory), type(uint256).max);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
 
-        // Register extensions in factory (this will transfer DEFAULT_JOIN_AMOUNT to each extension)
-        mockFactory.registerExtension(address(extension1), address(token));
-        mockFactory.registerExtension(address(extension2), address(token));
+        // Register extensions in mockGroupActionFactory (this will transfer DEFAULT_JOIN_AMOUNT to each extension)
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(extension1),
+            address(token)
+        );
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(extension2),
+            address(token)
+        );
 
         // Create second token
         token2 = new MockGroupToken();
@@ -88,8 +95,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -100,7 +106,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Verify group is active
         assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID_1, groupId),
+            groupManager.isGroupActive(address(extension1), groupId),
             "Group should be active"
         );
     }
@@ -124,8 +130,7 @@ contract GroupManagerTest is BaseGroupTest {
         // First activation
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -137,8 +142,7 @@ contract GroupManagerTest is BaseGroupTest {
         // Second activation with same extension, same (tokenAddress, actionId) should succeed
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
@@ -149,11 +153,11 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Both groups should be active
         assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID_1, groupId1),
+            groupManager.isGroupActive(address(extension1), groupId1),
             "Group1 should be active"
         );
         assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID_1, groupId2),
+            groupManager.isGroupActive(address(extension1), groupId2),
             "Group2 should be active"
         );
     }
@@ -177,8 +181,7 @@ contract GroupManagerTest is BaseGroupTest {
         // First activation with token
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -187,24 +190,27 @@ contract GroupManagerTest is BaseGroupTest {
             0
         );
 
-        // Map extension1 to (token2, ACTION_ID_1) - same extension, different token
-        submit.setActionInfo(address(token2), ACTION_ID_1, address(extension1));
-
-        // Second activation with same extension but different tokenAddress should revert
-        // ExtensionCenter.registerActionIfNeeded checks first and reverts with ActionAlreadyBoundToOtherAction
+        // Second activation with same extension should succeed (same extension can activate multiple groups)
+        // Extension's tokenAddress and actionId are fixed, so it will use the same (token, ACTION_ID_1)
         vm.prank(groupOwner2, groupOwner2);
-        vm.expectRevert(
-            IExtensionCenter.ActionAlreadyBoundToOtherAction.selector
-        );
         groupManager.activateGroup(
-            address(token2),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
             1e18,
             0,
             0
+        );
+
+        // Verify both groups are active
+        assertTrue(
+            groupManager.isGroupActive(address(extension1), groupId1),
+            "Group1 should be active"
+        );
+        assertTrue(
+            groupManager.isGroupActive(address(extension1), groupId2),
+            "Group2 should be active"
         );
     }
 
@@ -227,8 +233,7 @@ contract GroupManagerTest is BaseGroupTest {
         // First activation with ACTION_ID_1
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -237,24 +242,27 @@ contract GroupManagerTest is BaseGroupTest {
             0
         );
 
-        // Setup extension1 for ACTION_ID_2 (but same extension address)
-        submit.setActionInfo(address(token), ACTION_ID_2, address(extension1));
-
-        // Second activation with same extension but different actionId should revert
-        // ExtensionCenter.registerActionIfNeeded checks first and reverts with ActionAlreadyBoundToOtherAction
+        // Second activation with same extension should succeed (same extension can activate multiple groups)
+        // Extension's tokenAddress and actionId are fixed, so it will use the same (token, ACTION_ID_1)
         vm.prank(groupOwner2, groupOwner2);
-        vm.expectRevert(
-            IExtensionCenter.ActionAlreadyBoundToOtherAction.selector
-        );
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_2,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
             1e18,
             0,
             0
+        );
+
+        // Verify both groups are active
+        assertTrue(
+            groupManager.isGroupActive(address(extension1), groupId1),
+            "Group1 should be active"
+        );
+        assertTrue(
+            groupManager.isGroupActive(address(extension1), groupId2),
+            "Group2 should be active"
         );
     }
 
@@ -281,8 +289,7 @@ contract GroupManagerTest is BaseGroupTest {
         submit.setActionInfo(address(token), ACTION_ID_1, address(extension1));
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -293,7 +300,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Verify group1 is active with extension1
         assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID_1, groupId1),
+            groupManager.isGroupActive(address(extension1), groupId1),
             "Group1 should be active"
         );
 
@@ -302,8 +309,7 @@ contract GroupManagerTest is BaseGroupTest {
         submit.setActionInfo(address(token), ACTION_ID_2, address(extension2));
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_2,
+            address(extension2),
             groupId2,
             "Test Group 2",
             0,
@@ -314,11 +320,11 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Verify both groups are active with their respective extensions
         assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID_1, groupId1),
+            groupManager.isGroupActive(address(extension1), groupId1),
             "Group1 should be active"
         );
         assertTrue(
-            groupManager.isGroupActive(address(token), ACTION_ID_2, groupId2),
+            groupManager.isGroupActive(address(extension2), groupId2),
             "Group2 should be active"
         );
     }
@@ -342,8 +348,7 @@ contract GroupManagerTest is BaseGroupTest {
         // First activation
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -355,24 +360,25 @@ contract GroupManagerTest is BaseGroupTest {
         // Deactivate group1
         advanceRound();
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId1);
+        groupManager.deactivateGroup(address(extension1), groupId1);
 
-        // Try to activate with different actionId should still revert
-        // ExtensionCenter.registerActionIfNeeded checks first and reverts with ActionAlreadyBoundToOtherAction
-        submit.setActionInfo(address(token), ACTION_ID_2, address(extension1));
+        // Try to activate with same extension should succeed (binding persists but can activate new groups)
+        // Extension's tokenAddress and actionId are fixed, so it will use the same (token, ACTION_ID_1)
         vm.prank(groupOwner2, groupOwner2);
-        vm.expectRevert(
-            IExtensionCenter.ActionAlreadyBoundToOtherAction.selector
-        );
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_2,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
             1e18,
             0,
             0
+        );
+
+        // Verify group2 is active
+        assertTrue(
+            groupManager.isGroupActive(address(extension1), groupId2),
+            "Group2 should be active"
         );
     }
 
@@ -389,8 +395,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -403,8 +408,7 @@ contract GroupManagerTest is BaseGroupTest {
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(IGroupManager.GroupAlreadyActivated.selector);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group 2",
             0,
@@ -427,8 +431,7 @@ contract GroupManagerTest is BaseGroupTest {
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(IGroupManager.InvalidMinMaxJoinAmount.selector);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -451,8 +454,7 @@ contract GroupManagerTest is BaseGroupTest {
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(IGroupManager.OnlyGroupOwner.selector);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -475,8 +477,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -490,7 +491,7 @@ contract GroupManagerTest is BaseGroupTest {
         vm.expectRevert(
             IGroupManager.CannotDeactivateInActivatedRound.selector
         );
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
     }
 
     /// @notice Test: Deactivating non-existent group should revert
@@ -499,7 +500,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(IGroupManager.GroupNotFound.selector);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
     }
 
     /// @notice Test: Deactivating already deactivated group should revert
@@ -513,8 +514,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -525,12 +525,12 @@ contract GroupManagerTest is BaseGroupTest {
 
         advanceRound();
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
 
         // Try to deactivate again should revert
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(IGroupManager.GroupAlreadyDeactivated.selector);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
     }
 
     /// @notice Test: Deactivating with non-owner should revert
@@ -544,8 +544,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -558,7 +557,7 @@ contract GroupManagerTest is BaseGroupTest {
         // groupOwner2 tries to deactivate groupOwner1's group
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(IGroupManager.OnlyGroupOwner.selector);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
     }
 
     /// @notice Test: Deactivating should return stake to owner
@@ -574,8 +573,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -593,7 +591,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         advanceRound();
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
 
         uint256 balanceAfterDeactivation = token.balanceOf(groupOwner1);
         assertEq(
@@ -616,8 +614,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Initial Description",
             100,
@@ -629,8 +626,7 @@ contract GroupManagerTest is BaseGroupTest {
         // Update group info
         vm.prank(groupOwner1, groupOwner1);
         groupManager.updateGroupInfo(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Updated Description",
             200,
@@ -650,7 +646,7 @@ contract GroupManagerTest is BaseGroupTest {
             bool isActive,
             ,
 
-        ) = groupManager.groupInfo(address(token), ACTION_ID_1, groupId);
+        ) = groupManager.groupInfo(address(extension1), groupId);
 
         assertEq(groupId_, groupId, "GroupId should match");
         assertEq(
@@ -676,8 +672,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -690,8 +685,7 @@ contract GroupManagerTest is BaseGroupTest {
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(IGroupManager.InvalidMinMaxJoinAmount.selector);
         groupManager.updateGroupInfo(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Updated Description",
             0,
@@ -712,8 +706,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -724,14 +717,13 @@ contract GroupManagerTest is BaseGroupTest {
 
         advanceRound();
         vm.prank(groupOwner1, groupOwner1);
-        groupManager.deactivateGroup(address(token), ACTION_ID_1, groupId);
+        groupManager.deactivateGroup(address(extension1), groupId);
 
         // Try to update deactivated group should revert
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(IGroupManager.GroupNotActive.selector);
         groupManager.updateGroupInfo(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Updated Description",
             0,
@@ -752,8 +744,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Group",
             0,
@@ -766,8 +757,7 @@ contract GroupManagerTest is BaseGroupTest {
         vm.prank(groupOwner2, groupOwner2);
         vm.expectRevert(IGroupManager.OnlyGroupOwner.selector);
         groupManager.updateGroupInfo(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Updated Description",
             0,
@@ -790,8 +780,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId,
             "Test Description",
             100,
@@ -810,7 +799,7 @@ contract GroupManagerTest is BaseGroupTest {
             bool isActive,
             uint256 activatedRound,
             uint256 deactivatedRound
-        ) = groupManager.groupInfo(address(token), ACTION_ID_1, groupId);
+        ) = groupManager.groupInfo(address(extension1), groupId);
 
         assertEq(groupId_, groupId, "GroupId should match");
         assertEq(description, "Test Description", "Description should match");
@@ -844,8 +833,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -856,8 +844,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
@@ -867,8 +854,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         uint256[] memory activeIds = groupManager.activeGroupIds(
-            address(token),
-            ACTION_ID_1
+            address(extension1)
         );
         assertEq(activeIds.length, 2, "Should have 2 active groups");
         assertTrue(
@@ -894,15 +880,14 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.activeGroupIdsCount(address(token), ACTION_ID_1),
+            groupManager.activeGroupIdsCount(address(extension1)),
             0,
             "Should have 0 active groups initially"
         );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -912,15 +897,14 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.activeGroupIdsCount(address(token), ACTION_ID_1),
+            groupManager.activeGroupIdsCount(address(extension1)),
             1,
             "Should have 1 active group"
         );
 
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
@@ -930,7 +914,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.activeGroupIdsCount(address(token), ACTION_ID_1),
+            groupManager.activeGroupIdsCount(address(extension1)),
             2,
             "Should have 2 active groups"
         );
@@ -948,8 +932,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -960,8 +943,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
@@ -971,8 +953,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         uint256[] memory activeIds = groupManager.activeGroupIdsByOwner(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupOwner1
         );
         assertEq(activeIds.length, 2, "Should have 2 active groups");
@@ -999,15 +980,14 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStaked(address(token), ACTION_ID_1),
+            groupManager.totalStaked(address(extension1)),
             0,
             "Should have 0 staked initially"
         );
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -1017,15 +997,14 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStaked(address(token), ACTION_ID_1),
+            groupManager.totalStaked(address(extension1)),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             "Should have 1 stake amount"
         );
 
         vm.prank(groupOwner2, groupOwner2);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
@@ -1035,7 +1014,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStaked(address(token), ACTION_ID_1),
+            groupManager.totalStaked(address(extension1)),
             GROUP_ACTIVATION_STAKE_AMOUNT * 2,
             "Should have 2 stake amounts"
         );
@@ -1053,8 +1032,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         assertEq(
             groupManager.totalStakedByActionIdByOwner(
-                address(token),
-                ACTION_ID_1,
+                address(extension1),
                 groupOwner1
             ),
             0,
@@ -1063,8 +1041,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId1,
             "Test Group 1",
             0,
@@ -1075,8 +1052,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         assertEq(
             groupManager.totalStakedByActionIdByOwner(
-                address(token),
-                ACTION_ID_1,
+                address(extension1),
                 groupOwner1
             ),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -1085,8 +1061,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
-            address(token),
-            ACTION_ID_1,
+            address(extension1),
             groupId2,
             "Test Group 2",
             0,
@@ -1097,8 +1072,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         assertEq(
             groupManager.totalStakedByActionIdByOwner(
-                address(token),
-                ACTION_ID_1,
+                address(extension1),
                 groupOwner1
             ),
             GROUP_ACTIVATION_STAKE_AMOUNT * 2,

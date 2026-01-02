@@ -11,7 +11,6 @@ interface IGroupManager {
     error InvalidMaxAccounts();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
-    error ExtensionTokenActionMismatch();
     error NotRegisteredExtensionInFactory();
     error AlreadyInitialized();
     error InvalidFactory();
@@ -56,11 +55,6 @@ interface IGroupManager {
         uint256 deactivatedRound; // 0 = never deactivated
     }
 
-    struct TokenActionPair {
-        address tokenAddress;
-        uint256 actionId;
-    }
-
     function FACTORY_ADDRESS() external view returns (address);
 
     /// @notice Returns the precision constant (1e18) used for ratio and factor calculations
@@ -69,8 +63,7 @@ interface IGroupManager {
     function initialize(address factory_) external;
 
     function activateGroup(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         string memory description,
         uint256 maxCapacity,
@@ -79,15 +72,10 @@ interface IGroupManager {
         uint256 maxAccounts_
     ) external;
 
-    function deactivateGroup(
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId
-    ) external;
+    function deactivateGroup(address extension, uint256 groupId) external;
 
     function updateGroupInfo(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId,
         string memory newDescription,
         uint256 newMaxCapacity,
@@ -97,8 +85,7 @@ interface IGroupManager {
     ) external;
 
     function groupInfo(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     )
         external
@@ -116,92 +103,74 @@ interface IGroupManager {
         );
 
     function activeGroupIdsByOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address owner
     ) external view returns (uint256[] memory);
 
     function activeGroupIds(
-        address tokenAddress,
-        uint256 actionId
+        address extension
     ) external view returns (uint256[] memory);
 
     function activeGroupIdsCount(
-        address tokenAddress,
-        uint256 actionId
+        address extension
     ) external view returns (uint256);
 
     function activeGroupIdsAtIndex(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 index
     ) external view returns (uint256 groupId);
 
     function isGroupActive(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         uint256 groupId
     ) external view returns (bool);
 
     function calculateJoinMaxAmount(
-        address tokenAddress,
-        uint256 actionId
+        address extension
     ) external view returns (uint256);
 
     function maxVerifyCapacityByOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address owner
     ) external view returns (uint256);
 
     function totalStakedByActionIdByOwner(
-        address tokenAddress,
-        uint256 actionId,
+        address extension,
         address owner
     ) external view returns (uint256);
 
-    function totalStaked(
-        address tokenAddress,
-        uint256 actionId
-    ) external view returns (uint256);
+    function totalStaked(address extension) external view returns (uint256);
 
     function actionIdsByGroupId(
-        address actionFactory,
         address tokenAddress,
         uint256 groupId
     ) external view returns (uint256[] memory);
 
     function actionIdsByGroupIdCount(
-        address actionFactory,
         address tokenAddress,
         uint256 groupId
     ) external view returns (uint256);
 
     function actionIdsByGroupIdAtIndex(
-        address actionFactory,
         address tokenAddress,
         uint256 groupId,
         uint256 index
     ) external view returns (uint256);
 
     function actionIds(
-        address actionFactory,
         address tokenAddress
     ) external view returns (uint256[] memory);
 
     function actionIdsCount(
-        address actionFactory,
         address tokenAddress
     ) external view returns (uint256);
 
     function actionIdsAtIndex(
-        address actionFactory,
         address tokenAddress,
         uint256 index
     ) external view returns (uint256);
 
     function votedGroupActions(
-        address actionFactory,
         address tokenAddress,
         uint256 round
     )
@@ -210,7 +179,6 @@ interface IGroupManager {
         returns (uint256[] memory actionIds_, address[] memory extensions);
 
     function hasActiveGroups(
-        address actionFactory,
         address tokenAddress,
         address account
     ) external view returns (bool);
