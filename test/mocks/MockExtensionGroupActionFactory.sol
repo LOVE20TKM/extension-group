@@ -5,8 +5,8 @@ import {
     ExtensionFactoryBase
 } from "@extension/src/ExtensionFactoryBase.sol";
 import {
-    IExtensionGroupActionFactory
-} from "../../src/interface/IExtensionGroupActionFactory.sol";
+    IGroupActionFactory
+} from "../../src/interface/IGroupActionFactory.sol";
 import {IGroupManager} from "../../src/interface/IGroupManager.sol";
 import {GroupJoin} from "../../src/GroupJoin.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
@@ -15,7 +15,7 @@ import {GroupVerify} from "../../src/GroupVerify.sol";
 /// @notice Mock factory for testing ExtensionGroupAction
 contract MockExtensionGroupActionFactory is
     ExtensionFactoryBase,
-    IExtensionGroupActionFactory
+    IGroupActionFactory
 {
     // ============ Storage ============
 

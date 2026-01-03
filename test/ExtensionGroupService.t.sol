@@ -5,15 +5,15 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {
-    IExtensionGroupService
-} from "../src/interface/IExtensionGroupService.sol";
+    IGroupService
+} from "../src/interface/IGroupService.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {GroupJoin} from "../src/GroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
-import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
+import {IJoin} from "@extension/src/interface/IJoin.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
@@ -248,7 +248,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         newGroupManager.deactivateGroup(address(groupAction), groupId1);
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.NoActiveGroups.selector);
+        vm.expectRevert(IGroupService.NoActiveGroups.selector);
         groupService.join(new string[](0));
     }
 
@@ -295,7 +295,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionJoin.NotJoined.selector);
+        vm.expectRevert(IJoin.NotJoined.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -323,7 +323,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         // groupOwner2 tries to set recipients for groupId1 (owned by groupOwner1)
         vm.prank(groupOwner2);
-        vm.expectRevert(IExtensionGroupService.NotGroupOwner.selector);
+        vm.expectRevert(IGroupService.NotGroupOwner.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -346,7 +346,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.ArrayLengthMismatch.selector);
+        vm.expectRevert(IGroupService.ArrayLengthMismatch.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -370,7 +370,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         }
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.TooManyRecipients.selector);
+        vm.expectRevert(IGroupService.TooManyRecipients.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -392,7 +392,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.ZeroAddress.selector);
+        vm.expectRevert(IGroupService.ZeroAddress.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -414,7 +414,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 0;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.ZeroBasisPoints.selector);
+        vm.expectRevert(IGroupService.ZeroBasisPoints.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -438,7 +438,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[1] = 5e17; // 50% - total > 100%
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.InvalidBasisPoints.selector);
+        vm.expectRevert(IGroupService.InvalidBasisPoints.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -461,7 +461,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         basisPoints[0] = 5e17;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IExtensionGroupService.RecipientCannotBeSelf.selector);
+        vm.expectRevert(IGroupService.RecipientCannotBeSelf.selector);
         groupService.setRecipients(
             ACTION_ID,
             groupId1,
@@ -696,7 +696,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
 
-        IExtensionGroupService.GroupDistribution[]
+        IGroupService.GroupDistribution[]
             memory distributions = groupService.rewardDistributionAll(
                 round,
                 groupOwner1

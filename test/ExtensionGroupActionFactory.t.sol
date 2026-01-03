@@ -6,12 +6,12 @@ import {
     ExtensionGroupActionFactory
 } from "../src/ExtensionGroupActionFactory.sol";
 import {
-    IExtensionGroupActionFactory
-} from "../src/interface/IExtensionGroupActionFactory.sol";
+    IGroupActionFactory
+} from "../src/interface/IGroupActionFactory.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {
-    IExtensionGroupAction
-} from "../src/interface/IExtensionGroupAction.sol";
+    IGroupAction
+} from "../src/interface/IGroupAction.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {GroupJoin} from "../src/GroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";

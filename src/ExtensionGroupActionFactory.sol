@@ -3,9 +3,7 @@ pragma solidity =0.8.17;
 
 import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
 import {ExtensionGroupAction} from "./ExtensionGroupAction.sol";
-import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
@@ -15,7 +13,7 @@ import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 
 contract ExtensionGroupActionFactory is
     ExtensionFactoryBase,
-    IExtensionGroupActionFactory
+    IGroupActionFactory
 {
     address public immutable GROUP_MANAGER_ADDRESS;
     address public immutable GROUP_JOIN_ADDRESS;

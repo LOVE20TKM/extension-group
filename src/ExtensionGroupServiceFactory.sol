@@ -3,16 +3,14 @@ pragma solidity =0.8.17;
 
 import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
 import {ExtensionGroupService} from "./ExtensionGroupService.sol";
-import {
-    IExtensionGroupServiceFactory
-} from "./interface/IExtensionGroupServiceFactory.sol";
+import {IGroupServiceFactory} from "./interface/IGroupServiceFactory.sol";
 import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 
 contract ExtensionGroupServiceFactory is
     ExtensionFactoryBase,
-    IExtensionGroupServiceFactory
+    IGroupServiceFactory
 {
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
 

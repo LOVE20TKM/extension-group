@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    IExtensionFactory
-} from "@extension/src/interface/IExtensionFactory.sol";
-
-interface IExtensionGroupActionFactory is IExtensionFactory {
+interface IGroupActionFactory {
     event ExtensionCreate(
         address indexed extension,
         address indexed tokenAddress

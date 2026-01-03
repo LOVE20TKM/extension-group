@@ -1,19 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IExtension} from "@extension/src/interface/IExtension.sol";
-import {
-    IExtensionGroupAction
-} from "../../src/interface/IExtensionGroupAction.sol";
+import {IReward} from "@extension/src/interface/IReward.sol";
+import {IGroupAction} from "../../src/interface/IGroupAction.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
 import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 
 /**
  * @title MockExtensionGroupAction
- * @dev Mock Extension contract for GroupAction testing that implements IExtensionGroupAction
+ * @dev Mock Extension contract for GroupAction testing that implements IGroupAction
  */
-contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
+contract MockExtensionGroupAction is ExtensionBase, IGroupAction {
     // ============ Config Immutables ============
 
     address public immutable override STAKE_TOKEN_ADDRESS;
@@ -47,7 +45,7 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     function isJoinedValueConverted()
         external
         pure
-        override(ExtensionCore, IExtensionCore)
+        override(ExtensionCore)
         returns (bool)
     {
         return true;
@@ -56,7 +54,7 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     function joinedValue()
         external
         pure
-        override(ExtensionCore, IExtensionCore)
+        override(ExtensionCore)
         returns (uint256)
     {
         return 0;
@@ -64,7 +62,7 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
 
     function joinedValueByAccount(
         address /*account*/
-    ) external pure override(ExtensionCore, IExtensionCore) returns (uint256) {
+    ) external pure override(ExtensionCore) returns (uint256) {
         return 0;
     }
 
@@ -74,7 +72,7 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     )
         public
         pure
-        override(IExtension, ExtensionBase)
+        override(ExtensionBase)
         returns (uint256 reward, bool isMinted)
     {
         return (0, false);
@@ -91,7 +89,7 @@ contract MockExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         revert("Exit not implemented in mock");
     }
 
-    // ============ IExtensionGroupAction Interface ============
+    // ============ IGroupAction Interface ============
 
     function burnUnclaimedReward(uint256 /*round*/) external pure override {
         revert("Not implemented in mock");

@@ -4,10 +4,8 @@ pragma solidity =0.8.17;
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
 import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
-import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
-import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
+import {IGroupAction} from "./interface/IGroupAction.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
@@ -18,7 +16,7 @@ import {
 } from "@extension/src/interface/IExtensionFactory.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
+contract ExtensionGroupAction is ExtensionBase, IGroupAction {
     IGroupJoin internal immutable _groupJoin;
     IGroupVerify internal immutable _groupVerify;
     IGroupManager internal immutable _groupManager;
@@ -41,9 +39,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
     ) ExtensionBase(factory_, tokenAddress_) {
-        IExtensionGroupActionFactory factory = IExtensionGroupActionFactory(
-            factory_
-        );
+        IGroupActionFactory factory = IGroupActionFactory(factory_);
         address groupJoinAddress = factory.GROUP_JOIN_ADDRESS();
         _groupJoin = IGroupJoin(groupJoinAddress);
         _groupVerify = IGroupVerify(factory.GROUP_VERIFY_ADDRESS());
@@ -109,7 +105,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     function isJoinedValueConverted()
         external
         view
-        override(ExtensionCore, IExtensionCore)
+        override(ExtensionCore)
         returns (bool)
     {
         return JOIN_TOKEN_ADDRESS != TOKEN_ADDRESS;
@@ -118,7 +114,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
     function joinedValue()
         external
         view
-        override(ExtensionCore, IExtensionCore)
+        override(ExtensionCore)
         returns (uint256)
     {
         uint256 totalAmount = _groupJoin.totalJoinedAmount(address(this));
@@ -127,7 +123,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
 
     function joinedValueByAccount(
         address account
-    ) external view override(ExtensionCore, IExtensionCore) returns (uint256) {
+    ) external view override(ExtensionCore) returns (uint256) {
         (, uint256 amount, ) = _groupJoin.joinInfo(address(this), account);
         return _convertToTokenValue(amount);
     }

@@ -8,7 +8,8 @@ import {
 import {ExtensionBaseJoin} from "@extension/src/ExtensionBaseJoin.sol";
 import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
 import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
-import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
+import {IJoin} from "@extension/src/interface/IJoin.sol";
+import {IReward} from "@extension/src/interface/IReward.sol";
 import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
@@ -23,14 +24,12 @@ import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
-import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
-import {IExtensionGroupService} from "./interface/IExtensionGroupService.sol";
+import {IGroupAction} from "./interface/IGroupAction.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
+import {IGroupService} from "./interface/IGroupService.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
+contract ExtensionGroupService is ExtensionBaseJoin, IGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
@@ -44,7 +43,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     ILOVE20Launch internal immutable _launch;
     IGroupManager internal immutable _groupManager;
     ILOVE20Group internal immutable _group;
-    IExtensionGroupActionFactory internal immutable _actionFactory;
+    IExtensionFactory internal immutable _actionFactory;
 
     // account => actionId => groupId => recipients
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
@@ -78,16 +77,19 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
-        _actionFactory = IExtensionGroupActionFactory(
+        _actionFactory = IExtensionFactory(groupActionFactoryAddress_);
+        address groupManagerAddress = IGroupActionFactory(
             groupActionFactoryAddress_
-        );
-        _groupManager = IGroupManager(_actionFactory.GROUP_MANAGER_ADDRESS());
-        _group = ILOVE20Group(_actionFactory.GROUP_ADDRESS());
+        ).GROUP_MANAGER_ADDRESS();
+        _groupManager = IGroupManager(groupManagerAddress);
+        address groupAddress = IGroupActionFactory(groupActionFactoryAddress_)
+            .GROUP_ADDRESS();
+        _group = ILOVE20Group(groupAddress);
     }
 
     function join(
         string[] memory verificationInfos
-    ) public override(IExtensionJoin, ExtensionBaseJoin) {
+    ) public override(ExtensionBaseJoin) {
         if (
             !_groupManager.hasActiveGroups(
                 GROUP_ACTION_TOKEN_ADDRESS,
@@ -274,7 +276,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     function isJoinedValueConverted()
         external
         pure
-        override(ExtensionCore, IExtensionCore)
+        override(ExtensionCore)
         returns (bool)
     {
         return true;
@@ -283,7 +285,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     function joinedValue()
         external
         view
-        override(ExtensionCore, IExtensionCore)
+        override(ExtensionCore)
         returns (uint256)
     {
         return _getTotalStaked(address(0));
@@ -291,7 +293,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
 
     function joinedValueByAccount(
         address account
-    ) external view override(ExtensionCore, IExtensionCore) returns (uint256) {
+    ) external view override(ExtensionCore) returns (uint256) {
         if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
             return 0;
         return _getTotalStaked(account);
@@ -306,14 +308,13 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (, address[] memory exts) = _actionFactory.votedGroupActions(
-            GROUP_ACTION_TOKEN_ADDRESS,
-            round
-        );
+        (, address[] memory exts) = IGroupActionFactory(
+            GROUP_ACTION_FACTORY_ADDRESS
+        ).votedGroupActions(GROUP_ACTION_TOKEN_ADDRESS, round);
         for (uint256 i; i < exts.length; ) {
-            IExtensionGroupAction ga = IExtensionGroupAction(exts[i]);
+            IGroupAction ga = IGroupAction(exts[i]);
             accountReward += ga.generatedRewardByVerifier(round, verifier);
-            totalReward += ga.reward(round);
+            totalReward += IReward(address(ga)).reward(round);
             unchecked {
                 ++i;
             }
@@ -441,8 +442,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
                 GROUP_ACTION_TOKEN_ADDRESS,
                 aids[i]
             );
-            address stakeToken = IExtensionGroupAction(ext)
-                .STAKE_TOKEN_ADDRESS();
+            address stakeToken = IGroupAction(ext).STAKE_TOKEN_ADDRESS();
 
             uint256 staked = account == address(0)
                 ? _groupManager.totalStaked(ext)
@@ -535,8 +535,10 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
         if (ext == address(0)) return 0;
 
-        uint256 groupReward = IExtensionGroupAction(ext)
-            .generatedRewardByGroupId(round, groupId);
+        uint256 groupReward = IGroupAction(ext).generatedRewardByGroupId(
+            round,
+            groupId
+        );
         if (groupReward == 0) return 0;
 
         return (ownerReward * groupReward) / totalReward;

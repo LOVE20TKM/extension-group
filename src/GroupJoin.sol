@@ -2,11 +2,12 @@
 pragma solidity =0.8.17;
 
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
-import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
-import {IExtension} from "@extension/src/interface/IExtension.sol";
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
+import {IGroupAction} from "./interface/IGroupAction.sol";
+import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -26,7 +27,7 @@ using RoundHistoryAddress for RoundHistoryAddress.History;
 using SafeERC20 for IERC20;
 
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
-    IExtensionGroupActionFactory internal _factory;
+    IExtensionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
@@ -66,10 +67,16 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (factory_ == address(0)) revert InvalidFactory();
 
         _factoryAddress = factory_;
-        _factory = IExtensionGroupActionFactory(factory_);
-        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
-        _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
-        _group = ILOVE20Group(_factory.GROUP_ADDRESS());
+        _factory = IExtensionFactory(factory_);
+        _center = IExtensionCenter(
+            IExtensionFactory(factory_).CENTER_ADDRESS()
+        );
+        _groupManager = IGroupManager(
+            IGroupActionFactory(factory_).GROUP_MANAGER_ADDRESS()
+        );
+        _group = ILOVE20Group(
+            IGroupActionFactory(_factoryAddress).GROUP_ADDRESS()
+        );
         _join = ILOVE20Join(_center.joinAddress());
 
         _initialized = true;
@@ -87,8 +94,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) external override nonReentrant onlyValidExtension(extension) {
         if (amount == 0) revert JoinAmountZero();
 
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         uint256 currentRound = _join.currentRound();
 
         _processJoin(
@@ -115,8 +122,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function exit(
         address extension
     ) external override nonReentrant onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         uint256 groupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();
         if (groupId == 0) revert NotInGroup();
@@ -265,7 +272,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (!_factory.exists(extension)) {
             revert InvalidFactory();
         }
-        if (!IExtension(extension).initialized()) {
+        if (!IExtensionCore(extension).initialized()) {
             revert ExtensionNotInitialized();
         }
         _;
@@ -276,7 +283,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address,
         uint256
     ) internal view returns (address) {
-        return IExtensionGroupAction(extension).JOIN_TOKEN_ADDRESS();
+        return IGroupAction(extension).JOIN_TOKEN_ADDRESS();
     }
 
     function _processJoin(
@@ -341,8 +348,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address account,
         uint256 amount
     ) internal {
-        address joinTokenAddress = IExtensionGroupAction(extension)
-            .JOIN_TOKEN_ADDRESS();
+        address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
         IERC20(joinTokenAddress).safeTransferFrom(
             account,
             address(this),

@@ -7,8 +7,8 @@ import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
 import {ExtensionGroupService} from "../../src/ExtensionGroupService.sol";
 import {
-    IExtensionGroupService
-} from "../../src/interface/IExtensionGroupService.sol";
+    IGroupService
+} from "../../src/interface/IGroupService.sol";
 
 /// @title GroupServiceFlowTest
 /// @notice Integration test for complete group service flow with reward claiming
@@ -523,7 +523,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.next_phase();
 
         // Verify rewardDistributionAll returns both groups
-        IExtensionGroupService.GroupDistribution[] memory distributions = gs
+        IGroupService.GroupDistribution[] memory distributions = gs
             .rewardDistributionAll(verifyRound, bobGroup1.flow.userAddress);
         assertEq(distributions.length, 2, "Should have 2 group distributions");
 

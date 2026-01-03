@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IExtension} from "@extension/src/interface/IExtension.sol";
-
-interface IExtensionGroupAction is IExtension {
+interface IGroupAction {
     error RoundHasVerifiedGroups();
 
     event UnclaimedRewardBurn(

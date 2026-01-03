@@ -6,12 +6,12 @@ import {
     ExtensionGroupServiceFactory
 } from "../src/ExtensionGroupServiceFactory.sol";
 import {
-    IExtensionGroupServiceFactory
-} from "../src/interface/IExtensionGroupServiceFactory.sol";
+    IGroupServiceFactory
+} from "../src/interface/IGroupServiceFactory.sol";
 import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
 import {
-    IExtensionGroupService
-} from "../src/interface/IExtensionGroupService.sol";
+    IGroupService
+} from "../src/interface/IGroupService.sol";
 import {
     ExtensionGroupActionFactory
 } from "../src/ExtensionGroupActionFactory.sol";

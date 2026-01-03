@@ -10,12 +10,13 @@ import {
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
-import {IExtension} from "@extension/src/interface/IExtension.sol";
+import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {IExtensionGroupAction} from "./interface/IExtensionGroupAction.sol";
+import {IGroupAction} from "./interface/IGroupAction.sol";
 import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
@@ -27,7 +28,7 @@ contract GroupManager is IGroupManager {
 
     uint256 public constant PRECISION = 1e18;
 
-    IExtensionGroupActionFactory internal _factory;
+    IExtensionFactory internal _factory;
     IExtensionCenter internal _center;
     ILOVE20Group internal _group;
     ILOVE20Stake internal _stake;
@@ -56,9 +57,13 @@ contract GroupManager is IGroupManager {
         if (factory_ == address(0)) revert InvalidFactory();
 
         FACTORY_ADDRESS = factory_;
-        _factory = IExtensionGroupActionFactory(factory_);
-        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
-        _group = ILOVE20Group(_factory.GROUP_ADDRESS());
+        _factory = IExtensionFactory(factory_);
+        _center = IExtensionCenter(
+            IExtensionFactory(factory_).CENTER_ADDRESS()
+        );
+        _group = ILOVE20Group(
+            IGroupActionFactory(FACTORY_ADDRESS).GROUP_ADDRESS()
+        );
         _stake = ILOVE20Stake(_center.stakeAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
         _join = ILOVE20Join(_center.joinAddress());
@@ -80,10 +85,10 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
 
-        IExtensionGroupAction ext = IExtensionGroupAction(extension);
+        IGroupAction ext = IGroupAction(extension);
         {
             GroupInfo storage group = _groupInfo[extension][groupId];
 
@@ -134,8 +139,8 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
 
         GroupInfo storage group = _groupInfo[extension][groupId];
 
@@ -156,7 +161,7 @@ contract GroupManager is IGroupManager {
             _extensionsWithGroupActivation[tokenAddress].remove(extension);
         }
 
-        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
+        IGroupAction extConfig = IGroupAction(extension);
         uint256 stakedAmount = extConfig.ACTIVATION_STAKE_AMOUNT();
         _totalStaked[extension] -= stakedAmount;
         IERC20(extConfig.STAKE_TOKEN_ADDRESS()).safeTransfer(
@@ -187,8 +192,8 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
 
         GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
@@ -340,7 +345,7 @@ contract GroupManager is IGroupManager {
     ) external view override returns (uint256) {
         address extension = _extensionsByActivatedGroupId[tokenAddress][groupId]
             .at(index);
-        return IExtension(extension).actionId();
+        return IExtensionCore(extension).actionId();
     }
 
     function actionIdsCount(
@@ -356,18 +361,18 @@ contract GroupManager is IGroupManager {
         address extension = _extensionsWithGroupActivation[tokenAddress].at(
             index
         );
-        return IExtension(extension).actionId();
+        return IExtensionCore(extension).actionId();
     }
 
     function calculateJoinMaxAmount(
         address extension
     ) public view override returns (uint256) {
-        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
+        IGroupAction extConfig = IGroupAction(extension);
         address joinTokenAddress = extConfig.JOIN_TOKEN_ADDRESS();
         if (joinTokenAddress == address(0)) return 0;
 
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         uint256 round = _join.currentRound();
 
         uint256 totalVotes = _vote.votesNum(tokenAddress, round);
@@ -392,7 +397,7 @@ contract GroupManager is IGroupManager {
         address extension,
         address owner
     ) public view override returns (uint256) {
-        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
+        IGroupAction extConfig = IGroupAction(extension);
         return
             _calculateMaxVerifyCapacityByOwner(
                 extension,
@@ -424,7 +429,7 @@ contract GroupManager is IGroupManager {
         uint256[] memory actionIds_ = new uint256[](extensions.length);
 
         for (uint256 i; i < extensions.length; ) {
-            actionIds_[i] = IExtension(extensions[i]).actionId();
+            actionIds_[i] = IExtensionCore(extensions[i]).actionId();
             unchecked {
                 ++i;
             }
@@ -442,7 +447,7 @@ contract GroupManager is IGroupManager {
         uint256[] memory actionIds_ = new uint256[](extensions.length);
 
         for (uint256 i; i < extensions.length; ) {
-            actionIds_[i] = IExtension(extensions[i]).actionId();
+            actionIds_[i] = IExtensionCore(extensions[i]).actionId();
             unchecked {
                 ++i;
             }
@@ -460,7 +465,7 @@ contract GroupManager is IGroupManager {
         if (!_factory.exists(extension)) {
             revert NotRegisteredExtensionInFactory();
         }
-        IExtension(extension).initializeIfNeeded();
+        IExtensionCore(extension).initializeIfNeeded();
         _;
     }
 
@@ -469,8 +474,8 @@ contract GroupManager is IGroupManager {
         address owner,
         uint256 maxVerifyCapacityFactor
     ) internal view returns (uint256) {
-        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
-        address tokenAddress = extConfig.TOKEN_ADDRESS();
+        IGroupAction extConfig = IGroupAction(extension);
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
         uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
         if (totalGovVotes == 0) return 0;
@@ -486,7 +491,7 @@ contract GroupManager is IGroupManager {
         address extension,
         address owner
     ) internal view returns (uint256 staked) {
-        IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
+        IGroupAction extConfig = IGroupAction(extension);
         uint256 nftBalance = _group.balanceOf(owner);
         for (uint256 i; i < nftBalance; ) {
             uint256 gId = _group.tokenOfOwnerByIndex(owner, i);

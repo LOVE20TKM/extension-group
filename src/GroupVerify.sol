@@ -3,10 +3,11 @@ pragma solidity =0.8.17;
 
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
-import {IExtension} from "@extension/src/interface/IExtension.sol";
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
+import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -18,7 +19,7 @@ import {
 import {MAX_ORIGIN_SCORE, PRECISION} from "./interface/IGroupVerify.sol";
 
 contract GroupVerify is IGroupVerify, ReentrancyGuard {
-    IExtensionGroupActionFactory internal _factory;
+    IExtensionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     ILOVE20Group internal _group;
@@ -85,13 +86,21 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (factory_ == address(0)) revert InvalidFactory();
 
         _factoryAddress = factory_;
-        _factory = IExtensionGroupActionFactory(factory_);
-        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
-        _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
-        _group = ILOVE20Group(_factory.GROUP_ADDRESS());
+        _factory = IExtensionFactory(factory_);
+        _center = IExtensionCenter(
+            IExtensionFactory(factory_).CENTER_ADDRESS()
+        );
+        _groupManager = IGroupManager(
+            IGroupActionFactory(_factoryAddress).GROUP_MANAGER_ADDRESS()
+        );
+        address groupAddress = IGroupActionFactory(_factoryAddress)
+            .GROUP_ADDRESS();
+        _group = ILOVE20Group(groupAddress);
         _verify = ILOVE20Verify(_center.verifyAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
-        _groupJoin = IGroupJoin(_factory.GROUP_JOIN_ADDRESS());
+        _groupJoin = IGroupJoin(
+            IGroupActionFactory(_factoryAddress).GROUP_JOIN_ADDRESS()
+        );
 
         _initialized = true;
     }
@@ -104,7 +113,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (!_factory.exists(extension)) {
             revert InvalidFactory();
         }
-        if (!IExtension(extension).initialized()) {
+        if (!IExtensionCore(extension).initialized()) {
             revert ExtensionNotInitialized();
         }
         _;
@@ -121,8 +130,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 groupId,
         address delegatedVerifier
     ) external override onlyGroupOwner(extension, groupId) {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         _delegatedVerifierByGroupId[extension][groupId] = delegatedVerifier;
         _delegatedVerifierOwnerByGroupId[extension][
             groupId
@@ -142,8 +151,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 startIndex,
         uint256[] calldata originScores
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         uint256 currentRound = _verify.currentRound();
 
         _checkVerifier(extension, groupId);
@@ -252,8 +261,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 amount,
         string calldata reason
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         _processDistrustVote(
             extension,
             tokenAddress,
@@ -650,8 +659,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtensionCore(extension).actionId();
         uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
         uint256 capacityReduction = _capacityReductionByGroupId[extension][
             round

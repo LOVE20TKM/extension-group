@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IExtensionJoin} from "@extension/src/interface/IExtensionJoin.sol";
-
-interface IExtensionGroupService is IExtensionJoin {
+interface IGroupService {
     error NoActiveGroups();
     error InvalidBasisPoints();
     error TooManyRecipients();
