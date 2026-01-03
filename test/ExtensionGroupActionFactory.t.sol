@@ -8,9 +8,7 @@ import {
 import {
     IExtensionGroupActionFactory
 } from "../src/interface/IExtensionGroupActionFactory.sol";
-import {
-    ExtensionGroupAction
-} from "../src/ExtensionGroupAction.sol";
+import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {
     IExtensionGroupAction
 } from "../src/interface/IExtensionGroupAction.sol";
@@ -65,7 +63,7 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
     // ============ Constructor Tests ============
 
     function test_Constructor_StoresCenter() public view {
-        assertEq(factory.center(), address(center));
+        assertEq(factory.CENTER_ADDRESS(), address(center));
     }
 
     function test_Constructor_StoresGroupManagerAddress() public view {
@@ -157,10 +155,8 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
             CAPACITY_FACTOR
         );
 
-        ExtensionGroupAction groupAction = ExtensionGroupAction(
-            extension
-        );
-        assertEq(groupAction.factory(), address(factory));
+        ExtensionGroupAction groupAction = ExtensionGroupAction(extension);
+        assertEq(groupAction.FACTORY_ADDRESS(), address(factory));
     }
 
     function test_CreateExtension_MultipleExtensions() public {
@@ -225,7 +221,7 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         ExtensionGroupAction ext = ExtensionGroupAction(extension);
 
         // Verify extension token address
-        assertEq(ext.tokenAddress(), address(token));
+        assertEq(ext.TOKEN_ADDRESS(), address(token));
 
         // Verify Factory addresses
         assertEq(factory.GROUP_MANAGER_ADDRESS(), address(newGroupManager));
@@ -409,7 +405,11 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         // Add an actionId with zero extension address
         uint256 zeroActionId = 300;
         submit.setActionInfo(address(token), zeroActionId, address(0));
-        vote.setVotedActionIds(address(token), join.currentRound(), zeroActionId);
+        vote.setVotedActionIds(
+            address(token),
+            join.currentRound(),
+            zeroActionId
+        );
 
         uint256 round = join.currentRound();
         (uint256[] memory aids, address[] memory exts) = factory

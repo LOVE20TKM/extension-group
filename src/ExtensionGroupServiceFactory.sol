@@ -18,7 +18,11 @@ contract ExtensionGroupServiceFactory is
 
     constructor(
         address groupActionFactory_
-    ) ExtensionFactoryBase(IExtensionFactory(groupActionFactory_).center()) {
+    )
+        ExtensionFactoryBase(
+            IExtensionFactory(groupActionFactory_).CENTER_ADDRESS()
+        )
+    {
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactory_;
     }
 

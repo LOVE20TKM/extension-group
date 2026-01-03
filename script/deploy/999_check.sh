@@ -44,7 +44,7 @@ if [ -n "$groupManagerAddress" ]; then
     # Verify addresses through factory
     if [ -n "$groupActionFactoryAddress" ]; then
         check_equal "GroupManager factory: GROUP_ADDRESS" $groupAddress $(cast_call $groupActionFactoryAddress "GROUP_ADDRESS()(address)")
-        check_equal "GroupManager factory: center" $centerAddress $(cast_call $groupActionFactoryAddress "center()(address)")
+        check_equal "GroupManager factory: center" $centerAddress $(cast_call $groupActionFactoryAddress "CENTER_ADDRESS()(address)")
     fi
 else
     echo "(warning) GroupManager not deployed"
@@ -69,7 +69,7 @@ fi
 echo "-------------------- GroupActionFactory check --------------------"
 if [ -n "$groupActionFactoryAddress" ]; then
     echo "  groupActionFactoryAddress: $groupActionFactoryAddress"
-    check_equal "GroupActionFactory: center" $centerAddress $(cast_call $groupActionFactoryAddress "center()(address)")
+    check_equal "GroupActionFactory: center" $centerAddress $(cast_call $groupActionFactoryAddress "CENTER_ADDRESS()(address)")
     check_equal "GroupActionFactory: GROUP_MANAGER_ADDRESS" $groupManagerAddress $(cast_call $groupActionFactoryAddress "GROUP_MANAGER_ADDRESS()(address)")
     check_equal "GroupActionFactory: GROUP_JOIN_ADDRESS" $groupJoinAddress $(cast_call $groupActionFactoryAddress "GROUP_JOIN_ADDRESS()(address)")
     check_equal "GroupActionFactory: GROUP_VERIFY_ADDRESS" $groupVerifyAddress $(cast_call $groupActionFactoryAddress "GROUP_VERIFY_ADDRESS()(address)")
@@ -81,7 +81,7 @@ fi
 echo "-------------------- GroupServiceFactory check --------------------"
 if [ -n "$groupServiceFactoryAddress" ]; then
     echo "  groupServiceFactoryAddress: $groupServiceFactoryAddress"
-    check_equal "GroupServiceFactory: center" $centerAddress $(cast_call $groupServiceFactoryAddress "center()(address)")
+    check_equal "GroupServiceFactory: center" $centerAddress $(cast_call $groupServiceFactoryAddress "CENTER_ADDRESS()(address)")
     check_equal "GroupServiceFactory: GROUP_ACTION_FACTORY_ADDRESS" $groupActionFactoryAddress $(cast_call $groupServiceFactoryAddress "GROUP_ACTION_FACTORY_ADDRESS()(address)")
 else
     echo "(warning) GroupServiceFactory not deployed"

@@ -75,9 +75,9 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         uint256 rewardAmount = _reward[round];
         if (rewardAmount > 0 && _burnedReward[round] == 0) {
             _burnedReward[round] = rewardAmount;
-            ILOVE20Token(tokenAddress).burn(rewardAmount);
+            ILOVE20Token(TOKEN_ADDRESS).burn(rewardAmount);
             emit UnclaimedRewardBurn(
-                tokenAddress,
+                TOKEN_ADDRESS,
                 round,
                 actionId,
                 rewardAmount
@@ -112,7 +112,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         override(ExtensionCore, IExtensionCore)
         returns (bool)
     {
-        return JOIN_TOKEN_ADDRESS != tokenAddress;
+        return JOIN_TOKEN_ADDRESS != TOKEN_ADDRESS;
     }
 
     function joinedValue()
@@ -185,12 +185,12 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         uint256 amount
     ) internal view returns (uint256) {
         if (amount == 0) return 0;
-        if (JOIN_TOKEN_ADDRESS == tokenAddress) return amount;
+        if (JOIN_TOKEN_ADDRESS == TOKEN_ADDRESS) return amount;
         return
             TokenConversionLib.convertLPToTokenValue(
                 JOIN_TOKEN_ADDRESS,
                 amount,
-                tokenAddress
+                TOKEN_ADDRESS
             );
     }
 
@@ -198,7 +198,7 @@ contract ExtensionGroupAction is ExtensionBase, IExtensionGroupAction {
         address joinTokenAddress_,
         address tokenAddress_
     ) private view {
-        if (joinTokenAddress_ == tokenAddress_) return;
+        if (joinTokenAddress_ == TOKEN_ADDRESS) return;
 
         if (
             !TokenConversionLib.isLPTokenContainingTarget(

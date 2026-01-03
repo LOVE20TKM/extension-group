@@ -806,7 +806,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         address joinTokenAddress = action.JOIN_TOKEN_ADDRESS();
         assertEq(joinTokenAddress, address(token));
         assertEq(
-            action.tokenAddress(),
+            action.TOKEN_ADDRESS(),
             address(token),
             "tokenAddress mismatch"
         );

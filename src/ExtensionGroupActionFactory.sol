@@ -69,7 +69,7 @@ contract ExtensionGroupActionFactory is
         override
         returns (uint256[] memory actionIds_, address[] memory extensions)
     {
-        IExtensionCenter center_ = IExtensionCenter(center);
+        IExtensionCenter center_ = IExtensionCenter(CENTER_ADDRESS);
         ILOVE20Vote vote = ILOVE20Vote(center_.voteAddress());
         ILOVE20Submit submit = ILOVE20Submit(center_.submitAddress());
 

@@ -86,7 +86,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         _factoryAddress = factory_;
         _factory = IExtensionGroupActionFactory(factory_);
-        _center = IExtensionCenter(_factory.center());
+        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
         _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _verify = ILOVE20Verify(_center.verifyAddress());
@@ -121,7 +121,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 groupId,
         address delegatedVerifier
     ) external override onlyGroupOwner(extension, groupId) {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         _delegatedVerifierByGroupId[extension][groupId] = delegatedVerifier;
         _delegatedVerifierOwnerByGroupId[extension][
@@ -142,7 +142,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 startIndex,
         uint256[] calldata originScores
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _verify.currentRound();
 
@@ -252,7 +252,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 amount,
         string calldata reason
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         _processDistrustVote(
             extension,
@@ -650,7 +650,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
         uint256 capacityReduction = _capacityReductionByGroupId[extension][

@@ -57,7 +57,7 @@ contract GroupManager is IGroupManager {
 
         FACTORY_ADDRESS = factory_;
         _factory = IExtensionGroupActionFactory(factory_);
-        _center = IExtensionCenter(_factory.center());
+        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _stake = ILOVE20Stake(_center.stakeAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
@@ -80,7 +80,7 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
 
         IExtensionGroupAction ext = IExtensionGroupAction(extension);
@@ -134,7 +134,7 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -187,7 +187,7 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
 
         GroupInfo storage group = _groupInfo[extension][groupId];
@@ -366,7 +366,7 @@ contract GroupManager is IGroupManager {
         address joinTokenAddress = extConfig.JOIN_TOKEN_ADDRESS();
         if (joinTokenAddress == address(0)) return 0;
 
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         uint256 round = _join.currentRound();
 
@@ -470,7 +470,7 @@ contract GroupManager is IGroupManager {
         uint256 maxVerifyCapacityFactor
     ) internal view returns (uint256) {
         IExtensionGroupAction extConfig = IExtensionGroupAction(extension);
-        address tokenAddress = extConfig.tokenAddress();
+        address tokenAddress = extConfig.TOKEN_ADDRESS();
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
         uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
         if (totalGovVotes == 0) return 0;

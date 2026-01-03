@@ -67,7 +67,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         _factoryAddress = factory_;
         _factory = IExtensionGroupActionFactory(factory_);
-        _center = IExtensionCenter(_factory.center());
+        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
         _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
         _group = ILOVE20Group(_factory.GROUP_ADDRESS());
         _join = ILOVE20Join(_center.joinAddress());
@@ -87,7 +87,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) external override nonReentrant onlyValidExtension(extension) {
         if (amount == 0) revert JoinAmountZero();
 
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _join.currentRound();
 
@@ -115,7 +115,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function exit(
         address extension
     ) external override nonReentrant onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).tokenAddress();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         uint256 groupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();

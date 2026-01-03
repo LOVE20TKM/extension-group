@@ -103,7 +103,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         address[] calldata addrs,
         uint256[] calldata basisPoints
     ) external {
-        if (!_center.isAccountJoined(tokenAddress, actionId, msg.sender))
+        if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, msg.sender))
             revert NotJoined();
 
         address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
@@ -292,7 +292,8 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     function joinedValueByAccount(
         address account
     ) external view override(ExtensionCore, IExtensionCore) returns (uint256) {
-        if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
+        if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
+            return 0;
         return _getTotalStaked(account);
     }
 
@@ -366,7 +367,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         }
 
         emit RecipientsUpdate(
-            tokenAddress,
+            TOKEN_ADDRESS,
             round,
             actionId_,
             groupId,
@@ -460,19 +461,19 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
     ) internal view returns (uint256) {
         if (amount == 0) return 0;
 
-        if (stakeToken == tokenAddress) return amount;
+        if (stakeToken == TOKEN_ADDRESS) return amount;
 
         if (
             TokenConversionLib.isLPTokenContainingTarget(
                 stakeToken,
-                tokenAddress
+                TOKEN_ADDRESS
             )
         ) {
             return
                 TokenConversionLib.convertLPToTokenValue(
                     stakeToken,
                     amount,
-                    tokenAddress
+                    TOKEN_ADDRESS
                 );
         }
 
@@ -480,7 +481,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
             TokenConversionLib.convertViaUniswap(
                 _center.uniswapV2FactoryAddress(),
                 stakeToken,
-                tokenAddress,
+                TOKEN_ADDRESS,
                 amount
             );
     }
@@ -504,7 +505,8 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         uint256 round,
         address account
     ) internal view override returns (uint256) {
-        if (!_center.isAccountJoined(tokenAddress, actionId, account)) return 0;
+        if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
+            return 0;
 
         uint256 total = reward(round);
         if (total == 0) return 0;
@@ -552,10 +554,10 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
         if (amount > 0) {
             uint256 remaining = amount - _distributeToRecipients(round);
             if (remaining > 0)
-                IERC20(tokenAddress).safeTransfer(msg.sender, remaining);
+                IERC20(TOKEN_ADDRESS).safeTransfer(msg.sender, remaining);
         }
 
-        emit ClaimReward(tokenAddress, round, actionId, msg.sender, amount);
+        emit ClaimReward(TOKEN_ADDRESS, round, actionId, msg.sender, amount);
     }
 
     function _distributeToRecipients(
@@ -605,7 +607,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IExtensionGroupService {
             bps
         );
 
-        IERC20 token = IERC20(tokenAddress);
+        IERC20 token = IERC20(TOKEN_ADDRESS);
         for (uint256 i; i < addrs.length; ) {
             if (amounts[i] > 0) {
                 token.safeTransfer(addrs[i], amounts[i]);

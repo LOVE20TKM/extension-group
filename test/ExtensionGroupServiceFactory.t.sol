@@ -8,9 +8,7 @@ import {
 import {
     IExtensionGroupServiceFactory
 } from "../src/interface/IExtensionGroupServiceFactory.sol";
-import {
-    ExtensionGroupService
-} from "../src/ExtensionGroupService.sol";
+import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
 import {
     IExtensionGroupService
 } from "../src/interface/IExtensionGroupService.sol";
@@ -67,9 +65,7 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         // Deploy GroupService factory
-        factory = new ExtensionGroupServiceFactory(
-            address(actionFactory)
-        );
+        factory = new ExtensionGroupServiceFactory(address(actionFactory));
     }
 
     // ============ Constructor Tests ============
@@ -79,7 +75,7 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
             factory.GROUP_ACTION_FACTORY_ADDRESS(),
             address(actionFactory)
         );
-        assertEq(factory.center(), address(center));
+        assertEq(factory.CENTER_ADDRESS(), address(center));
     }
 
     // ============ CreateExtension Tests ============
@@ -134,10 +130,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(token)
         );
 
-        ExtensionGroupService groupService = ExtensionGroupService(
-            extension
-        );
-        assertEq(groupService.factory(), address(factory));
+        ExtensionGroupService groupService = ExtensionGroupService(extension);
+        assertEq(groupService.FACTORY_ADDRESS(), address(factory));
     }
 
     function test_CreateExtension_SetsCorrectGroupActionFactoryAddress()
@@ -150,9 +144,7 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(token)
         );
 
-        ExtensionGroupService groupService = ExtensionGroupService(
-            extension
-        );
+        ExtensionGroupService groupService = ExtensionGroupService(extension);
         assertEq(groupService.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
         assertEq(
             groupService.GROUP_ACTION_FACTORY_ADDRESS(),
@@ -185,12 +177,10 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(token)
         );
 
-        ExtensionGroupService ext = ExtensionGroupService(
-            extension
-        );
+        ExtensionGroupService ext = ExtensionGroupService(extension);
 
         // All parameters are public immutable, can be accessed directly
-        assertEq(ext.tokenAddress(), address(token));
+        assertEq(ext.TOKEN_ADDRESS(), address(token));
         assertEq(ext.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
         assertEq(ext.GROUP_ACTION_FACTORY_ADDRESS(), address(actionFactory));
         assertEq(ext.DEFAULT_MAX_RECIPIENTS(), MAX_RECIPIENTS);
