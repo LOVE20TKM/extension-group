@@ -7,7 +7,7 @@ import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
-import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -94,8 +94,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) external override nonReentrant onlyValidExtension(extension) {
         if (amount == 0) revert JoinAmountZero();
 
-        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtensionCore(extension).actionId();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _join.currentRound();
 
         _processJoin(
@@ -122,8 +122,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function exit(
         address extension
     ) external override nonReentrant onlyValidExtension(extension) {
-        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtensionCore(extension).actionId();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 groupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();
         if (groupId == 0) revert NotInGroup();
@@ -272,7 +272,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (!_factory.exists(extension)) {
             revert InvalidFactory();
         }
-        if (!IExtensionCore(extension).initialized()) {
+        if (!IExtension(extension).initialized()) {
             revert ExtensionNotInitialized();
         }
         _;

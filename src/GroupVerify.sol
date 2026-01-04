@@ -7,7 +7,7 @@ import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
     IExtensionFactory
 } from "@extension/src/interface/IExtensionFactory.sol";
-import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
@@ -113,7 +113,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (!_factory.exists(extension)) {
             revert InvalidFactory();
         }
-        if (!IExtensionCore(extension).initialized()) {
+        if (!IExtension(extension).initialized()) {
             revert ExtensionNotInitialized();
         }
         _;
@@ -130,8 +130,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 groupId,
         address delegatedVerifier
     ) external override onlyGroupOwner(extension, groupId) {
-        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtensionCore(extension).actionId();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         _delegatedVerifierByGroupId[extension][groupId] = delegatedVerifier;
         _delegatedVerifierOwnerByGroupId[extension][
             groupId
@@ -151,8 +151,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 startIndex,
         uint256[] calldata originScores
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtensionCore(extension).actionId();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _verify.currentRound();
 
         _checkVerifier(extension, groupId);
@@ -261,8 +261,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 amount,
         string calldata reason
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtensionCore(extension).actionId();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         _processDistrustVote(
             extension,
             tokenAddress,
@@ -659,8 +659,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
-        address tokenAddress = IExtensionCore(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtensionCore(extension).actionId();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
         uint256 capacityReduction = _capacityReductionByGroupId[extension][
             round

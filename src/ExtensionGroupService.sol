@@ -8,8 +8,8 @@ import {
 import {
     ExtensionBaseRewardJoin
 } from "@extension/src/ExtensionBaseRewardJoin.sol";
-import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
-import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
+import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IJoin} from "@extension/src/interface/IJoin.sol";
 import {IReward} from "@extension/src/interface/IReward.sol";
 import {
@@ -278,7 +278,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function isJoinedValueConverted()
         external
         pure
-        override(ExtensionCore)
+        override(ExtensionBase)
         returns (bool)
     {
         return true;
@@ -287,7 +287,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function joinedValue()
         external
         view
-        override(ExtensionCore)
+        override(ExtensionBase)
         returns (uint256)
     {
         return _getTotalStaked(address(0));
@@ -295,7 +295,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     function joinedValueByAccount(
         address account
-    ) external view override(ExtensionCore) returns (uint256) {
+    ) external view override(ExtensionBase) returns (uint256) {
         if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
             return 0;
         return _getTotalStaked(account);
