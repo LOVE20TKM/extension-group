@@ -3,7 +3,7 @@ pragma solidity =0.8.17;
 
 import {IReward} from "@extension/src/interface/IReward.sol";
 import {IGroupAction} from "../../src/interface/IGroupAction.sol";
-import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
+import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
 import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
 import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 
@@ -11,7 +11,7 @@ import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
  * @title MockExtensionGroupAction
  * @dev Mock Extension contract for GroupAction testing that implements IGroupAction
  */
-contract MockExtensionGroupAction is ExtensionBase, IGroupAction {
+contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     // ============ Config Immutables ============
 
     address public immutable override STAKE_TOKEN_ADDRESS;
@@ -28,7 +28,7 @@ contract MockExtensionGroupAction is ExtensionBase, IGroupAction {
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
-    ) ExtensionBase(factory_, tokenAddress_) {
+    ) ExtensionBaseReward(factory_, tokenAddress_) {
         STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
@@ -72,7 +72,7 @@ contract MockExtensionGroupAction is ExtensionBase, IGroupAction {
     )
         public
         pure
-        override(ExtensionBase)
+        override(ExtensionBaseReward)
         returns (uint256 reward, bool isMinted)
     {
         return (0, false);

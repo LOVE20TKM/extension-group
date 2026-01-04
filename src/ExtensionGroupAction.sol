@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
+import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
 import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
 import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
@@ -16,7 +16,7 @@ import {
 } from "@extension/src/interface/IExtensionFactory.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-contract ExtensionGroupAction is ExtensionBase, IGroupAction {
+contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     IGroupJoin internal immutable _groupJoin;
     IGroupVerify internal immutable _groupVerify;
     IGroupManager internal immutable _groupManager;
@@ -38,7 +38,7 @@ contract ExtensionGroupAction is ExtensionBase, IGroupAction {
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
-    ) ExtensionBase(factory_, tokenAddress_) {
+    ) ExtensionBaseReward(factory_, tokenAddress_) {
         IGroupActionFactory factory = IGroupActionFactory(factory_);
         address groupJoinAddress = factory.GROUP_JOIN_ADDRESS();
         _groupJoin = IGroupJoin(groupJoinAddress);

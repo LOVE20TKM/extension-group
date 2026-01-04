@@ -5,7 +5,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ExtensionBaseJoin} from "@extension/src/ExtensionBaseJoin.sol";
+import {
+    ExtensionBaseRewardJoin
+} from "@extension/src/ExtensionBaseRewardJoin.sol";
 import {ExtensionCore} from "@extension/src/ExtensionCore.sol";
 import {IExtensionCore} from "@extension/src/interface/IExtensionCore.sol";
 import {IJoin} from "@extension/src/interface/IJoin.sol";
@@ -29,7 +31,7 @@ import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupService} from "./interface/IGroupService.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
-contract ExtensionGroupService is ExtensionBaseJoin, IGroupService {
+contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
@@ -63,7 +65,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IGroupService {
         address tokenAddress_,
         address groupActionTokenAddress_,
         address groupActionFactoryAddress_
-    ) ExtensionBaseJoin(factory_, tokenAddress_) {
+    ) ExtensionBaseRewardJoin(factory_, tokenAddress_) {
         _launch = ILOVE20Launch(_center.launchAddress());
 
         if (groupActionTokenAddress_ != tokenAddress_) {
@@ -89,7 +91,7 @@ contract ExtensionGroupService is ExtensionBaseJoin, IGroupService {
 
     function join(
         string[] memory verificationInfos
-    ) public override(ExtensionBaseJoin) {
+    ) public override(ExtensionBaseRewardJoin) {
         if (
             !_groupManager.hasActiveGroups(
                 GROUP_ACTION_TOKEN_ADDRESS,
