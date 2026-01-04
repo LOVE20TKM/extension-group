@@ -2,11 +2,6 @@
 pragma solidity =0.8.17;
 
 interface IGroupActionFactory {
-    event ExtensionCreate(
-        address indexed extension,
-        address indexed tokenAddress
-    );
-
     function GROUP_MANAGER_ADDRESS() external view returns (address);
 
     function GROUP_JOIN_ADDRESS() external view returns (address);

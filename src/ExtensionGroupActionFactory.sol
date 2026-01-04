@@ -54,8 +54,6 @@ contract ExtensionGroupActionFactory is
         );
 
         _registerExtension(extension, tokenAddress_);
-
-        emit ExtensionCreate(extension, tokenAddress_);
     }
 
     function votedGroupActions(
