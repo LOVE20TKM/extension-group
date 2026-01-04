@@ -24,7 +24,9 @@ import {
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
-import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
+import {
+    IERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
@@ -44,7 +46,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     ILOVE20Launch internal immutable _launch;
     IGroupManager internal immutable _groupManager;
-    ILOVE20Group internal immutable _group;
+    IERC721Enumerable internal immutable _group;
     IExtensionFactory internal immutable _actionFactory;
 
     // account => actionId => groupId => recipients
@@ -86,7 +88,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         _groupManager = IGroupManager(groupManagerAddress);
         address groupAddress = IGroupActionFactory(groupActionFactoryAddress_)
             .GROUP_ADDRESS();
-        _group = ILOVE20Group(groupAddress);
+        _group = IERC721Enumerable(groupAddress);
     }
 
     function join(

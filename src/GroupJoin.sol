@@ -10,7 +10,9 @@ import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
+import {
+    IERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
@@ -30,7 +32,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     IExtensionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
-    ILOVE20Group internal _group;
+    IERC721Enumerable internal _group;
     ILOVE20Join internal _join;
 
     address internal _factoryAddress;
@@ -74,7 +76,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _groupManager = IGroupManager(
             IGroupActionFactory(factory_).GROUP_MANAGER_ADDRESS()
         );
-        _group = ILOVE20Group(
+        _group = IERC721Enumerable(
             IGroupActionFactory(_factoryAddress).GROUP_ADDRESS()
         );
         _join = ILOVE20Join(_center.joinAddress());

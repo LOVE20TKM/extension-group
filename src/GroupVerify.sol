@@ -10,7 +10,9 @@ import {
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
+import {
+    IERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {
@@ -22,7 +24,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     IExtensionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
-    ILOVE20Group internal _group;
+    IERC721Enumerable internal _group;
     ILOVE20Verify internal _verify;
     ILOVE20Vote internal _vote;
     IGroupJoin internal _groupJoin;
@@ -95,7 +97,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         address groupAddress = IGroupActionFactory(_factoryAddress)
             .GROUP_ADDRESS();
-        _group = ILOVE20Group(groupAddress);
+        _group = IERC721Enumerable(groupAddress);
         _verify = ILOVE20Verify(_center.verifyAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
         _groupJoin = IGroupJoin(

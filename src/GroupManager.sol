@@ -2,7 +2,9 @@
 pragma solidity =0.8.17;
 
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {ILOVE20Group} from "@group/interfaces/ILOVE20Group.sol";
+import {
+    IERC721Enumerable
+} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
@@ -30,7 +32,7 @@ contract GroupManager is IGroupManager {
 
     IExtensionFactory internal _factory;
     IExtensionCenter internal _center;
-    ILOVE20Group internal _group;
+    IERC721Enumerable internal _group;
     ILOVE20Stake internal _stake;
     ILOVE20Vote internal _vote;
     ILOVE20Join internal _join;
@@ -61,7 +63,7 @@ contract GroupManager is IGroupManager {
         _center = IExtensionCenter(
             IExtensionFactory(factory_).CENTER_ADDRESS()
         );
-        _group = ILOVE20Group(
+        _group = IERC721Enumerable(
             IGroupActionFactory(FACTORY_ADDRESS).GROUP_ADDRESS()
         );
         _stake = ILOVE20Stake(_center.stakeAddress());
