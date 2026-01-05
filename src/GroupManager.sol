@@ -127,19 +127,13 @@ contract GroupManager is IGroupManager {
     function deactivateGroup(
         address extension,
         uint256 groupId
-    )
-        external
-        override
-        onlyGroupOwner(groupId)
-        onlyValidExtensionAndAutoInitialize(extension)
-    {
+    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
 
         GroupInfo storage group = _groupInfo[extension][groupId];
 
-        if (group.activatedRound == 0) revert GroupNotFound();
-        if (!group.isActive) revert GroupAlreadyDeactivated();
+        if (!group.isActive) revert GroupNotActive();
 
         uint256 currentRound = _join.currentRound();
         if (currentRound == group.activatedRound)
@@ -163,14 +157,14 @@ contract GroupManager is IGroupManager {
             stakedAmount
         );
 
-        emit DeactivateGroup(
-            tokenAddress,
-            actionId,
-            currentRound,
-            groupId,
-            msg.sender,
-            stakedAmount
-        );
+        emit DeactivateGroup({
+            tokenAddress: tokenAddress,
+            actionId: actionId,
+            round: currentRound,
+            groupId: groupId,
+            owner: msg.sender,
+            stakeAmount: stakedAmount
+        });
     }
 
     function updateGroupInfo(
@@ -181,12 +175,7 @@ contract GroupManager is IGroupManager {
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
-    )
-        external
-        override
-        onlyGroupOwner(groupId)
-        onlyValidExtensionAndAutoInitialize(extension)
-    {
+    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
         GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
 
@@ -341,6 +330,24 @@ contract GroupManager is IGroupManager {
         return IExtension(extension).actionId();
     }
 
+    function actionIds(
+        address tokenAddress
+    ) public view override returns (uint256[] memory) {
+        address[] memory extensions = _extensionsWithGroupActivation[
+            tokenAddress
+        ].values();
+        uint256[] memory actionIds_ = new uint256[](extensions.length);
+
+        for (uint256 i; i < extensions.length; ) {
+            actionIds_[i] = IExtension(extensions[i]).actionId();
+            unchecked {
+                ++i;
+            }
+        }
+
+        return actionIds_;
+    }
+
     function actionIdsCount(
         address tokenAddress
     ) external view override returns (uint256) {
@@ -390,20 +397,35 @@ contract GroupManager is IGroupManager {
         address extension,
         address owner
     ) public view override returns (uint256) {
-        IGroupAction extConfig = IGroupAction(extension);
-        return
-            _calculateMaxVerifyCapacityByOwner(
-                extension,
-                owner,
-                extConfig.MAX_VERIFY_CAPACITY_FACTOR()
-            );
+        IGroupAction ext = IGroupAction(extension);
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
+        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
+        if (totalGovVotes == 0) return 0;
+
+        uint256 totalMinted = IERC20(ext.JOIN_TOKEN_ADDRESS()).totalSupply();
+
+        uint256 baseCapacity = (totalMinted * ownerGovVotes) / totalGovVotes;
+        return (baseCapacity * ext.MAX_VERIFY_CAPACITY_FACTOR()) / PRECISION;
     }
 
     function totalStakedByOwner(
         address extension,
         address owner
     ) public view override returns (uint256) {
-        return _totalStakedByActionIdByOwner(extension, owner);
+        IGroupAction ext = IGroupAction(extension);
+        uint256 nftBalance = _group.balanceOf(owner);
+        for (uint256 i; i < nftBalance; ) {
+            uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
+            if (_groupInfo[extension][gId].isActive) {
+                staked += ext.ACTIVATION_STAKE_AMOUNT();
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        return staked;
     }
 
     function totalStaked(
@@ -431,24 +453,6 @@ contract GroupManager is IGroupManager {
         return actionIds_;
     }
 
-    function actionIds(
-        address tokenAddress
-    ) public view override returns (uint256[] memory) {
-        address[] memory extensions = _extensionsWithGroupActivation[
-            tokenAddress
-        ].values();
-        uint256[] memory actionIds_ = new uint256[](extensions.length);
-
-        for (uint256 i; i < extensions.length; ) {
-            actionIds_[i] = IExtension(extensions[i]).actionId();
-            unchecked {
-                ++i;
-            }
-        }
-
-        return actionIds_;
-    }
-
     modifier onlyGroupOwner(uint256 groupId) {
         if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
         _;
@@ -461,40 +465,11 @@ contract GroupManager is IGroupManager {
         IExtension(extension).initializeIfNeeded();
         _;
     }
-
-    function _calculateMaxVerifyCapacityByOwner(
-        address extension,
-        address owner,
-        uint256 maxVerifyCapacityFactor
-    ) internal view returns (uint256) {
-        IGroupAction extConfig = IGroupAction(extension);
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
-        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
-        if (totalGovVotes == 0) return 0;
-
-        uint256 totalMinted = IERC20(extConfig.JOIN_TOKEN_ADDRESS())
-            .totalSupply();
-
-        uint256 baseCapacity = (totalMinted * ownerGovVotes) / totalGovVotes;
-        return (baseCapacity * maxVerifyCapacityFactor) / PRECISION;
-    }
-
-    function _totalStakedByActionIdByOwner(
-        address extension,
-        address owner
-    ) internal view returns (uint256 staked) {
-        IGroupAction extConfig = IGroupAction(extension);
-        uint256 nftBalance = _group.balanceOf(owner);
-        for (uint256 i; i < nftBalance; ) {
-            uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
-            if (_groupInfo[extension][gId].isActive) {
-                staked += extConfig.ACTIVATION_STAKE_AMOUNT();
-            }
-            unchecked {
-                ++i;
-            }
+    modifier onlyValidExtension(address extension) {
+        if (!_factory.exists(extension)) {
+            revert NotRegisteredExtensionInFactory();
         }
+        _;
     }
 
     function _updateGroupInfoFields(
@@ -523,17 +498,17 @@ contract GroupManager is IGroupManager {
             description
         );
 
-        emit UpdateGroupInfo(
-            IExtension(extension).TOKEN_ADDRESS(),
-            IExtension(extension).actionId(),
-            currentRound,
-            groupId,
-            description,
-            maxCapacity,
-            minJoinAmount,
-            maxJoinAmount_,
-            maxAccounts_
-        );
+        emit UpdateGroupInfo({
+            tokenAddress: IExtension(extension).TOKEN_ADDRESS(),
+            actionId: IExtension(extension).actionId(),
+            round: currentRound,
+            groupId: groupId,
+            description: description,
+            maxCapacity: maxCapacity,
+            minJoinAmount: minJoinAmount,
+            maxJoinAmount: maxJoinAmount_,
+            maxAccounts: maxAccounts_
+        });
     }
 
     function _activateGroup(

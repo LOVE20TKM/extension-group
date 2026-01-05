@@ -494,17 +494,8 @@ contract GroupManagerTest is BaseGroupTest {
         groupManager.deactivateGroup(address(extension1), groupId);
     }
 
-    /// @notice Test: Deactivating non-existent group should revert
-    function test_deactivateGroup_GroupNotFound() public {
-        uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "Group1");
-
-        vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.GroupNotFound.selector);
-        groupManager.deactivateGroup(address(extension1), groupId);
-    }
-
-    /// @notice Test: Deactivating already deactivated group should revert
-    function test_deactivateGroup_GroupAlreadyDeactivated() public {
+    /// @notice Test: Deactivating non-active group should revert
+    function test_deactivateGroup_GroupNotActive() public {
         uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "Group1");
         setupUser(
             groupOwner1,
@@ -529,7 +520,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Try to deactivate again should revert
         vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.GroupAlreadyDeactivated.selector);
+        vm.expectRevert(IGroupManager.GroupNotActive.selector);
         groupManager.deactivateGroup(address(extension1), groupId);
     }
 

@@ -5,7 +5,6 @@ interface IGroupManager {
     error NotRegisteredExtension();
     error GroupNotFound();
     error GroupAlreadyActivated();
-    error GroupAlreadyDeactivated();
     error GroupNotActive();
     error InvalidMinMaxJoinAmount();
     error InvalidMaxAccounts();
@@ -28,18 +27,18 @@ interface IGroupManager {
         uint256 round,
         uint256 indexed groupId,
         address owner,
-        uint256 returnedStake
+        uint256 stakeAmount
     );
     event UpdateGroupInfo(
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,
         uint256 indexed groupId,
-        string newDescription,
-        uint256 newMaxCapacity,
-        uint256 newMinJoinAmount,
-        uint256 newMaxJoinAmount,
-        uint256 newMaxAccounts
+        string description,
+        uint256 maxCapacity,
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts
     );
 
     struct GroupInfo {
