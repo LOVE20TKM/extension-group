@@ -22,10 +22,12 @@ import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
-import {AccountListHistory} from "@extension/src/lib/AccountListHistory.sol";
+import {
+    RoundHistoryAddressSet
+} from "@extension/src/lib/RoundHistoryAddressSet.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
-using AccountListHistory for AccountListHistory.Storage;
+using RoundHistoryAddressSet for RoundHistoryAddressSet.Storage;
 using SafeERC20 for IERC20;
 
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
@@ -47,7 +49,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     mapping(address => mapping(address => RoundHistoryUint256.History))
         internal _amountHistoryByAccount;
     // extension => groupId => account list history
-    mapping(address => mapping(uint256 => AccountListHistory.Storage))
+    mapping(address => mapping(uint256 => RoundHistoryAddressSet.Storage))
         internal _accountListHistory;
     // extension => groupId => totalJoinedAmount
     mapping(address => mapping(uint256 => RoundHistoryUint256.History))
