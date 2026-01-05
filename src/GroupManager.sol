@@ -60,7 +60,7 @@ contract GroupManager is IGroupManager {
     constructor() {}
 
     function initialize(address factory_) external {
-        if (_initialized) revert AlreadyInitialized();
+        require(_initialized == false, "Already initialized");
         require(factory_ != address(0), "Invalid factory");
 
         FACTORY_ADDRESS = factory_;
@@ -92,7 +92,6 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        IGroupAction ext = IGroupAction(extension);
         uint256 currentRound = _join.currentRound();
 
         _activateGroupPreSetup(
@@ -106,6 +105,7 @@ contract GroupManager is IGroupManager {
             currentRound
         );
 
+        IGroupAction ext = IGroupAction(extension);
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
         _activateGroupPostSetup(extension, groupId, tokenAddress, stakeAmount);

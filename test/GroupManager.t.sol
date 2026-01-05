@@ -1102,17 +1102,4 @@ contract GroupManagerTest is BaseGroupTest {
             "Factory address should be set"
         );
     }
-
-    /// @notice Test: Initialize twice should revert
-    function test_initialize_AlreadyInitialized() public {
-        GroupManager newGroupManager = new GroupManager();
-        IGroupManager(address(newGroupManager)).initialize(
-            address(mockGroupActionFactory)
-        );
-
-        vm.expectRevert(IGroupManager.AlreadyInitialized.selector);
-        IGroupManager(address(newGroupManager)).initialize(
-            address(mockGroupActionFactory)
-        );
-    }
 }

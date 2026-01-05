@@ -12,7 +12,6 @@ interface IGroupManager {
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
     error NotRegisteredExtensionInFactory();
-    error AlreadyInitialized();
     error ExtensionNotInitialized();
 
     event ActivateGroup(
