@@ -108,6 +108,12 @@ interface IGroupManager {
             uint256 deactivatedRound
         );
 
+    function descriptionByRound(
+        address extension,
+        uint256 groupId,
+        uint256 round
+    ) external view returns (string memory);
+
     function activeGroupIdsByOwner(
         address extension,
         address owner

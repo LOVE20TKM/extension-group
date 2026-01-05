@@ -22,11 +22,13 @@ import {IGroupAction} from "./interface/IGroupAction.sol";
 import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {RoundHistoryString} from "@extension/src/lib/RoundHistoryString.sol";
 
 contract GroupManager is IGroupManager {
     using EnumerableSet for EnumerableSet.UintSet;
     using EnumerableSet for EnumerableSet.AddressSet;
     using SafeERC20 for IERC20;
+    using RoundHistoryString for RoundHistoryString.History;
 
     uint256 public constant PRECISION = 1e18;
 
@@ -41,6 +43,9 @@ contract GroupManager is IGroupManager {
     bool internal _initialized;
     // extension => groupId => GroupInfo
     mapping(address => mapping(uint256 => GroupInfo)) internal _groupInfo;
+    // extension => groupId => descriptionHistory
+    mapping(address => mapping(uint256 => RoundHistoryString.History))
+        internal _descriptionHistory;
     // extension => activeGroupIds
     mapping(address => EnumerableSet.UintSet) internal _activeGroupIds;
     // extension => totalStaked
@@ -87,52 +92,41 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
-
         IGroupAction ext = IGroupAction(extension);
-        {
-            GroupInfo storage group = _groupInfo[extension][groupId];
+        uint256 currentRound = _join.currentRound();
 
-            if (group.isActive) revert GroupAlreadyActivated();
-            if (maxJoinAmount != 0 && maxJoinAmount < minJoinAmount) {
-                revert InvalidMinMaxJoinAmount();
-            }
-
-            group.groupId = groupId;
-            group.description = description;
-            group.maxCapacity = maxCapacity;
-            group.minJoinAmount = minJoinAmount;
-            group.maxJoinAmount = maxJoinAmount;
-            group.maxAccounts = maxAccounts_;
-            group.activatedRound = _join.currentRound();
-            group.isActive = true;
-            group.deactivatedRound = 0;
-        }
-        _activeGroupIds[extension].add(groupId);
-        _totalStaked[extension] += ext.ACTIVATION_STAKE_AMOUNT();
-
-        _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
-        _extensionsWithGroupActivation[tokenAddress].add(extension);
-
-        IERC20(ext.STAKE_TOKEN_ADDRESS()).safeTransferFrom(
-            msg.sender,
-            address(this),
-            ext.ACTIVATION_STAKE_AMOUNT()
-        );
-
-        emit ActivateGroup(
-            tokenAddress,
-            actionId,
-            _join.currentRound(),
+        _activateGroupPreSetup(
+            extension,
             groupId,
-            msg.sender,
             description,
             maxCapacity,
             minJoinAmount,
             maxJoinAmount,
             maxAccounts_,
-            ext.ACTIVATION_STAKE_AMOUNT()
+            currentRound
+        );
+
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
+        _activateGroupPostSetup(extension, groupId, tokenAddress, stakeAmount);
+
+        IERC20(ext.STAKE_TOKEN_ADDRESS()).safeTransferFrom(
+            msg.sender,
+            address(this),
+            stakeAmount
+        );
+
+        _emitActivateGroup(
+            extension,
+            tokenAddress,
+            currentRound,
+            groupId,
+            description,
+            maxCapacity,
+            minJoinAmount,
+            maxJoinAmount,
+            maxAccounts_,
+            stakeAmount
         );
     }
 
@@ -199,32 +193,19 @@ contract GroupManager is IGroupManager {
         onlyGroupOwner(groupId)
         onlyValidExtensionAndAutoInitialize(extension)
     {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
-
         GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
 
-        if (newMaxJoinAmount != 0 && newMaxJoinAmount < newMinJoinAmount) {
-            revert InvalidMinMaxJoinAmount();
-        }
-
-        group.description = newDescription;
-        group.maxCapacity = newMaxCapacity;
-        group.minJoinAmount = newMinJoinAmount;
-        group.maxJoinAmount = newMaxJoinAmount;
-        group.maxAccounts = newMaxAccounts;
-
-        emit UpdateGroupInfo(
-            tokenAddress,
-            actionId,
-            _join.currentRound(),
+        uint256 currentRound = _join.currentRound();
+        _updateGroupInfoFields(
+            extension,
             groupId,
             newDescription,
             newMaxCapacity,
             newMinJoinAmount,
             newMaxJoinAmount,
-            newMaxAccounts
+            newMaxAccounts,
+            currentRound
         );
     }
 
@@ -259,6 +240,17 @@ contract GroupManager is IGroupManager {
             info.activatedRound,
             info.deactivatedRound
         );
+    }
+
+    function descriptionByRound(
+        address extension,
+        uint256 groupId,
+        uint256 round
+    ) external view override returns (string memory) {
+        RoundHistoryString.History storage descHistory = _descriptionHistory[
+            extension
+        ][groupId];
+        return descHistory.value(round);
     }
 
     function activeGroupIdsByOwner(
@@ -509,5 +501,122 @@ contract GroupManager is IGroupManager {
                 ++i;
             }
         }
+    }
+
+    function _recordDescription(
+        address extension,
+        uint256 groupId,
+        uint256 round,
+        string memory description_
+    ) internal {
+        _descriptionHistory[extension][groupId].record(round, description_);
+    }
+
+    function _updateGroupInfoFields(
+        address extension,
+        uint256 groupId,
+        string memory description,
+        uint256 maxCapacity,
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts_,
+        uint256 currentRound
+    ) internal {
+        if (maxJoinAmount != 0 && maxJoinAmount < minJoinAmount) {
+            revert InvalidMinMaxJoinAmount();
+        }
+
+        GroupInfo storage group = _groupInfo[extension][groupId];
+        group.description = description;
+        group.maxCapacity = maxCapacity;
+        group.minJoinAmount = minJoinAmount;
+        group.maxJoinAmount = maxJoinAmount;
+        group.maxAccounts = maxAccounts_;
+
+        _descriptionHistory[extension][groupId].record(
+            currentRound,
+            description
+        );
+
+        emit UpdateGroupInfo(
+            IExtension(extension).TOKEN_ADDRESS(),
+            IExtension(extension).actionId(),
+            currentRound,
+            groupId,
+            description,
+            maxCapacity,
+            minJoinAmount,
+            maxJoinAmount,
+            maxAccounts_
+        );
+    }
+
+    function _activateGroupPreSetup(
+        address extension,
+        uint256 groupId,
+        string memory description,
+        uint256 maxCapacity,
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts_,
+        uint256 currentRound
+    ) internal {
+        GroupInfo storage group = _groupInfo[extension][groupId];
+        if (group.isActive) revert GroupAlreadyActivated();
+
+        _updateGroupInfoFields(
+            extension,
+            groupId,
+            description,
+            maxCapacity,
+            minJoinAmount,
+            maxJoinAmount,
+            maxAccounts_,
+            currentRound
+        );
+
+        group.groupId = groupId;
+        group.activatedRound = currentRound;
+        group.isActive = true;
+        group.deactivatedRound = 0;
+    }
+
+    function _activateGroupPostSetup(
+        address extension,
+        uint256 groupId,
+        address tokenAddress,
+        uint256 stakeAmount
+    ) internal {
+        _activeGroupIds[extension].add(groupId);
+        _totalStaked[extension] += stakeAmount;
+        _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
+        _extensionsWithGroupActivation[tokenAddress].add(extension);
+    }
+
+    function _emitActivateGroup(
+        address extension,
+        address tokenAddress,
+        uint256 currentRound,
+        uint256 groupId,
+        string memory description,
+        uint256 maxCapacity,
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts_,
+        uint256 stakeAmount
+    ) internal {
+        emit ActivateGroup(
+            tokenAddress,
+            IExtension(extension).actionId(),
+            currentRound,
+            groupId,
+            msg.sender,
+            description,
+            maxCapacity,
+            minJoinAmount,
+            maxJoinAmount,
+            maxAccounts_,
+            stakeAmount
+        );
     }
 }
