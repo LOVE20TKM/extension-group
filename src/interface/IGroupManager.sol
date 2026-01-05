@@ -13,7 +13,6 @@ interface IGroupManager {
     error OnlyGroupOwner();
     error NotRegisteredExtensionInFactory();
     error AlreadyInitialized();
-    error InvalidFactory();
     error ExtensionNotInitialized();
 
     event ActivateGroup(

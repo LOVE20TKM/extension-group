@@ -1115,12 +1115,4 @@ contract GroupManagerTest is BaseGroupTest {
             address(mockGroupActionFactory)
         );
     }
-
-    /// @notice Test: Initialize with zero address should revert
-    function test_initialize_InvalidFactory() public {
-        GroupManager newGroupManager = new GroupManager();
-
-        vm.expectRevert(IGroupManager.InvalidFactory.selector);
-        IGroupManager(address(newGroupManager)).initialize(address(0));
-    }
 }

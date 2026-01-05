@@ -61,7 +61,7 @@ contract GroupManager is IGroupManager {
 
     function initialize(address factory_) external {
         if (_initialized) revert AlreadyInitialized();
-        if (factory_ == address(0)) revert InvalidFactory();
+        require(factory_ != address(0), "Invalid factory");
 
         FACTORY_ADDRESS = factory_;
         _factory = IExtensionFactory(factory_);
