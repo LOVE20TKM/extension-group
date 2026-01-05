@@ -20,20 +20,15 @@ interface IGroupManager {
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,
-        uint256 groupId,
+        uint256 indexed groupId,
         address owner,
-        string description,
-        uint256 maxCapacity,
-        uint256 minJoinAmount,
-        uint256 maxJoinAmount,
-        uint256 maxAccounts,
         uint256 stakeAmount
     );
     event DeactivateGroup(
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,
-        uint256 groupId,
+        uint256 indexed groupId,
         address owner,
         uint256 returnedStake
     );
@@ -41,7 +36,7 @@ interface IGroupManager {
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,
-        uint256 groupId,
+        uint256 indexed groupId,
         string newDescription,
         uint256 newMaxCapacity,
         uint256 newMinJoinAmount,

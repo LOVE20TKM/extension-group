@@ -116,16 +116,12 @@ contract GroupManager is IGroupManager {
             stakeAmount
         );
 
-        _emitActivateGroup(
-            extension,
+        emit ActivateGroup(
             tokenAddress,
+            IExtension(extension).actionId(),
             currentRound,
             groupId,
-            description,
-            maxCapacity,
-            minJoinAmount,
-            maxJoinAmount,
-            maxAccounts_,
+            msg.sender,
             stakeAmount
         );
     }
@@ -591,32 +587,5 @@ contract GroupManager is IGroupManager {
         _totalStaked[extension] += stakeAmount;
         _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
         _extensionsWithGroupActivation[tokenAddress].add(extension);
-    }
-
-    function _emitActivateGroup(
-        address extension,
-        address tokenAddress,
-        uint256 currentRound,
-        uint256 groupId,
-        string memory description,
-        uint256 maxCapacity,
-        uint256 minJoinAmount,
-        uint256 maxJoinAmount,
-        uint256 maxAccounts_,
-        uint256 stakeAmount
-    ) internal {
-        emit ActivateGroup(
-            tokenAddress,
-            IExtension(extension).actionId(),
-            currentRound,
-            groupId,
-            msg.sender,
-            description,
-            maxCapacity,
-            minJoinAmount,
-            maxJoinAmount,
-            maxAccounts_,
-            stakeAmount
-        );
     }
 }
