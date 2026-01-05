@@ -412,7 +412,7 @@ contract GroupManager is IGroupManager {
     function totalStakedByOwner(
         address extension,
         address owner
-    ) public view override returns (uint256) {
+    ) public view override returns (uint256 staked) {
         IGroupAction ext = IGroupAction(extension);
         uint256 nftBalance = _group.balanceOf(owner);
         for (uint256 i; i < nftBalance; ) {

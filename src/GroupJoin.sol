@@ -22,10 +22,10 @@ import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
-import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
+import {AccountListHistory} from "@extension/src/lib/AccountListHistory.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
-using RoundHistoryAddress for RoundHistoryAddress.History;
+using AccountListHistory for AccountListHistory.Storage;
 using SafeERC20 for IERC20;
 
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
@@ -46,15 +46,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     // extension => account => amount
     mapping(address => mapping(address => RoundHistoryUint256.History))
         internal _amountHistoryByAccount;
-    // extension => groupId => accountCount
-    mapping(address => mapping(uint256 => RoundHistoryUint256.History))
-        internal _accountCountByGroupIdHistory;
-    // extension => groupId => index => account
-    mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddress.History)))
-        internal _accountByGroupIdAndIndexHistory;
-    // extension => groupId => account => index
-    mapping(address => mapping(uint256 => mapping(address => RoundHistoryUint256.History)))
-        internal _accountIndexInGroupHistory;
+    // extension => groupId => account list history
+    mapping(address => mapping(uint256 => AccountListHistory.Storage))
+        internal _accountListHistory;
     // extension => groupId => totalJoinedAmount
     mapping(address => mapping(uint256 => RoundHistoryUint256.History))
         internal _totalJoinedAmountHistoryByGroupId;
@@ -147,7 +141,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _totalJoinedAmountHistory[extension].latestValue() - amount
         );
 
-        _removeAccountFromGroup(extension, currentRound, groupId, msg.sender);
+        _accountListHistory[extension][groupId].removeAccount(
+            msg.sender,
+            currentRound
+        );
         delete _joinedRoundByAccount[extension][msg.sender];
         _center.removeAccount(tokenAddress, actionId, msg.sender);
 
@@ -190,7 +187,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId
     ) external view override returns (uint256) {
-        return _accountCountByGroupIdHistory[extension][groupId].latestValue();
+        return _accountListHistory[extension][groupId].accountsCount();
     }
 
     function accountsByGroupIdAtIndex(
@@ -198,9 +195,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 index
     ) external view override returns (address) {
-        return
-            _accountByGroupIdAndIndexHistory[extension][groupId][index]
-                .latestValue();
+        return _accountListHistory[extension][groupId].accountsAtIndex(index);
     }
 
     function groupIdByAccountByRound(
@@ -247,7 +242,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 round
     ) external view override returns (uint256) {
-        return _accountCountByGroupIdHistory[extension][groupId].value(round);
+        return
+            _accountListHistory[extension][groupId].accountsCountByRound(round);
     }
 
     function accountByGroupIdAndIndexByRound(
@@ -257,7 +253,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 round
     ) external view override returns (address) {
         return
-            _accountByGroupIdAndIndexHistory[extension][groupId][index].value(
+            _accountListHistory[extension][groupId].accountsByRoundAtIndex(
+                index,
                 round
             );
     }
@@ -328,7 +325,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 currentRound,
                 groupId
             );
-            _addAccountToGroup(extension, currentRound, groupId, account);
+            _accountListHistory[extension][groupId].addAccount(
+                account,
+                currentRound
+            );
             _center.addAccount(
                 tokenAddress,
                 actionId,
@@ -456,8 +456,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) internal view {
         if (maxAccounts > 0) {
             if (
-                _accountCountByGroupIdHistory[extension][groupId]
-                    .latestValue() >= maxAccounts
+                _accountListHistory[extension][groupId].accountsCount() >=
+                maxAccounts
             ) revert GroupAccountsFull();
         }
         if (amount < minJoinAmount) revert AmountBelowMinimum();
@@ -511,56 +511,5 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 ownerGroupIds[i]
             ].latestValue();
         }
-    }
-
-    function _addAccountToGroup(
-        address extension,
-        uint256 round,
-        uint256 groupId,
-        address account
-    ) internal {
-        uint256 accountCount = _accountCountByGroupIdHistory[extension][groupId]
-            .latestValue();
-
-        _accountByGroupIdAndIndexHistory[extension][groupId][accountCount]
-            .record(round, account);
-        _accountIndexInGroupHistory[extension][groupId][account].record(
-            round,
-            accountCount
-        );
-        _accountCountByGroupIdHistory[extension][groupId].record(
-            round,
-            accountCount + 1
-        );
-    }
-
-    function _removeAccountFromGroup(
-        address extension,
-        uint256 round,
-        uint256 groupId,
-        address account
-    ) internal {
-        uint256 index = _accountIndexInGroupHistory[extension][groupId][account]
-            .latestValue();
-        uint256 lastIndex = _accountCountByGroupIdHistory[extension][groupId]
-            .latestValue() - 1;
-
-        if (index != lastIndex) {
-            address lastAccount = _accountByGroupIdAndIndexHistory[extension][
-                groupId
-            ][lastIndex].latestValue();
-            _accountByGroupIdAndIndexHistory[extension][groupId][index].record(
-                round,
-                lastAccount
-            );
-            _accountIndexInGroupHistory[extension][groupId][lastAccount].record(
-                round,
-                index
-            );
-        }
-        _accountCountByGroupIdHistory[extension][groupId].record(
-            round,
-            lastIndex
-        );
     }
 }
