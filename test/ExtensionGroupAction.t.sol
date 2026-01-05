@@ -575,7 +575,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
     }
 
-    function test_GroupInfoUpdate() public {
+    function test_UpdateGroupInfo() public {
         string memory newDesc = "Updated description";
         uint256 newMin = 5e18;
         uint256 newMax = 50e18;

@@ -16,23 +16,28 @@ interface IGroupManager {
     error InvalidFactory();
     error ExtensionNotInitialized();
 
-    event GroupActivate(
+    event ActivateGroup(
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,
         uint256 groupId,
         address owner,
+        string description,
         uint256 maxCapacity,
-        uint256 maxAccounts
+        uint256 minJoinAmount,
+        uint256 maxJoinAmount,
+        uint256 maxAccounts,
+        uint256 stakeAmount
     );
-    event GroupDeactivate(
+    event DeactivateGroup(
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,
         uint256 groupId,
+        address owner,
         uint256 returnedStake
     );
-    event GroupInfoUpdate(
+    event UpdateGroupInfo(
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 round,

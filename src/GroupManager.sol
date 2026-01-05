@@ -121,14 +121,18 @@ contract GroupManager is IGroupManager {
             ext.ACTIVATION_STAKE_AMOUNT()
         );
 
-        emit GroupActivate(
+        emit ActivateGroup(
             tokenAddress,
             actionId,
             _join.currentRound(),
             groupId,
             msg.sender,
+            description,
             maxCapacity,
-            maxAccounts_
+            minJoinAmount,
+            maxJoinAmount,
+            maxAccounts_,
+            ext.ACTIVATION_STAKE_AMOUNT()
         );
     }
 
@@ -171,11 +175,12 @@ contract GroupManager is IGroupManager {
             stakedAmount
         );
 
-        emit GroupDeactivate(
+        emit DeactivateGroup(
             tokenAddress,
             actionId,
             currentRound,
             groupId,
+            msg.sender,
             stakedAmount
         );
     }
@@ -210,7 +215,7 @@ contract GroupManager is IGroupManager {
         group.maxJoinAmount = newMaxJoinAmount;
         group.maxAccounts = newMaxAccounts;
 
-        emit GroupInfoUpdate(
+        emit UpdateGroupInfo(
             tokenAddress,
             actionId,
             _join.currentRound(),
