@@ -94,7 +94,7 @@ contract GroupManager is IGroupManager {
     {
         uint256 currentRound = _join.currentRound();
 
-        _activateGroupPreSetup(
+        _activateGroup(
             extension,
             groupId,
             description,
@@ -106,9 +106,7 @@ contract GroupManager is IGroupManager {
         );
 
         IGroupAction ext = IGroupAction(extension);
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
-        _activateGroupPostSetup(extension, groupId, tokenAddress, stakeAmount);
 
         IERC20(ext.STAKE_TOKEN_ADDRESS()).safeTransferFrom(
             msg.sender,
@@ -116,14 +114,14 @@ contract GroupManager is IGroupManager {
             stakeAmount
         );
 
-        emit ActivateGroup(
-            tokenAddress,
-            IExtension(extension).actionId(),
-            currentRound,
-            groupId,
-            msg.sender,
-            stakeAmount
-        );
+        emit ActivateGroup({
+            tokenAddress: IExtension(extension).TOKEN_ADDRESS(),
+            actionId: IExtension(extension).actionId(),
+            round: currentRound,
+            groupId: groupId,
+            owner: msg.sender,
+            stakeAmount: stakeAmount
+        });
     }
 
     function deactivateGroup(
@@ -538,7 +536,7 @@ contract GroupManager is IGroupManager {
         );
     }
 
-    function _activateGroupPreSetup(
+    function _activateGroup(
         address extension,
         uint256 groupId,
         string memory description,
@@ -566,14 +564,11 @@ contract GroupManager is IGroupManager {
         group.activatedRound = currentRound;
         group.isActive = true;
         group.deactivatedRound = 0;
-    }
 
-    function _activateGroupPostSetup(
-        address extension,
-        uint256 groupId,
-        address tokenAddress,
-        uint256 stakeAmount
-    ) internal {
+        IGroupAction ext = IGroupAction(extension);
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
+
         _activeGroupIds[extension].add(groupId);
         _totalStaked[extension] += stakeAmount;
         _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
