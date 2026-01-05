@@ -499,15 +499,6 @@ contract GroupManager is IGroupManager {
         }
     }
 
-    function _recordDescription(
-        address extension,
-        uint256 groupId,
-        uint256 round,
-        string memory description_
-    ) internal {
-        _descriptionHistory[extension][groupId].record(round, description_);
-    }
-
     function _updateGroupInfoFields(
         address extension,
         uint256 groupId,
