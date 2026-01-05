@@ -132,9 +132,7 @@ interface IGroupManager {
         uint256 groupId
     ) external view returns (bool);
 
-    function calculateJoinMaxAmount(
-        address extension
-    ) external view returns (uint256);
+    function maxJoinAmount(address extension) external view returns (uint256);
 
     function maxVerifyCapacityByOwner(
         address extension,

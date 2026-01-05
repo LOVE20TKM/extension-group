@@ -439,7 +439,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
             revert AmountExceedsAccountCap();
         }
-        if (newTotal > _groupManager.calculateJoinMaxAmount(extension))
+        if (newTotal > _groupManager.maxJoinAmount(extension))
             revert AmountExceedsAccountCap();
 
         if (maxCapacity > 0) {

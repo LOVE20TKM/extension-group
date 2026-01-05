@@ -84,7 +84,7 @@ contract GroupManager is IGroupManager {
         string memory description,
         uint256 maxCapacity,
         uint256 minJoinAmount,
-        uint256 maxJoinAmount,
+        uint256 maxJoinAmount_,
         uint256 maxAccounts_
     )
         external
@@ -101,7 +101,7 @@ contract GroupManager is IGroupManager {
             description,
             maxCapacity,
             minJoinAmount,
-            maxJoinAmount,
+            maxJoinAmount_,
             maxAccounts_,
             currentRound
         );
@@ -217,7 +217,7 @@ contract GroupManager is IGroupManager {
             string memory description,
             uint256 maxCapacity,
             uint256 minJoinAmount,
-            uint256 maxJoinAmount,
+            uint256 maxJoinAmount_,
             uint256 maxAccounts,
             bool isActive,
             uint256 activatedRound,
@@ -359,7 +359,7 @@ contract GroupManager is IGroupManager {
         return IExtension(extension).actionId();
     }
 
-    function calculateJoinMaxAmount(
+    function maxJoinAmount(
         address extension
     ) public view override returns (uint256) {
         IGroupAction extConfig = IGroupAction(extension);
@@ -514,11 +514,11 @@ contract GroupManager is IGroupManager {
         string memory description,
         uint256 maxCapacity,
         uint256 minJoinAmount,
-        uint256 maxJoinAmount,
+        uint256 maxJoinAmount_,
         uint256 maxAccounts_,
         uint256 currentRound
     ) internal {
-        if (maxJoinAmount != 0 && maxJoinAmount < minJoinAmount) {
+        if (maxJoinAmount_ != 0 && maxJoinAmount_ < minJoinAmount) {
             revert InvalidMinMaxJoinAmount();
         }
 
@@ -526,7 +526,7 @@ contract GroupManager is IGroupManager {
         group.description = description;
         group.maxCapacity = maxCapacity;
         group.minJoinAmount = minJoinAmount;
-        group.maxJoinAmount = maxJoinAmount;
+        group.maxJoinAmount = maxJoinAmount_;
         group.maxAccounts = maxAccounts_;
 
         _descriptionHistory[extension][groupId].record(
@@ -542,7 +542,7 @@ contract GroupManager is IGroupManager {
             description,
             maxCapacity,
             minJoinAmount,
-            maxJoinAmount,
+            maxJoinAmount_,
             maxAccounts_
         );
     }
@@ -553,7 +553,7 @@ contract GroupManager is IGroupManager {
         string memory description,
         uint256 maxCapacity,
         uint256 minJoinAmount,
-        uint256 maxJoinAmount,
+        uint256 maxJoinAmount_,
         uint256 maxAccounts_,
         uint256 currentRound
     ) internal {
@@ -566,7 +566,7 @@ contract GroupManager is IGroupManager {
             description,
             maxCapacity,
             minJoinAmount,
-            maxJoinAmount,
+            maxJoinAmount_,
             maxAccounts_,
             currentRound
         );

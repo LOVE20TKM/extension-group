@@ -609,7 +609,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             address(groupAction),
             groupOwner1
         );
-        uint256 maxPerAccount = groupManager.calculateJoinMaxAmount(
+        uint256 maxPerAccount = groupManager.maxJoinAmount(
             address(groupAction)
         );
         assertTrue(maxCapacity > 0, "maxCapacity should be > 0");
@@ -884,18 +884,14 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         lpToken.mint(address(this), 1000e18); // Increase totalSupply to 1100e18
 
         // Calculate max join amount based on LP token totalSupply
-        uint256 maxJoinAmount = groupManager.calculateJoinMaxAmount(
-            address(action)
-        );
+        uint256 maxJoinAmount = groupManager.maxJoinAmount(address(action));
 
         // Use a join amount that's within the limit (use 80% of max to be safe)
         uint256 lpAmount = (maxJoinAmount * 80) / 100;
         if (lpAmount == 0) {
             // If maxJoinAmount is too small, mint more LP tokens
             lpToken.mint(address(this), 10000e18);
-            maxJoinAmount = groupManager.calculateJoinMaxAmount(
-                address(action)
-            );
+            maxJoinAmount = groupManager.maxJoinAmount(address(action));
             lpAmount = (maxJoinAmount * 80) / 100;
         }
 
