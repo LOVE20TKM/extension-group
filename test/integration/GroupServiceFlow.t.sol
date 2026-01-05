@@ -6,9 +6,7 @@ import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
 import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
 import {ExtensionGroupService} from "../../src/ExtensionGroupService.sol";
-import {
-    IGroupService
-} from "../../src/interface/IGroupService.sol";
+import {IGroupService} from "../../src/interface/IGroupService.sol";
 
 /// @title GroupServiceFlowTest
 /// @notice Integration test for complete group service flow with reward claiming
@@ -67,12 +65,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 bobJoinedVal = gs.joinedValueByAccount(
             bobGroup1.flow.userAddress
         );
-        uint256 expectedBobJoinedVal = h
-            .getGroupManager()
-            .totalStakedByActionIdByOwner(
-                bobGroup1.groupActionAddress,
-                bobGroup1.flow.userAddress
-            );
+        uint256 expectedBobJoinedVal = h.getGroupManager().totalStakedByOwner(
+            bobGroup1.groupActionAddress,
+            bobGroup1.flow.userAddress
+        );
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,
@@ -464,12 +460,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 bobJoinedVal = gs.joinedValueByAccount(
             bobGroup1.flow.userAddress
         );
-        uint256 expectedBobJoinedVal = h
-            .getGroupManager()
-            .totalStakedByActionIdByOwner(
-                bobGroup1.groupActionAddress,
-                bobGroup1.flow.userAddress
-            );
+        uint256 expectedBobJoinedVal = h.getGroupManager().totalStakedByOwner(
+            bobGroup1.groupActionAddress,
+            bobGroup1.flow.userAddress
+        );
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,
@@ -719,13 +713,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             bobGroup1.flow.userAddress
         );
         // Use original actionIds for expected value calculation since groups were activated with those
-        uint256 expectedBobJoinedVal = h
-            .getGroupManager()
-            .totalStakedByActionIdByOwner(
-                bobGroup1.groupActionAddress,
-                bobGroup1.flow.userAddress
-            ) +
-            h.getGroupManager().totalStakedByActionIdByOwner(
+        uint256 expectedBobJoinedVal = h.getGroupManager().totalStakedByOwner(
+            bobGroup1.groupActionAddress,
+            bobGroup1.flow.userAddress
+        ) +
+            h.getGroupManager().totalStakedByOwner(
                 aliceGroup.groupActionAddress,
                 bobGroup1.flow.userAddress
             );

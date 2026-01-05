@@ -4,9 +4,7 @@ pragma solidity =0.8.17;
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
-import {
-    IGroupService
-} from "../src/interface/IGroupService.sol";
+import {IGroupService} from "../src/interface/IGroupService.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {GroupJoin} from "../src/GroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
@@ -696,11 +694,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
 
-        IGroupService.GroupDistribution[]
-            memory distributions = groupService.rewardDistributionAll(
-                round,
-                groupOwner1
-            );
+        IGroupService.GroupDistribution[] memory distributions = groupService
+            .rewardDistributionAll(round, groupOwner1);
 
         // Should have 1 distribution (for groupId1)
         assertEq(distributions.length, 1);
@@ -735,7 +730,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
         assertEq(
             ownerValue,
-            newGroupManager.totalStakedByActionIdByOwner(
+            newGroupManager.totalStakedByOwner(
                 address(groupAction),
                 groupOwner1
             )
@@ -853,11 +848,11 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         // Verify joinedValueByAccount includes both actions
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
-        uint256 expectedTotal = newGroupManager.totalStakedByActionIdByOwner(
+        uint256 expectedTotal = newGroupManager.totalStakedByOwner(
             address(groupAction),
             groupOwner1
         ) +
-            newGroupManager.totalStakedByActionIdByOwner(
+            newGroupManager.totalStakedByOwner(
                 groupAction2Address,
                 groupOwner1
             );
@@ -868,7 +863,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         );
         // Verify groupOwner1 has stake in action2
         assertEq(
-            newGroupManager.totalStakedByActionIdByOwner(
+            newGroupManager.totalStakedByOwner(
                 groupAction2Address,
                 groupOwner1
             ),

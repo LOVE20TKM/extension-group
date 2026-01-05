@@ -139,7 +139,7 @@ interface IGroupManager {
         address owner
     ) external view returns (uint256);
 
-    function totalStakedByActionIdByOwner(
+    function totalStakedByOwner(
         address extension,
         address owner
     ) external view returns (uint256);

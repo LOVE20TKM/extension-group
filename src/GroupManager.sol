@@ -401,7 +401,7 @@ contract GroupManager is IGroupManager {
             );
     }
 
-    function totalStakedByActionIdByOwner(
+    function totalStakedByOwner(
         address extension,
         address owner
     ) public view override returns (uint256) {

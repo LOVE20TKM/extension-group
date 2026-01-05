@@ -450,7 +450,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
             uint256 staked = account == address(0)
                 ? _groupManager.totalStaked(ext)
-                : _groupManager.totalStakedByActionIdByOwner(ext, account);
+                : _groupManager.totalStakedByOwner(ext, account);
 
             total += _convertToTokenValue(stakeToken, staked);
             unchecked {
