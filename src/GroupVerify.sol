@@ -254,6 +254,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 amount,
         string calldata reason
     ) external override onlyValidExtension(extension) {
+        if (amount == 0) revert DistrustVoteZeroAmount();
+
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         _processDistrustVote(
@@ -741,7 +743,11 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
         ];
-        uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
+        uint256 totalVotes = _vote.votesNumByActionId(
+            tokenAddress,
+            round,
+            actionId
+        );
 
         uint256[] storage groupIds = _groupIdsByVerifier[extension][round][
             groupOwner
@@ -753,23 +759,23 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             storage capacityReductionMap = _capacityReductionByGroupId[
                 extension
             ][round];
-        uint256 totalScore = _totalGroupScore[extension][round];
+        uint256 totalGroupScore_ = _totalGroupScore[extension][round];
 
         for (uint256 i = 0; i < groupIds.length; i++) {
             uint256 groupId = groupIds[i];
-            totalScore = _updateGroupScore(
+            totalGroupScore_ = _updateGroupScore(
                 scoreMap,
                 capacityReductionMap,
                 extension,
                 groupId,
                 round,
-                total,
+                totalVotes,
                 distrustVotes,
-                totalScore
+                totalGroupScore_
             );
         }
 
-        _totalGroupScore[extension][round] = totalScore;
+        _totalGroupScore[extension][round] = totalGroupScore_;
     }
 
     function _updateGroupScore(
@@ -778,10 +784,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         uint256 groupId,
         uint256 round,
-        uint256 total,
+        uint256 totalVotes,
         uint256 distrustVotes,
-        uint256 totalScore
-    ) internal returns (uint256) {
+        uint256 totalGroupScore_
+    ) internal returns (uint256 newTotalGroupScore) {
         uint256 oldScore = scoreMap[groupId];
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
             extension,
@@ -791,16 +797,16 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 capacityReduction = capacityReductionMap[groupId];
 
         uint256 newScore;
-        if (total == 0) {
-            newScore = (groupAmount * capacityReduction) / PRECISION;
-        } else {
-            newScore =
-                (((groupAmount * (total - distrustVotes)) / total) *
-                    capacityReduction) /
-                PRECISION;
+        if (totalVotes == 0) {
+            return 0;
         }
 
+        newScore =
+            (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
+                capacityReduction) /
+            PRECISION;
+
         scoreMap[groupId] = newScore;
-        return totalScore - oldScore + newScore;
+        return totalGroupScore_ - oldScore + newScore;
     }
 }

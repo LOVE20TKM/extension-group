@@ -17,6 +17,7 @@ interface IGroupVerify {
     error DistrustVoteExceedsLimit();
     error InvalidReason();
     error ExtensionNotInitialized();
+    error DistrustVoteZeroAmount();
 
     event VerifyWithOriginScores(
         address indexed tokenAddress,
