@@ -80,25 +80,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount,
         string[] memory verificationInfos
     ) external override nonReentrant onlyValidExtension(extension) {
-        if (amount == 0) revert JoinAmountZero();
-
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _join.currentRound();
-
         uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();
+
         bool isFirstJoin = joinedGroupId == 0;
+        _validateJoin(extension, groupId, amount, isFirstJoin, joinedGroupId);
 
-        _validateJoinAmounts(
-            extension,
-            groupId,
-            amount,
-            isFirstJoin,
-            joinedGroupId
-        );
-
-        _transferJoinToken(extension, msg.sender, amount);
         _increaseAmountHistory(
             extension,
             groupId,
@@ -106,6 +94,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             currentRound,
             msg.sender
         );
+
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         if (isFirstJoin) {
             _joinedRoundByAccount[extension][msg.sender] = currentRound;
             _groupIdHistoryByAccount[extension][msg.sender].record(
@@ -127,6 +118,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 verificationInfos
             );
         }
+
+        _transferJoinToken(extension, msg.sender, amount);
 
         emit Join(
             tokenAddress,
@@ -331,44 +324,62 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 currentRound,
         address account
     ) internal {
+        _amountHistoryByAccount[extension][account].increase(
+            currentRound,
+            amount
+        );
         _totalJoinedAmountHistoryByGroupId[extension][groupId].increase(
             currentRound,
             amount
         );
         _totalJoinedAmountHistory[extension].increase(currentRound, amount);
-        _amountHistoryByAccount[extension][account].increase(
-            currentRound,
-            amount
-        );
     }
 
-    function _validateJoinAmounts(
+    function _validateJoin(
         address extension,
         uint256 groupId,
         uint256 amount,
         bool isFirstJoin,
         uint256 joinedGroupId
     ) internal view {
-        _validateGroupInfo(
+        if (amount == 0) revert JoinAmountZero();
+
+        // Check account's group membership (not based on GroupInfo)
+        if (!isFirstJoin && joinedGroupId != groupId) {
+            revert AlreadyInOtherGroup();
+        }
+
+        uint256 newTotal = _amountHistoryByAccount[extension][msg.sender]
+            .latestValue() + amount;
+
+        // All validations based on GroupInfo
+        _validateGroupConstraints(
             extension,
             groupId,
             amount,
             isFirstJoin,
-            joinedGroupId
+            newTotal
         );
-        _validateOwnerCapacity(extension, groupId, amount);
+
+        // Check extension-wide account limit
+        uint256 extensionMaxJoinAmount = _groupManager.maxJoinAmount(extension);
+        if (newTotal > extensionMaxJoinAmount) {
+            revert AmountExceedsAccountCap();
+        }
+
+        // Owner-level constraints (not based on GroupInfo)
+        _validateOwnerConstraints(extension, groupId, amount);
     }
 
-    function _validateGroupInfo(
+    // All validations based on GroupInfo: fetch once and validate all constraints
+    function _validateGroupConstraints(
         address extension,
         uint256 groupId,
         uint256 amount,
         bool isFirstJoin,
-        uint256 joinedGroupId
+        uint256 newTotal
     ) internal view {
-        if (!isFirstJoin && joinedGroupId != groupId)
-            revert AlreadyInOtherGroup();
-
+        // Fetch group info once
         (
             ,
             ,
@@ -381,63 +392,47 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         ) = _groupManager.groupInfo(extension, groupId);
 
-        if (!isActive) revert CannotJoinDeactivatedGroup();
-
-        if (isFirstJoin) {
-            _validateFirstJoin(
-                extension,
-                groupId,
-                amount,
-                maxAccounts,
-                minJoinAmount
-            );
+        // Validate group status
+        if (!isActive) {
+            revert CannotJoinDeactivatedGroup();
         }
 
-        uint256 newTotal = _amountHistoryByAccount[extension][msg.sender]
-            .latestValue() + amount;
-
+        // Check group-specific account limit
         if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
             revert AmountExceedsAccountCap();
         }
-        if (newTotal > _groupManager.maxJoinAmount(extension))
-            revert AmountExceedsAccountCap();
 
+        // Validate first join specific rules
+        if (isFirstJoin) {
+            // Check if group has reached max accounts
+            if (maxAccounts > 0) {
+                uint256 currentAccountCount = _accountsHistory[extension][
+                    groupId
+                ].count();
+                if (currentAccountCount >= maxAccounts) {
+                    revert GroupAccountsFull();
+                }
+            }
+
+            // Check minimum join amount
+            if (amount < minJoinAmount) {
+                revert AmountBelowMinimum();
+            }
+        }
+
+        // Validate group capacity
         if (maxCapacity > 0) {
-            _validateGroupCapacity(extension, groupId, amount, maxCapacity);
-        }
-    }
-
-    function _validateFirstJoin(
-        address extension,
-        uint256 groupId,
-        uint256 amount,
-        uint256 maxAccounts,
-        uint256 minJoinAmount
-    ) internal view {
-        if (maxAccounts > 0) {
-            if (_accountsHistory[extension][groupId].count() >= maxAccounts)
-                revert GroupAccountsFull();
-        }
-        if (amount < minJoinAmount) revert AmountBelowMinimum();
-    }
-
-    function _validateGroupCapacity(
-        address extension,
-        uint256 groupId,
-        uint256 amount,
-        uint256 maxCapacity
-    ) internal view {
-        mapping(uint256 => RoundHistoryUint256.History)
-            storage groupHistory = _totalJoinedAmountHistoryByGroupId[
+            uint256 currentGroupTotal = _totalJoinedAmountHistoryByGroupId[
                 extension
-            ];
-        RoundHistoryUint256.History storage history = groupHistory[groupId];
-        if (history.latestValue() + amount > maxCapacity) {
-            revert GroupCapacityExceeded();
+            ][groupId].latestValue();
+            if (currentGroupTotal + amount > maxCapacity) {
+                revert GroupCapacityExceeded();
+            }
         }
     }
 
-    function _validateOwnerCapacity(
+    // Owner-level validation: owner's total capacity across all groups
+    function _validateOwnerConstraints(
         address extension,
         uint256 groupId,
         uint256 amount
@@ -447,11 +442,12 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             extension,
             groupOwner
         );
-        uint256 ownerMaxVerifyCapacity = _groupManager.maxVerifyCapacityByOwner(
+        uint256 ownerMaxCapacity = _groupManager.maxVerifyCapacityByOwner(
             extension,
             groupOwner
         );
-        if (ownerTotalJoined + amount > ownerMaxVerifyCapacity) {
+
+        if (ownerTotalJoined + amount > ownerMaxCapacity) {
             revert OwnerCapacityExceeded();
         }
     }
