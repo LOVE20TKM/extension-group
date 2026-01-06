@@ -5,7 +5,7 @@ interface IGroupJoin {
     error InvalidJoinTokenAddress();
     error JoinAmountZero();
     error AlreadyInOtherGroup();
-    error NotInGroup();
+    error NotJoinedAction();
     error AmountBelowMinimum();
     error AmountExceedsAccountCap();
     error OwnerCapacityExceeded();

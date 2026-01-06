@@ -58,6 +58,15 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     mapping(address => RoundHistoryUint256.History)
         internal _totalJoinedAmountHistory;
 
+    modifier onlyValidExtension(address extension) {
+        if (!_factory.exists(extension)) {
+            revert NotRegisteredExtensionInFactory();
+        }
+        if (!IExtension(extension).initialized()) {
+            revert ExtensionNotInitialized();
+        }
+        _;
+    }
     constructor() {}
 
     function initialize(address factory_) external {
@@ -121,14 +130,14 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         _transferJoinToken(extension, msg.sender, amount);
 
-        emit Join(
-            tokenAddress,
-            currentRound,
-            actionId,
-            groupId,
-            msg.sender,
-            amount
-        );
+        emit Join({
+            tokenAddress: tokenAddress,
+            round: currentRound,
+            actionId: actionId,
+            groupId: groupId,
+            account: msg.sender,
+            amount: amount
+        });
     }
 
     function exit(
@@ -138,14 +147,14 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 actionId = IExtension(extension).actionId();
         uint256 groupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();
-        if (groupId == 0) revert NotInGroup();
+        if (groupId == 0) revert NotJoinedAction();
 
         uint256 amount = _amountHistoryByAccount[extension][msg.sender]
             .latestValue();
         uint256 currentRound = _join.currentRound();
 
-        _groupIdHistoryByAccount[extension][msg.sender].record(currentRound, 0);
         _amountHistoryByAccount[extension][msg.sender].record(currentRound, 0);
+        _groupIdHistoryByAccount[extension][msg.sender].record(currentRound, 0);
 
         _totalJoinedAmountHistoryByGroupId[extension][groupId].decrease(
             currentRound,
@@ -153,27 +162,23 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
         _totalJoinedAmountHistory[extension].decrease(currentRound, amount);
 
-        _accountsHistory[extension][groupId].remove(currentRound, msg.sender);
         delete _joinedRoundByAccount[extension][msg.sender];
+        _accountsHistory[extension][groupId].remove(currentRound, msg.sender);
         _center.removeAccount(tokenAddress, actionId, msg.sender);
 
-        address joinTokenAddress = _getJoinTokenAddress(
-            extension,
-            tokenAddress,
-            actionId
-        );
+        address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
         IERC20 joinToken = IERC20(joinTokenAddress);
 
         joinToken.safeTransfer(msg.sender, amount);
 
-        emit Exit(
-            tokenAddress,
-            currentRound,
-            actionId,
-            groupId,
-            msg.sender,
-            amount
-        );
+        emit Exit({
+            tokenAddress: tokenAddress,
+            round: currentRound,
+            actionId: actionId,
+            groupId: groupId,
+            account: msg.sender,
+            amount: amount
+        });
     }
 
     function joinInfo(
@@ -253,19 +258,20 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _totalJoinedAmountHistory[extension].value(round);
     }
 
-    function accountsByGroupIdByRoundCount(
-        address extension,
-        uint256 groupId,
-        uint256 round
-    ) external view override returns (uint256) {
-        return _accountsHistory[extension][groupId].countByRound(round);
-    }
     function accountsByGroupIdByRound(
         address extension,
         uint256 groupId,
         uint256 round
     ) external view override returns (address[] memory) {
         return _accountsHistory[extension][groupId].valuesByRound(round);
+    }
+
+    function accountsByGroupIdByRoundCount(
+        address extension,
+        uint256 groupId,
+        uint256 round
+    ) external view override returns (uint256) {
+        return _accountsHistory[extension][groupId].countByRound(round);
     }
 
     function accountsByGroupIdByRoundAtIndex(
@@ -284,24 +290,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 round
     ) external view override returns (uint256) {
         return _amountHistoryByAccount[extension][account].value(round);
-    }
-
-    modifier onlyValidExtension(address extension) {
-        if (!_factory.exists(extension)) {
-            revert NotRegisteredExtensionInFactory();
-        }
-        if (!IExtension(extension).initialized()) {
-            revert ExtensionNotInitialized();
-        }
-        _;
-    }
-
-    function _getJoinTokenAddress(
-        address extension,
-        address,
-        uint256
-    ) internal view returns (address) {
-        return IGroupAction(extension).JOIN_TOKEN_ADDRESS();
     }
 
     function _transferJoinToken(
@@ -465,5 +453,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 ownerGroupIds[i]
             ].latestValue();
         }
+        return total;
     }
 }
