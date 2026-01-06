@@ -44,6 +44,23 @@ cast_call() {
 }
 echo "cast_call() loaded"
 
+cast_send() {
+    local address=$1
+    local function_signature=$2
+    shift 2
+    local args=("$@")
+
+    cast send "$address" \
+        "$function_signature" \
+        "${args[@]}" \
+        --rpc-url "$RPC_URL" \
+        --account "$KEYSTORE_ACCOUNT" \
+        --password "$KEYSTORE_PASSWORD" \
+        --gas-price 5000000000 \
+        --legacy
+}
+echo "cast_send() loaded"
+
 check_equal() {
     local description="$1"
     local expected="$2"
