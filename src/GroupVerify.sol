@@ -88,6 +88,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     // extension => round => voter => groupOwner => reason
     mapping(address => mapping(uint256 => mapping(address => mapping(address => string))))
         internal _distrustReason;
+    // extension => round => groupOwner => list of voters
+    mapping(address => mapping(uint256 => mapping(address => address[])))
+        internal _distrustVotersByGroupOwner;
+    // extension => round => list of groupOwners
+    mapping(address => mapping(uint256 => address[]))
+        internal _distrustGroupOwners;
 
     function initialize(address factory_) external {
         require(_initialized == false, "Already initialized");
@@ -261,6 +267,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         string calldata reason
     ) external override onlyValidExtension(extension) {
         if (amount == 0) revert DistrustVoteZeroAmount();
+        address voter = msg.sender;
+        uint256 currentRound = _verify.currentRound();
 
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
@@ -268,7 +276,19 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             extension,
             tokenAddress,
             actionId,
+            currentRound,
+            voter,
             groupOwner,
+            amount,
+            reason
+        );
+
+        emit DistrustVote(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupOwner,
+            voter,
             amount,
             reason
         );
@@ -278,13 +298,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         address tokenAddress,
         uint256 actionId,
+        uint256 currentRound,
+        address voter,
         address groupOwner,
         uint256 amount,
         string calldata reason
     ) internal {
-        address voter = msg.sender;
-        uint256 currentRound = _verify.currentRound();
-
         uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
             tokenAddress,
             currentRound,
@@ -304,21 +323,27 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         if (bytes(reason).length == 0) revert InvalidReason();
 
-        voterVotes[groupOwner] += amount;
-        _distrustVotesByGroupOwner[extension][currentRound][
-            groupOwner
-        ] += amount;
-        _distrustReason[extension][currentRound][voter][groupOwner] = reason;
+        mapping(address => uint256)
+            storage groupOwnerVotes = _distrustVotesByGroupOwner[extension][
+                currentRound
+            ];
+        mapping(address => mapping(address => string))
+            storage distrustReasonMap = _distrustReason[extension][
+                currentRound
+            ];
 
-        emit DistrustVote(
-            tokenAddress,
-            currentRound,
-            actionId,
-            groupOwner,
-            voter,
-            amount,
-            reason
-        );
+        if (currentVotes == 0) {
+            _distrustVotersByGroupOwner[extension][currentRound][groupOwner]
+                .push(voter);
+        }
+
+        if (groupOwnerVotes[groupOwner] == 0) {
+            _distrustGroupOwners[extension][currentRound].push(groupOwner);
+        }
+
+        voterVotes[groupOwner] += amount;
+        groupOwnerVotes[groupOwner] += amount;
+        distrustReasonMap[voter][groupOwner] = reason;
 
         _updateDistrustForOwnerGroups(
             extension,
@@ -520,6 +545,53 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address groupOwner
     ) external view override returns (string memory) {
         return _distrustReason[extension][round][voter][groupOwner];
+    }
+
+    function distrustVotersByGroupOwner(
+        address extension,
+        uint256 round,
+        address groupOwner
+    ) external view returns (address[] memory) {
+        return _distrustVotersByGroupOwner[extension][round][groupOwner];
+    }
+
+    function distrustVotersByGroupOwnerCount(
+        address extension,
+        uint256 round,
+        address groupOwner
+    ) external view returns (uint256) {
+        return _distrustVotersByGroupOwner[extension][round][groupOwner].length;
+    }
+
+    function distrustVotersByGroupOwnerAtIndex(
+        address extension,
+        uint256 round,
+        address groupOwner,
+        uint256 index
+    ) external view returns (address) {
+        return _distrustVotersByGroupOwner[extension][round][groupOwner][index];
+    }
+
+    function distrustGroupOwners(
+        address extension,
+        uint256 round
+    ) external view returns (address[] memory) {
+        return _distrustGroupOwners[extension][round];
+    }
+
+    function distrustGroupOwnersCount(
+        address extension,
+        uint256 round
+    ) external view returns (uint256) {
+        return _distrustGroupOwners[extension][round].length;
+    }
+
+    function distrustGroupOwnersAtIndex(
+        address extension,
+        uint256 round,
+        uint256 index
+    ) external view returns (address) {
+        return _distrustGroupOwners[extension][round][index];
     }
 
     function _processScores(

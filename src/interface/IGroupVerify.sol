@@ -204,4 +204,39 @@ interface IGroupVerify {
         address voter,
         address groupOwner
     ) external view returns (string memory);
+
+    function distrustVotersByGroupOwner(
+        address extension,
+        uint256 round,
+        address groupOwner
+    ) external view returns (address[] memory);
+
+    function distrustVotersByGroupOwnerCount(
+        address extension,
+        uint256 round,
+        address groupOwner
+    ) external view returns (uint256);
+
+    function distrustVotersByGroupOwnerAtIndex(
+        address extension,
+        uint256 round,
+        address groupOwner,
+        uint256 index
+    ) external view returns (address);
+
+    function distrustGroupOwners(
+        address extension,
+        uint256 round
+    ) external view returns (address[] memory);
+
+    function distrustGroupOwnersCount(
+        address extension,
+        uint256 round
+    ) external view returns (uint256);
+
+    function distrustGroupOwnersAtIndex(
+        address extension,
+        uint256 round,
+        uint256 index
+    ) external view returns (address);
 }
