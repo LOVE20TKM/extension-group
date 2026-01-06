@@ -138,13 +138,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _delegateSetterByGroupId[extension][groupId] = delegate == address(0)
             ? address(0)
             : msg.sender;
-        emit SetGroupDelegate(
-            tokenAddress,
-            _verify.currentRound(),
-            actionId,
-            groupId,
-            delegate
-        );
+        emit SetGroupDelegate({
+            tokenAddress: tokenAddress,
+            round: _verify.currentRound(),
+            actionId: actionId,
+            groupId: groupId,
+            delegate: delegate
+        });
     }
 
     function submitOriginScores(
@@ -154,16 +154,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256[] calldata originScores
     ) external override onlyValidExtension(extension) {
         uint256 currentRound = _verify.currentRound();
-        _checkVerifierOrDelegate(extension, groupId);
+        if (!canVerify(extension, msg.sender, groupId)) {
+            revert NotVerifier();
+        }
 
-        if (
-            _groupJoin.accountsByGroupIdByRoundCount(
-                extension,
-                groupId,
-                currentRound
-            ) == 0
-        ) {
-            revert NoDataForRound();
+        if (originScores.length == 0) {
+            revert OriginScoresEmpty();
         }
 
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
@@ -178,19 +174,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             originScores,
             msg.sender
         );
-    }
-
-    function _checkVerifierOrDelegate(
-        address extension,
-        uint256 groupId
-    ) internal view {
-        address groupOwner = _group.ownerOf(groupId);
-        bool isValidDelegate = msg.sender ==
-            _delegateByGroupId[extension][groupId] &&
-            _delegateSetterByGroupId[extension][groupId] == groupOwner;
-        if (msg.sender != groupOwner && !isValidDelegate) {
-            revert NotVerifier();
-        }
     }
 
     function _processVerificationBatch(
@@ -236,11 +219,20 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         mapping(uint256 => uint256) storage batchScoreMap = _batchTotalScore[
             extension
         ][currentRound];
-
-        verifiedCount[groupId] += originScores.length;
         batchScoreMap[groupId] += batchScore;
-        uint256 finalBatchScore = batchScoreMap[groupId];
+        verifiedCount[groupId] += originScores.length;
+
         bool isComplete = verifiedCount[groupId] == accountCount;
+
+        if (isComplete) {
+            _finalizeVerification(
+                extension,
+                currentRound,
+                groupId,
+                batchScoreMap[groupId],
+                submitter
+            );
+        }
 
         emit SubmitOriginScores({
             tokenAddress: tokenAddress,
@@ -251,16 +243,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             count: originScores.length,
             isComplete: isComplete
         });
-
-        if (isComplete) {
-            _finalizeVerification(
-                extension,
-                currentRound,
-                groupId,
-                finalBatchScore,
-                submitter
-            );
-        }
     }
 
     function distrustVote(
@@ -289,15 +271,15 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             amount
         );
 
-        emit DistrustVote(
-            tokenAddress,
-            currentRound,
-            actionId,
-            groupOwner,
-            voter,
-            amount,
-            reason
-        );
+        emit DistrustVote({
+            tokenAddress: tokenAddress,
+            round: currentRound,
+            actionId: actionId,
+            groupOwner: groupOwner,
+            voter: voter,
+            amount: amount,
+            reason: reason
+        });
     }
 
     function _processDistrustVote(
@@ -316,15 +298,15 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             actionId,
             extension
         );
-        if (verifyVotes == 0) revert NotGovernor();
+        if (verifyVotes == 0) revert VerifyVotesZero();
 
-        uint256 currentVotes = _distrustVotesByVoterByGroupOwner[extension][
+        uint256 preVotes = _distrustVotesByVoterByGroupOwner[extension][
             currentRound
         ][voter][groupOwner];
-        if (currentVotes + amount > verifyVotes)
-            revert DistrustVoteExceedsLimit();
+        if (preVotes + amount > verifyVotes)
+            revert DistrustVoteExceedsVerifyVotes();
 
-        if (currentVotes == 0) {
+        if (preVotes == 0) {
             _distrustVotersByGroupOwner[extension][currentRound][groupOwner]
                 .push(voter);
         }
@@ -355,16 +337,79 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         uint256 round,
         address account
-    ) external view override returns (uint256) {
-        return _getOriginScore(extension, round, account);
+    ) public view override returns (uint256) {
+        uint256 groupId = _groupJoin.groupIdByAccountByRound(
+            extension,
+            account,
+            round
+        );
+
+        // If account is not in any group, return 0
+        if (groupId == 0) {
+            return 0;
+        }
+
+        // if group is verified, return the deduction value
+        if (_isVerified[extension][round][groupId]) {
+            return
+                MAX_ORIGIN_SCORE -
+                _originScoreDeductionByAccount[extension][round][account];
+        }
+
+        uint256 verifiedCount = _verifiedAccountCount[extension][round][
+            groupId
+        ];
+
+        // If group is not verified, return 0
+        if (verifiedCount == 0) {
+            return 0;
+        }
+
+        // Check if account is in the verified range
+        // Accounts are verified in order from index 0 to verifiedCount - 1
+        for (uint256 i = 0; i < verifiedCount; i++) {
+            address verifiedAccount = _groupJoin
+                .accountsByGroupIdByRoundAtIndex(extension, groupId, round, i);
+            if (verifiedAccount == account) {
+                // Account is verified, get deduction value
+                uint256 deduction = _originScoreDeductionByAccount[extension][
+                    round
+                ][account];
+                // If deduction is 0, score is 100 (full score)
+                // Otherwise, score is MAX_ORIGIN_SCORE - deduction
+                return MAX_ORIGIN_SCORE - deduction;
+            }
+        }
+
+        // Account is not in verified range, return 0
+        return 0;
     }
 
+    function totalAccountScore(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view override returns (uint256) {
+        return _totalAccountScore[extension][round][groupId];
+    }
     function accountScore(
         address extension,
         uint256 round,
         address account
     ) external view override returns (uint256) {
-        return _calculateAccountScore(extension, round, account);
+        uint256 originScoreVal = originScoreByAccount(
+            extension,
+            round,
+            account
+        );
+        if (originScoreVal == 0) return 0;
+
+        uint256 amount = _groupJoin.amountByAccountByRound(
+            extension,
+            account,
+            round
+        );
+        return originScoreVal * amount;
     }
 
     function groupScore(
@@ -404,7 +449,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         address account,
         uint256 groupId
-    ) external view override returns (bool) {
+    ) public view override returns (bool) {
         address groupOwner = _group.ownerOf(groupId);
         bool isValidDelegate = account ==
             _delegateByGroupId[extension][groupId] &&
@@ -498,12 +543,19 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiedGroupIds[extension][round];
     }
 
-    function totalAccountScore(
+    function verifiedGroupIdsCount(
+        address extension,
+        uint256 round
+    ) external view override returns (uint256) {
+        return _verifiedGroupIds[extension][round].length;
+    }
+
+    function verifiedGroupIdsAtIndex(
         address extension,
         uint256 round,
-        uint256 groupId
+        uint256 index
     ) external view override returns (uint256) {
-        return _totalAccountScore[extension][round][groupId];
+        return _verifiedGroupIds[extension][round][index];
     }
 
     function distrustVotesByGroupOwner(
@@ -624,6 +676,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
                     currentRound
                 );
         }
+        return totalScore;
     }
 
     function _finalizeVerification(
@@ -634,15 +687,14 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address submitter
     ) internal {
         address groupOwner = _group.ownerOf(groupId);
-        uint256 capacityReduction = _calculateCapacityReduction(
+        _capacityReductionByGroupId[extension][currentRound][
+            groupId
+        ] = _calculateCapacityReduction(
             extension,
             currentRound,
             groupOwner,
             groupId
         );
-        _capacityReductionByGroupId[extension][currentRound][
-            groupId
-        ] = capacityReduction;
 
         // Record verifier (NFT owner, not delegated verifier)
         _verifierByGroupId[extension][currentRound][groupId] = groupOwner;
@@ -655,7 +707,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         ) {
             _verifiers[extension][currentRound].push(groupOwner);
         }
-        _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
 
         _totalAccountScore[extension][currentRound][groupId] = totalScore;
 
@@ -668,78 +719,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _totalGroupScore[extension][currentRound] += calculatedGroupScore;
 
         _isVerified[extension][currentRound][groupId] = true;
+        _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
         _verifiedGroupIds[extension][currentRound].push(groupId);
-    }
-
-    function _calculateAccountScore(
-        address extension,
-        uint256 round,
-        address account
-    ) internal view returns (uint256) {
-        uint256 originScoreVal = _getOriginScore(extension, round, account);
-        if (originScoreVal == 0) return 0;
-
-        uint256 amount = _groupJoin.amountByAccountByRound(
-            extension,
-            account,
-            round
-        );
-        return originScoreVal * amount;
-    }
-
-    function _getOriginScore(
-        address extension,
-        uint256 round,
-        address account
-    ) internal view returns (uint256) {
-        uint256 groupId = _groupJoin.groupIdByAccountByRound(
-            extension,
-            account,
-            round
-        );
-
-        // If account is not in any group, return 0
-        if (groupId == 0) {
-            return 0;
-        }
-
-        // if group is verified, return the deduction value
-        if (_isVerified[extension][round][groupId]) {
-            return
-                MAX_ORIGIN_SCORE -
-                _originScoreDeductionByAccount[extension][round][account];
-        }
-
-        uint256 verifiedCount = _verifiedAccountCount[extension][round][
-            groupId
-        ];
-
-        // If group is not verified, return 0
-        if (verifiedCount == 0) {
-            return 0;
-        }
-
-        // Check if account is in the verified range
-        // Accounts are verified in order from index 0 to verifiedCount - 1
-        for (uint256 i = 0; i < verifiedCount; i++) {
-            address verifiedAccount = _groupJoin
-                .accountsByGroupIdByRoundAtIndex(extension, groupId, round, i);
-            if (verifiedAccount == account) {
-                // Account is verified, get deduction value
-                uint256 deduction = _originScoreDeductionByAccount[extension][
-                    round
-                ][account];
-                // If deduction is 0, score is 100 (full score)
-                // Otherwise, score is MAX_ORIGIN_SCORE - deduction
-                return
-                    deduction == 0
-                        ? MAX_ORIGIN_SCORE
-                        : MAX_ORIGIN_SCORE - deduction;
-            }
-        }
-
-        // Account is not in verified range, return 0
-        return 0;
     }
 
     function _calculateCapacityReduction(
@@ -883,15 +864,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         uint256 capacityReduction = capacityReductionMap[groupId];
 
-        uint256 newScore;
-        if (totalVotes == 0) {
-            return 0;
-        }
-
-        newScore =
-            (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
-                capacityReduction) /
-            PRECISION;
+        uint256 newScore = (((groupAmount * (totalVotes - distrustVotes)) /
+            totalVotes) * capacityReduction) / PRECISION;
 
         scoreMap[groupId] = newScore;
         return totalGroupScore_ - oldScore + newScore;

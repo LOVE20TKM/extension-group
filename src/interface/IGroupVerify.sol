@@ -5,16 +5,16 @@ uint256 constant MAX_ORIGIN_SCORE = 100;
 uint256 constant PRECISION = 1e18;
 
 interface IGroupVerify {
+    error OriginScoresEmpty();
     error NotVerifier();
     error ScoreExceedsMax();
     error NoRemainingVerifyCapacity();
     error AlreadyVerified();
-    error NoDataForRound();
     error InvalidStartIndex();
     error ScoresExceedAccountCount();
     error NotRegisteredExtension();
-    error NotGovernor();
-    error DistrustVoteExceedsLimit();
+    error VerifyVotesZero();
+    error DistrustVoteExceedsVerifyVotes();
     error InvalidReason();
     error ExtensionNotInitialized();
     error DistrustVoteZeroAmount();
@@ -179,6 +179,17 @@ interface IGroupVerify {
         address extension,
         uint256 round
     ) external view returns (uint256[] memory);
+
+    function verifiedGroupIdsCount(
+        address extension,
+        uint256 round
+    ) external view returns (uint256);
+
+    function verifiedGroupIdsAtIndex(
+        address extension,
+        uint256 round,
+        uint256 index
+    ) external view returns (uint256);
 
     function distrustVotesByGroupOwner(
         address extension,
