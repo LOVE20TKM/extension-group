@@ -92,13 +92,13 @@ interface IGroupVerify {
         uint256 groupId
     ) external view returns (uint256);
 
-    function scoreByGroupId(
+    function groupScore(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
 
-    function score(
+    function totalGroupScore(
         address extension,
         uint256 round
     ) external view returns (uint256);

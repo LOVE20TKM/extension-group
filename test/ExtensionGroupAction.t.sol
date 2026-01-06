@@ -346,7 +346,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         setupVerifyVotes(governor, ACTION_ID, address(groupAction), 100e18);
 
         uint256 round = verify.currentRound();
-        uint256 scoreBefore = groupVerify.scoreByGroupId(
+        uint256 scoreBefore = groupVerify.groupScore(
             address(groupAction),
             round,
             groupId1
@@ -361,7 +361,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             "Bad behavior"
         );
 
-        uint256 scoreAfter = groupVerify.scoreByGroupId(
+        uint256 scoreAfter = groupVerify.groupScore(
             address(groupAction),
             round,
             groupId1

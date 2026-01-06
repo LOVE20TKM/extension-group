@@ -4,9 +4,7 @@ pragma solidity =0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
-import {
-    ExtensionGroupAction
-} from "../../src/ExtensionGroupAction.sol";
+import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
 import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 
@@ -74,9 +72,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         h.core_verify_extension(aliceGroup, extensionAddr);
 
         // Verify state
-        ExtensionGroupAction ga = ExtensionGroupAction(
-            extensionAddr
-        );
+        ExtensionGroupAction ga = ExtensionGroupAction(extensionAddr);
         IGroupVerify groupVerify = IGroupVerify(
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
@@ -534,7 +530,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
 
         // Verify group scores match joined amounts (no reduction applied)
         assertEq(
-            groupVerifyContract2.scoreByGroupId(
+            groupVerifyContract2.groupScore(
                 bobGroup1.groupActionAddress,
                 verifyRound,
                 bobGroup1.groupId
@@ -543,7 +539,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             "Group1 score should equal joined amount"
         );
         assertEq(
-            groupVerifyContract2.scoreByGroupId(
+            groupVerifyContract2.groupScore(
                 bobGroup1.groupActionAddress,
                 verifyRound,
                 bobGroup2.groupId

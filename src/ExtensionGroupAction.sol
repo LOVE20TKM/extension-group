@@ -166,10 +166,10 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         uint256 totalReward = reward(round);
         if (totalReward == 0) return 0;
 
-        uint256 totalScore = _groupVerify.score(address(this), round);
+        uint256 totalScore = _groupVerify.totalGroupScore(address(this), round);
         if (totalScore == 0) return 0;
 
-        uint256 groupScore = _groupVerify.scoreByGroupId(
+        uint256 groupScore = _groupVerify.groupScore(
             address(this),
             round,
             groupId

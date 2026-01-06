@@ -54,9 +54,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         internal _totalAccountScore;
     // extension => round => groupId => group score (with distrust applied)
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _scoreByGroupId;
+        internal _groupScore;
     // extension => round => total score of all verified groups
-    mapping(address => mapping(uint256 => uint256)) internal _score;
+    mapping(address => mapping(uint256 => uint256)) internal _totalGroupScore;
     // extension => round => groupId => whether verification is complete
     mapping(address => mapping(uint256 => mapping(uint256 => bool)))
         internal _isVerified;
@@ -337,12 +337,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _calculateAccountScore(extension, round, account);
     }
 
-    function scoreByGroupId(
+    function groupScore(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        return _scoreByGroupId[extension][round][groupId];
+        return _groupScore[extension][round][groupId];
     }
 
     function capacityReductionByGroupId(
@@ -353,11 +353,11 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _capacityReductionByGroupId[extension][round][groupId];
     }
 
-    function score(
+    function totalGroupScore(
         address extension,
         uint256 round
     ) external view override returns (uint256) {
-        return _score[extension][round];
+        return _totalGroupScore[extension][round];
     }
 
     function delegatedVerifierByGroupId(
@@ -570,13 +570,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         _totalAccountScore[extension][currentRound][groupId] = totalScore;
 
-        uint256 groupScore = _calculateGroupScore(
+        uint256 calculatedGroupScore = _calculateGroupScore(
             extension,
             currentRound,
             groupId
         );
-        _scoreByGroupId[extension][currentRound][groupId] = groupScore;
-        _score[extension][currentRound] += groupScore;
+        _groupScore[extension][currentRound][groupId] = calculatedGroupScore;
+        _totalGroupScore[extension][currentRound] += calculatedGroupScore;
 
         _isVerified[extension][currentRound][groupId] = true;
         _verifiedGroupIds[extension][currentRound].push(groupId);
@@ -714,16 +714,20 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         ];
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
-        uint256 total = _vote.votesNumByActionId(tokenAddress, round, actionId);
+        uint256 totalVotes = _vote.votesNumByActionId(
+            tokenAddress,
+            round,
+            actionId
+        );
         uint256 capacityReduction = _capacityReductionByGroupId[extension][
             round
         ][groupId];
 
-        if (total == 0) {
-            return (groupAmount * capacityReduction) / PRECISION;
+        if (totalVotes == 0) {
+            return 0;
         }
         return
-            (((groupAmount * (total - distrustVotes)) / total) *
+            (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
                 capacityReduction) / PRECISION;
     }
 
@@ -742,14 +746,14 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256[] storage groupIds = _groupIdsByVerifier[extension][round][
             groupOwner
         ];
-        mapping(uint256 => uint256) storage scoreMap = _scoreByGroupId[
-            extension
-        ][round];
+        mapping(uint256 => uint256) storage scoreMap = _groupScore[extension][
+            round
+        ];
         mapping(uint256 => uint256)
             storage capacityReductionMap = _capacityReductionByGroupId[
                 extension
             ][round];
-        uint256 totalScore = _score[extension][round];
+        uint256 totalScore = _totalGroupScore[extension][round];
 
         for (uint256 i = 0; i < groupIds.length; i++) {
             uint256 groupId = groupIds[i];
@@ -765,7 +769,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             );
         }
 
-        _score[extension][round] = totalScore;
+        _totalGroupScore[extension][round] = totalScore;
     }
 
     function _updateGroupScore(
