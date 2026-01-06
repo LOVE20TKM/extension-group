@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IGroupVerify} from "./interface/IGroupVerify.sol";
-import {IGroupJoin} from "./interface/IGroupJoin.sol";
-import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
-    IExtensionFactory
-} from "@extension/src/interface/IExtensionFactory.sol";
+    IGroupVerify,
+    MAX_ORIGIN_SCORE,
+    PRECISION
+} from "./interface/IGroupVerify.sol";
+import {IGroupJoin} from "./interface/IGroupJoin.sol";
+import {
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
@@ -18,10 +21,9 @@ import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {MAX_ORIGIN_SCORE, PRECISION} from "./interface/IGroupVerify.sol";
 
 contract GroupVerify is IGroupVerify, ReentrancyGuard {
-    IExtensionFactory internal _factory;
+    IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     IERC721Enumerable internal _group;
@@ -29,7 +31,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ILOVE20Vote internal _vote;
     IGroupJoin internal _groupJoin;
 
-    address internal _factoryAddress;
+    address public FACTORY_ADDRESS;
     bool internal _initialized;
 
     // extension => groupId => delegatedVerifier
@@ -87,28 +89,16 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         require(_initialized == false, "Already initialized");
         require(factory_ != address(0), "Invalid factory");
 
-        _factoryAddress = factory_;
-        _factory = IExtensionFactory(factory_);
-        _center = IExtensionCenter(
-            IExtensionFactory(factory_).CENTER_ADDRESS()
-        );
-        _groupManager = IGroupManager(
-            IGroupActionFactory(_factoryAddress).GROUP_MANAGER_ADDRESS()
-        );
-        address groupAddress = IGroupActionFactory(_factoryAddress)
-            .GROUP_ADDRESS();
-        _group = IERC721Enumerable(groupAddress);
+        FACTORY_ADDRESS = factory_;
+        _factory = IExtensionGroupActionFactory(factory_);
+        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
+        _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
+        _group = IERC721Enumerable(_factory.GROUP_ADDRESS());
         _verify = ILOVE20Verify(_center.verifyAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
-        _groupJoin = IGroupJoin(
-            IGroupActionFactory(_factoryAddress).GROUP_JOIN_ADDRESS()
-        );
+        _groupJoin = IGroupJoin(_factory.GROUP_JOIN_ADDRESS());
 
         _initialized = true;
-    }
-
-    function FACTORY_ADDRESS() external view override returns (address) {
-        return _factoryAddress;
     }
 
     modifier onlyValidExtension(address extension) {
