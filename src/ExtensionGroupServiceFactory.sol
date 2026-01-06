@@ -6,9 +6,13 @@ import {ExtensionGroupService} from "./ExtensionGroupService.sol";
 import {
     IExtensionGroupServiceFactory
 } from "./interface/IExtensionGroupServiceFactory.sol";
-import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
+// import {
+//     IExtensionFactory
+// } from "@extension/src/interface/IExtensionFactory.sol";
+
+interface IExtensionFactoryOnlyCenterAddress {
+    function CENTER_ADDRESS() external view returns (address);
+}
 
 contract ExtensionGroupServiceFactory is
     ExtensionFactoryBase,
@@ -20,7 +24,8 @@ contract ExtensionGroupServiceFactory is
         address groupActionFactory_
     )
         ExtensionFactoryBase(
-            IExtensionGroupActionFactory(groupActionFactory_).CENTER_ADDRESS()
+            IExtensionFactoryOnlyCenterAddress(groupActionFactory_)
+                .CENTER_ADDRESS()
         )
     {
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactory_;

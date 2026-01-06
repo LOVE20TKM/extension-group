@@ -176,4 +176,15 @@ interface IGroupManager {
         address tokenAddress,
         address account
     ) external view returns (bool);
+
+    function totalStakedValueByTokenAddress(
+        address tokenAddress,
+        address targetTokenAddress,
+        address account
+    ) external view returns (uint256);
+
+    function totalStakedValue(
+        address tokenAddress,
+        address targetTokenAddress
+    ) external view returns (uint256);
 }

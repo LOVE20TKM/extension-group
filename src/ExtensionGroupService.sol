@@ -33,7 +33,6 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupService} from "./interface/IGroupService.sol";
-import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
 contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
@@ -291,7 +290,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         override(ExtensionBase)
         returns (uint256)
     {
-        return _getTotalStaked(address(0));
+        return _getTotalStaked();
     }
 
     function joinedValueByAccount(
@@ -299,7 +298,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) external view override(ExtensionBase) returns (uint256) {
         if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
             return 0;
-        return _getTotalStaked(account);
+        return _getTotalStakedByAccount(account);
     }
 
     function hasActiveGroups(address account) public view returns (bool) {
@@ -435,58 +434,22 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             );
     }
 
-    function _getTotalStaked(
-        address account
-    ) internal view returns (uint256 total) {
-        uint256[] memory aids = _groupManager.actionIds(
-            GROUP_ACTION_TOKEN_ADDRESS
-        );
-        for (uint256 i; i < aids.length; ) {
-            address ext = _center.extension(
+    function _getTotalStaked() internal view returns (uint256) {
+        return
+            _groupManager.totalStakedValue(
                 GROUP_ACTION_TOKEN_ADDRESS,
-                aids[i]
+                TOKEN_ADDRESS
             );
-            address stakeToken = IGroupAction(ext).STAKE_TOKEN_ADDRESS();
-
-            uint256 staked = account == address(0)
-                ? _groupManager.totalStaked(ext)
-                : _groupManager.totalStakedByOwner(ext, account);
-
-            total += _convertToTokenValue(stakeToken, staked);
-            unchecked {
-                ++i;
-            }
-        }
     }
 
-    function _convertToTokenValue(
-        address stakeToken,
-        uint256 amount
+    function _getTotalStakedByAccount(
+        address account
     ) internal view returns (uint256) {
-        if (amount == 0) return 0;
-
-        if (stakeToken == TOKEN_ADDRESS) return amount;
-
-        if (
-            TokenConversionLib.isLPTokenContainingTarget(
-                stakeToken,
-                TOKEN_ADDRESS
-            )
-        ) {
-            return
-                TokenConversionLib.convertLPToTokenValue(
-                    stakeToken,
-                    amount,
-                    TOKEN_ADDRESS
-                );
-        }
-
         return
-            TokenConversionLib.convertViaUniswap(
-                _center.uniswapV2FactoryAddress(),
-                stakeToken,
+            _groupManager.totalStakedValueByTokenAddress(
+                GROUP_ACTION_TOKEN_ADDRESS,
                 TOKEN_ADDRESS,
-                amount
+                account
             );
     }
 

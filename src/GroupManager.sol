@@ -22,6 +22,7 @@ import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {RoundHistoryString} from "@extension/src/lib/RoundHistoryString.sol";
+import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
 contract GroupManager is IGroupManager {
     using EnumerableSet for EnumerableSet.UintSet;
@@ -427,6 +428,81 @@ contract GroupManager is IGroupManager {
         address extension
     ) public view override returns (uint256) {
         return _totalStaked[extension];
+    }
+
+    function totalStakedValueByTokenAddress(
+        address tokenAddress,
+        address targetTokenAddress,
+        address account
+    ) public view override returns (uint256 total) {
+        uint256[] memory aids = actionIds(tokenAddress);
+        for (uint256 i; i < aids.length; ) {
+            address ext = _center.extension(tokenAddress, aids[i]);
+            address stakeToken = IGroupAction(ext).STAKE_TOKEN_ADDRESS();
+            uint256 stakedAmount = totalStakedByOwner(ext, account);
+
+            total += _convertToTokenValue(
+                stakeToken,
+                stakedAmount,
+                targetTokenAddress
+            );
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function totalStakedValue(
+        address tokenAddress,
+        address targetTokenAddress
+    ) public view override returns (uint256 total) {
+        uint256[] memory aids = actionIds(tokenAddress);
+        for (uint256 i; i < aids.length; ) {
+            address ext = _center.extension(tokenAddress, aids[i]);
+            address stakeToken = IGroupAction(ext).STAKE_TOKEN_ADDRESS();
+            uint256 stakedAmount = totalStaked(ext);
+
+            total += _convertToTokenValue(
+                stakeToken,
+                stakedAmount,
+                targetTokenAddress
+            );
+            unchecked {
+                ++i;
+            }
+        }
+    }
+
+    function _convertToTokenValue(
+        address stakeToken,
+        uint256 amount,
+        address targetTokenAddress
+    ) internal view returns (uint256) {
+        if (amount == 0) return 0;
+
+        if (stakeToken == targetTokenAddress) return amount;
+
+        if (
+            TokenConversionLib.isLPTokenContainingTarget(
+                stakeToken,
+                targetTokenAddress
+            )
+        ) {
+            return
+                TokenConversionLib.convertLPToTokenValue(
+                    stakeToken,
+                    amount,
+                    targetTokenAddress
+                );
+        }
+
+        return
+            TokenConversionLib.convertViaUniswap(
+                _center.uniswapV2FactoryAddress(),
+                stakeToken,
+                targetTokenAddress,
+                amount
+            );
     }
 
     function actionIdsByGroupId(
