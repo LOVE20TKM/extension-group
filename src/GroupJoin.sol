@@ -86,16 +86,47 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _join.currentRound();
 
-        _processJoin(
+        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
+            .latestValue();
+        bool isFirstJoin = joinedGroupId == 0;
+
+        _validateJoinAmounts(
             extension,
-            tokenAddress,
-            actionId,
+            groupId,
+            amount,
+            isFirstJoin,
+            joinedGroupId
+        );
+
+        _transferJoinToken(extension, msg.sender, amount);
+        _increaseAmountHistory(
+            extension,
             groupId,
             amount,
             currentRound,
-            msg.sender,
-            verificationInfos
+            msg.sender
         );
+        if (isFirstJoin) {
+            _joinedRoundByAccount[extension][msg.sender] = currentRound;
+            _groupIdHistoryByAccount[extension][msg.sender].record(
+                currentRound,
+                groupId
+            );
+            _accountsHistory[extension][groupId].add(currentRound, msg.sender);
+            _center.addAccount(
+                tokenAddress,
+                actionId,
+                msg.sender,
+                verificationInfos
+            );
+        } else if (verificationInfos.length > 0) {
+            _center.updateVerificationInfo(
+                tokenAddress,
+                actionId,
+                msg.sender,
+                verificationInfos
+            );
+        }
 
         emit Join(
             tokenAddress,
@@ -123,15 +154,11 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _groupIdHistoryByAccount[extension][msg.sender].record(currentRound, 0);
         _amountHistoryByAccount[extension][msg.sender].record(currentRound, 0);
 
-        _totalJoinedAmountHistoryByGroupId[extension][groupId].record(
+        _totalJoinedAmountHistoryByGroupId[extension][groupId].decrease(
             currentRound,
-            _totalJoinedAmountHistoryByGroupId[extension][groupId]
-                .latestValue() - amount
+            amount
         );
-        _totalJoinedAmountHistory[extension].record(
-            currentRound,
-            _totalJoinedAmountHistory[extension].latestValue() - amount
-        );
+        _totalJoinedAmountHistory[extension].decrease(currentRound, amount);
 
         _accountsHistory[extension][groupId].remove(currentRound, msg.sender);
         delete _joinedRoundByAccount[extension][msg.sender];
@@ -284,63 +311,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return IGroupAction(extension).JOIN_TOKEN_ADDRESS();
     }
 
-    function _processJoin(
-        address extension,
-        address tokenAddress,
-        uint256 actionId,
-        uint256 groupId,
-        uint256 amount,
-        uint256 currentRound,
-        address account,
-        string[] memory verificationInfos
-    ) internal {
-        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][account]
-            .latestValue();
-        bool isFirstJoin = joinedGroupId == 0;
-        uint256 newTotal = _amountHistoryByAccount[extension][account]
-            .latestValue() + amount;
-
-        _validateJoinAmounts(
-            extension,
-            groupId,
-            amount,
-            isFirstJoin,
-            joinedGroupId,
-            newTotal
-        );
-
-        _transferJoinToken(extension, account, amount);
-        _updateJoinHistory(
-            extension,
-            groupId,
-            amount,
-            currentRound,
-            account,
-            newTotal
-        );
-        if (isFirstJoin) {
-            _joinedRoundByAccount[extension][account] = currentRound;
-            _groupIdHistoryByAccount[extension][account].record(
-                currentRound,
-                groupId
-            );
-            _accountsHistory[extension][groupId].add(currentRound, account);
-            _center.addAccount(
-                tokenAddress,
-                actionId,
-                account,
-                verificationInfos
-            );
-        } else if (verificationInfos.length > 0) {
-            _center.updateVerificationInfo(
-                tokenAddress,
-                actionId,
-                account,
-                verificationInfos
-            );
-        }
-    }
-
     function _transferJoinToken(
         address extension,
         address account,
@@ -354,27 +324,21 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function _updateJoinHistory(
+    function _increaseAmountHistory(
         address extension,
         uint256 groupId,
         uint256 amount,
         uint256 currentRound,
-        address account,
-        uint256 newTotal
+        address account
     ) internal {
-        RoundHistoryUint256.History
-            storage groupHistory = _totalJoinedAmountHistoryByGroupId[
-                extension
-            ][groupId];
-        groupHistory.record(currentRound, groupHistory.latestValue() + amount);
-
-        RoundHistoryUint256.History
-            storage totalHistory = _totalJoinedAmountHistory[extension];
-        totalHistory.record(currentRound, totalHistory.latestValue() + amount);
-
-        _amountHistoryByAccount[extension][account].record(
+        _totalJoinedAmountHistoryByGroupId[extension][groupId].increase(
             currentRound,
-            newTotal
+            amount
+        );
+        _totalJoinedAmountHistory[extension].increase(currentRound, amount);
+        _amountHistoryByAccount[extension][account].increase(
+            currentRound,
+            amount
         );
     }
 
@@ -383,16 +347,14 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 amount,
         bool isFirstJoin,
-        uint256 joinedGroupId,
-        uint256 newTotal
+        uint256 joinedGroupId
     ) internal view {
         _validateGroupInfo(
             extension,
             groupId,
             amount,
             isFirstJoin,
-            joinedGroupId,
-            newTotal
+            joinedGroupId
         );
         _validateOwnerCapacity(extension, groupId, amount);
     }
@@ -402,8 +364,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 amount,
         bool isFirstJoin,
-        uint256 joinedGroupId,
-        uint256 newTotal
+        uint256 joinedGroupId
     ) internal view {
         if (!isFirstJoin && joinedGroupId != groupId)
             revert AlreadyInOtherGroup();
@@ -431,6 +392,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 minJoinAmount
             );
         }
+
+        uint256 newTotal = _amountHistoryByAccount[extension][msg.sender]
+            .latestValue() + amount;
 
         if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
             revert AmountExceedsAccountCap();
