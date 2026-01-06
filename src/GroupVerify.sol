@@ -34,12 +34,11 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     address public FACTORY_ADDRESS;
     bool internal _initialized;
 
-    // extension => groupId => delegatedVerifier
-    mapping(address => mapping(uint256 => address))
-        internal _delegatedVerifierByGroupId;
+    // extension => groupId => delegate
+    mapping(address => mapping(uint256 => address)) internal _delegateByGroupId;
     // extension => groupId => group owner at the time of delegation
     mapping(address => mapping(uint256 => address))
-        internal _delegatedVerifierOwnerByGroupId;
+        internal _delegateSetterByGroupId;
     // extension => round => account => score deduction (0 means full score 100, >0 means deduction from 100)
     mapping(address => mapping(uint256 => mapping(address => uint256)))
         internal _originScoreDeductionByAccount;
@@ -128,23 +127,23 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _;
     }
 
-    function setGroupDelegatedVerifier(
+    function setGroupDelegate(
         address extension,
         uint256 groupId,
-        address delegatedVerifier
+        address delegate
     ) external override onlyGroupOwner(extension, groupId) {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
-        _delegatedVerifierByGroupId[extension][groupId] = delegatedVerifier;
-        _delegatedVerifierOwnerByGroupId[extension][
-            groupId
-        ] = delegatedVerifier == address(0) ? address(0) : msg.sender;
-        emit SetGroupDelegatedVerifier(
+        _delegateByGroupId[extension][groupId] = delegate;
+        _delegateSetterByGroupId[extension][groupId] = delegate == address(0)
+            ? address(0)
+            : msg.sender;
+        emit SetGroupDelegate(
             tokenAddress,
             _verify.currentRound(),
             actionId,
             groupId,
-            delegatedVerifier
+            delegate
         );
     }
 
@@ -154,14 +153,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 startIndex,
         uint256[] calldata originScores
     ) external override onlyValidExtension(extension) {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
         uint256 currentRound = _verify.currentRound();
-
-        _checkVerifier(extension, groupId);
-        if (_isVerified[extension][currentRound][groupId]) {
-            revert AlreadyVerified();
-        }
+        _checkVerifierOrDelegate(extension, groupId);
 
         if (
             _groupJoin.accountsByGroupIdByRoundCount(
@@ -173,6 +166,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             revert NoDataForRound();
         }
 
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         _processVerificationBatch(
             extension,
             tokenAddress,
@@ -185,12 +180,15 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
     }
 
-    function _checkVerifier(address extension, uint256 groupId) internal view {
+    function _checkVerifierOrDelegate(
+        address extension,
+        uint256 groupId
+    ) internal view {
         address groupOwner = _group.ownerOf(groupId);
-        bool isValidDelegatedVerifier = msg.sender ==
-            _delegatedVerifierByGroupId[extension][groupId] &&
-            _delegatedVerifierOwnerByGroupId[extension][groupId] == groupOwner;
-        if (msg.sender != groupOwner && !isValidDelegatedVerifier) {
+        bool isValidDelegate = msg.sender ==
+            _delegateByGroupId[extension][groupId] &&
+            _delegateSetterByGroupId[extension][groupId] == groupOwner;
+        if (msg.sender != groupOwner && !isValidDelegate) {
             revert NotVerifier();
         }
     }
@@ -205,6 +203,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256[] calldata originScores,
         address submitter
     ) internal {
+        if (_isVerified[extension][currentRound][groupId]) {
+            revert AlreadyVerified();
+        }
+
         mapping(uint256 => uint256)
             storage verifiedCount = _verifiedAccountCount[extension][
                 currentRound
@@ -388,14 +390,14 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _totalGroupScore[extension][round];
     }
 
-    function delegatedVerifierByGroupId(
+    function delegateByGroupId(
         address extension,
         uint256 groupId
     ) external view override returns (address) {
         address groupOwner = _group.ownerOf(groupId);
-        if (_delegatedVerifierOwnerByGroupId[extension][groupId] != groupOwner)
+        if (_delegateSetterByGroupId[extension][groupId] != groupOwner)
             return address(0);
-        return _delegatedVerifierByGroupId[extension][groupId];
+        return _delegateByGroupId[extension][groupId];
     }
 
     function canVerify(
@@ -404,10 +406,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 groupId
     ) external view override returns (bool) {
         address groupOwner = _group.ownerOf(groupId);
-        bool isValidDelegatedVerifier = account ==
-            _delegatedVerifierByGroupId[extension][groupId] &&
-            _delegatedVerifierOwnerByGroupId[extension][groupId] == groupOwner;
-        return account == groupOwner || isValidDelegatedVerifier;
+        bool isValidDelegate = account ==
+            _delegateByGroupId[extension][groupId] &&
+            _delegateSetterByGroupId[extension][groupId] == groupOwner;
+        return account == groupOwner || isValidDelegate;
     }
 
     function verifiedAccountCount(

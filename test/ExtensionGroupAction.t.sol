@@ -273,14 +273,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
     }
 
     function test_DelegatedVerification() public {
-        address delegatedVerifier = address(0x123);
+        address delegate = address(0x123);
 
         vm.prank(groupOwner1);
-        groupVerify.setGroupDelegatedVerifier(
-            address(groupAction),
-            groupId1,
-            delegatedVerifier
-        );
+        groupVerify.setGroupDelegate(address(groupAction), groupId1, delegate);
 
         // User joins
         uint256 joinAmount = 10e18;
@@ -298,7 +294,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256[] memory scores = new uint256[](1);
         scores[0] = 85;
 
-        vm.prank(delegatedVerifier);
+        vm.prank(delegate);
         groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,

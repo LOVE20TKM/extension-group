@@ -29,12 +29,12 @@ interface IGroupVerify {
         uint256 count,
         bool isComplete
     );
-    event SetGroupDelegatedVerifier(
+    event SetGroupDelegate(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
         uint256 indexed groupId,
-        address delegatedVerifier
+        address delegate
     );
     event DistrustVote(
         address indexed tokenAddress,
@@ -57,10 +57,10 @@ interface IGroupVerify {
         uint256[] calldata originScores
     ) external;
 
-    function setGroupDelegatedVerifier(
+    function setGroupDelegate(
         address extension,
         uint256 groupId,
-        address delegatedVerifier
+        address delegate
     ) external;
 
     function distrustVote(
@@ -105,7 +105,7 @@ interface IGroupVerify {
         uint256 round
     ) external view returns (uint256);
 
-    function delegatedVerifierByGroupId(
+    function delegateByGroupId(
         address extension,
         uint256 groupId
     ) external view returns (address);
