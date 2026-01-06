@@ -132,7 +132,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         uint256 round,
         address account
     ) internal view override returns (uint256) {
-        uint256 accountScore = _groupVerify.scoreByAccount(
+        uint256 accountScore = _groupVerify.accountScore(
             address(this),
             round,
             account
@@ -149,7 +149,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         uint256 groupReward = _calculateRewardByGroupId(round, groupId);
         if (groupReward == 0) return 0;
 
-        uint256 groupTotalScore = _groupVerify.totalScoreByGroupId(
+        uint256 groupTotalScore = _groupVerify.totalAccountScore(
             address(this),
             round,
             groupId

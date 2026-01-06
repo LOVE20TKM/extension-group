@@ -27,7 +27,7 @@ interface IGroupVerify {
         uint256 count,
         bool isComplete
     );
-    event GroupDelegatedVerifierSet(
+    event SetGroupDelegatedVerifier(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
@@ -74,19 +74,25 @@ interface IGroupVerify {
         address account
     ) external view returns (uint256);
 
-    function scoreByAccount(
+    function accountScore(
         address extension,
         uint256 round,
         address account
     ) external view returns (uint256);
 
-    function scoreByGroupId(
+    function totalAccountScore(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
 
     function capacityReductionByGroupId(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function scoreByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
@@ -165,12 +171,6 @@ interface IGroupVerify {
         address extension,
         uint256 round
     ) external view returns (uint256[] memory);
-
-    function totalScoreByGroupId(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256);
 
     function distrustVotesByGroupOwner(
         address extension,

@@ -138,7 +138,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _delegatedVerifierOwnerByGroupId[extension][
             groupId
         ] = delegatedVerifier == address(0) ? address(0) : msg.sender;
-        emit GroupDelegatedVerifierSet(
+        emit SetGroupDelegatedVerifier(
             tokenAddress,
             _verify.currentRound(),
             actionId,
@@ -338,7 +338,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _originScoreByAccount[extension][round][account];
     }
 
-    function scoreByAccount(
+    function accountScore(
         address extension,
         uint256 round,
         address account
@@ -469,7 +469,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifiedGroupIds[extension][round];
     }
 
-    function totalScoreByGroupId(
+    function totalAccountScore(
         address extension,
         uint256 round,
         uint256 groupId

@@ -536,7 +536,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         uint256 round = verify.currentRound();
         assertEq(
-            groupVerify.scoreByAccount(address(groupAction), round, user1),
+            groupVerify.accountScore(address(groupAction), round, user1),
             0
         );
     }
