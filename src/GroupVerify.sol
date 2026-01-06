@@ -85,15 +85,17 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     // extension => round => voter => groupOwner => distrust votes
     mapping(address => mapping(uint256 => mapping(address => mapping(address => uint256))))
         internal _distrustVotesByVoterByGroupOwner;
-    // extension => round => voter => groupOwner => reason
-    mapping(address => mapping(uint256 => mapping(address => mapping(address => string))))
-        internal _distrustReason;
+
     // extension => round => groupOwner => list of voters
     mapping(address => mapping(uint256 => mapping(address => address[])))
         internal _distrustVotersByGroupOwner;
     // extension => round => list of groupOwners
     mapping(address => mapping(uint256 => address[]))
         internal _distrustGroupOwners;
+
+    // extension => round => voter => groupOwner => reason
+    mapping(address => mapping(uint256 => mapping(address => mapping(address => string))))
+        internal _distrustReason;
 
     function initialize(address factory_) external {
         require(_initialized == false, "Already initialized");
@@ -122,8 +124,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     modifier onlyGroupOwner(address extension, uint256 groupId) {
-        if (_group.ownerOf(groupId) != msg.sender)
-            revert IGroupManager.OnlyGroupOwner();
+        if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
         _;
     }
 
@@ -267,11 +268,15 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         string calldata reason
     ) external override onlyValidExtension(extension) {
         if (amount == 0) revert DistrustVoteZeroAmount();
+        if (bytes(reason).length == 0) revert InvalidReason();
+
         address voter = msg.sender;
         uint256 currentRound = _verify.currentRound();
 
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
+
+        _distrustReason[extension][currentRound][voter][groupOwner] = reason;
         _processDistrustVote(
             extension,
             tokenAddress,
@@ -279,8 +284,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             currentRound,
             voter,
             groupOwner,
-            amount,
-            reason
+            amount
         );
 
         emit DistrustVote(
@@ -301,8 +305,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 currentRound,
         address voter,
         address groupOwner,
-        uint256 amount,
-        string calldata reason
+        uint256 amount
     ) internal {
         uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
             tokenAddress,
@@ -313,37 +316,29 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         if (verifyVotes == 0) revert NotGovernor();
 
-        mapping(address => uint256)
-            storage voterVotes = _distrustVotesByVoterByGroupOwner[extension][
-                currentRound
-            ][voter];
-        uint256 currentVotes = voterVotes[groupOwner];
+        uint256 currentVotes = _distrustVotesByVoterByGroupOwner[extension][
+            currentRound
+        ][voter][groupOwner];
         if (currentVotes + amount > verifyVotes)
             revert DistrustVoteExceedsLimit();
-
-        if (bytes(reason).length == 0) revert InvalidReason();
-
-        mapping(address => uint256)
-            storage groupOwnerVotes = _distrustVotesByGroupOwner[extension][
-                currentRound
-            ];
-        mapping(address => mapping(address => string))
-            storage distrustReasonMap = _distrustReason[extension][
-                currentRound
-            ];
 
         if (currentVotes == 0) {
             _distrustVotersByGroupOwner[extension][currentRound][groupOwner]
                 .push(voter);
         }
 
-        if (groupOwnerVotes[groupOwner] == 0) {
+        if (
+            _distrustVotesByGroupOwner[extension][currentRound][groupOwner] == 0
+        ) {
             _distrustGroupOwners[extension][currentRound].push(groupOwner);
         }
 
-        voterVotes[groupOwner] += amount;
-        groupOwnerVotes[groupOwner] += amount;
-        distrustReasonMap[voter][groupOwner] = reason;
+        _distrustVotesByVoterByGroupOwner[extension][currentRound][voter][
+            groupOwner
+        ] += amount;
+        _distrustVotesByGroupOwner[extension][currentRound][
+            groupOwner
+        ] += amount;
 
         _updateDistrustForOwnerGroups(
             extension,

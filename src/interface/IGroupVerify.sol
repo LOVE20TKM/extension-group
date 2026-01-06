@@ -18,6 +18,7 @@ interface IGroupVerify {
     error InvalidReason();
     error ExtensionNotInitialized();
     error DistrustVoteZeroAmount();
+    error OnlyGroupOwner();
 
     event SubmitOriginScores(
         address indexed tokenAddress,
