@@ -50,7 +50,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         internal _amountHistoryByAccount;
     // extension => groupId => account list history
     mapping(address => mapping(uint256 => RoundHistoryAddressSet.Storage))
-        internal _accountListHistory;
+        internal _accountsHistory;
     // extension => groupId => totalJoinedAmount
     mapping(address => mapping(uint256 => RoundHistoryUint256.History))
         internal _totalJoinedAmountHistoryByGroupId;
@@ -143,10 +143,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _totalJoinedAmountHistory[extension].latestValue() - amount
         );
 
-        _accountListHistory[extension][groupId].removeAccount(
-            msg.sender,
-            currentRound
-        );
+        _accountsHistory[extension][groupId].remove(msg.sender, currentRound);
         delete _joinedRoundByAccount[extension][msg.sender];
         _center.removeAccount(tokenAddress, actionId, msg.sender);
 
@@ -189,7 +186,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId
     ) external view override returns (uint256) {
-        return _accountListHistory[extension][groupId].accountsCount();
+        return _accountsHistory[extension][groupId].count();
     }
 
     function accountsByGroupIdAtIndex(
@@ -197,7 +194,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 index
     ) external view override returns (address) {
-        return _accountListHistory[extension][groupId].accountsAtIndex(index);
+        return _accountsHistory[extension][groupId].atIndex(index);
     }
 
     function groupIdByAccountByRound(
@@ -244,8 +241,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 round
     ) external view override returns (uint256) {
-        return
-            _accountListHistory[extension][groupId].accountsCountByRound(round);
+        return _accountsHistory[extension][groupId].countByRound(round);
     }
 
     function accountByGroupIdAndIndexByRound(
@@ -255,10 +251,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 round
     ) external view override returns (address) {
         return
-            _accountListHistory[extension][groupId].accountsByRoundAtIndex(
-                index,
-                round
-            );
+            _accountsHistory[extension][groupId].atIndexByRound(index, round);
     }
 
     function amountByAccountByRound(
@@ -327,10 +320,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 currentRound,
                 groupId
             );
-            _accountListHistory[extension][groupId].addAccount(
-                account,
-                currentRound
-            );
+            _accountsHistory[extension][groupId].add(account, currentRound);
             _center.addAccount(
                 tokenAddress,
                 actionId,
@@ -457,10 +447,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 minJoinAmount
     ) internal view {
         if (maxAccounts > 0) {
-            if (
-                _accountListHistory[extension][groupId].accountsCount() >=
-                maxAccounts
-            ) revert GroupAccountsFull();
+            if (_accountsHistory[extension][groupId].count() >= maxAccounts)
+                revert GroupAccountsFull();
         }
         if (amount < minJoinAmount) revert AmountBelowMinimum();
     }
