@@ -5,8 +5,6 @@ uint256 constant MAX_ORIGIN_SCORE = 100;
 uint256 constant PRECISION = 1e18;
 
 interface IGroupVerify {
-    error InvalidFactory();
-    error AlreadyInitialized();
     error NotVerifier();
     error ScoreExceedsMax();
     error NoRemainingVerifyCapacity();

@@ -84,8 +84,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         internal _distrustReason;
 
     function initialize(address factory_) external {
-        if (_initialized) revert AlreadyInitialized();
-        if (factory_ == address(0)) revert InvalidFactory();
+        require(_initialized == false, "Already initialized");
+        require(factory_ != address(0), "Invalid factory");
 
         _factoryAddress = factory_;
         _factory = IExtensionFactory(factory_);
@@ -113,7 +113,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
-            revert InvalidFactory();
+            revert NotRegisteredExtension();
         }
         if (!IExtension(extension).initialized()) {
             revert ExtensionNotInitialized();
