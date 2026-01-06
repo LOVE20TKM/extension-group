@@ -133,7 +133,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _totalJoinedAmountHistory[extension].latestValue() - amount
         );
 
-        _accountsHistory[extension][groupId].remove(msg.sender, currentRound);
+        _accountsHistory[extension][groupId].remove(currentRound, msg.sender);
         delete _joinedRoundByAccount[extension][msg.sender];
         _center.removeAccount(tokenAddress, actionId, msg.sender);
 
@@ -324,7 +324,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 currentRound,
                 groupId
             );
-            _accountsHistory[extension][groupId].add(account, currentRound);
+            _accountsHistory[extension][groupId].add(currentRound, account);
             _center.addAccount(
                 tokenAddress,
                 actionId,
