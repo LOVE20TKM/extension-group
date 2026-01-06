@@ -40,9 +40,15 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     // extension => groupId => group owner at the time of delegation
     mapping(address => mapping(uint256 => address))
         internal _delegatedVerifierOwnerByGroupId;
-    // extension => round => account => origin score [0-100]
+    // extension => round => account => score deduction (0 means full score 100, >0 means deduction from 100)
     mapping(address => mapping(uint256 => mapping(address => uint256)))
-        internal _originScoreByAccount;
+        internal _originScoreDeductionByAccount;
+    // extension => round => groupId => verified account count
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
+        internal _verifiedAccountCount;
+    // extension => round => groupId => accumulated total score
+    mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
+        internal _batchTotalScore;
     // extension => round => groupId => total score of all accounts in group
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
         internal _totalScoreByGroupId;
@@ -65,12 +71,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         internal _groupIdsByVerifier;
     // extension => round => list of verifiers
     mapping(address => mapping(uint256 => address[])) internal _verifiers;
-    // extension => round => groupId => verified account count
-    mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _verifiedAccountCount;
-    // extension => round => groupId => accumulated total score
-    mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _batchTotalScore;
+
     // extension => round => groupId => capacity reduction factor
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
         internal _capacityReductionByGroupId;
@@ -325,7 +326,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         address account
     ) external view override returns (uint256) {
-        return _originScoreByAccount[extension][round][account];
+        return _getOriginScore(extension, round, account);
     }
 
     function accountScore(
@@ -520,9 +521,16 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
                 currentRound,
                 startIndex + i
             );
-            _originScoreByAccount[extension][currentRound][
-                account
-            ] = originScores[i];
+
+            // Store deduction instead of original score to save gas
+            // If score is 100, don't store (remains 0)
+            // If score < 100, store MAX_ORIGIN_SCORE - originScore
+            if (originScores[i] < MAX_ORIGIN_SCORE) {
+                _originScoreDeductionByAccount[extension][currentRound][
+                    account
+                ] = MAX_ORIGIN_SCORE - originScores[i];
+            }
+
             totalScore +=
                 originScores[i] *
                 _groupJoin.amountByAccountByRound(
@@ -579,9 +587,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         address account
     ) internal view returns (uint256) {
-        uint256 originScoreVal = _originScoreByAccount[extension][round][
-            account
-        ];
+        uint256 originScoreVal = _getOriginScore(extension, round, account);
         if (originScoreVal == 0) return 0;
 
         uint256 amount = _groupJoin.amountByAccountByRound(
@@ -590,6 +596,61 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round
         );
         return originScoreVal * amount;
+    }
+
+    function _getOriginScore(
+        address extension,
+        uint256 round,
+        address account
+    ) internal view returns (uint256) {
+        uint256 groupId = _groupJoin.groupIdByAccountByRound(
+            extension,
+            account,
+            round
+        );
+
+        // If account is not in any group, return 0
+        if (groupId == 0) {
+            return 0;
+        }
+
+        // if group is verified, return the deduction value
+        if (_isVerified[extension][round][groupId]) {
+            return
+                MAX_ORIGIN_SCORE -
+                _originScoreDeductionByAccount[extension][round][account];
+        }
+
+        uint256 verifiedCount = _verifiedAccountCount[extension][round][
+            groupId
+        ];
+
+        // If group is not verified, return 0
+        if (verifiedCount == 0) {
+            return 0;
+        }
+
+        // Check if account is in the verified range
+        // Accounts are verified in order from index 0 to verifiedCount - 1
+        for (uint256 i = 0; i < verifiedCount; i++) {
+            address verifiedAccount = _groupJoin
+                .accountsByGroupIdByRoundAtIndex(extension, groupId, round, i);
+            if (verifiedAccount == account) {
+                // Account is verified, get deduction value
+                uint256 deduction = _originScoreDeductionByAccount[extension][
+                    round
+                ][account];
+                // If deduction is 0, score is 100 (full score)
+                // Otherwise, score is MAX_ORIGIN_SCORE - deduction
+                return
+                    deduction == 0
+                        ? MAX_ORIGIN_SCORE
+                        : MAX_ORIGIN_SCORE - deduction;
+            }
+        }
+
+        // Account is not in verified range, return 0
+        return 0;
     }
 
     function _calculateCapacityReduction(
