@@ -51,7 +51,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         internal _batchTotalScore;
     // extension => round => groupId => total score of all accounts in group
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _totalScoreByGroupId;
+        internal _totalAccountScore;
     // extension => round => groupId => group score (with distrust applied)
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
         internal _scoreByGroupId;
@@ -334,7 +334,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         address account
     ) external view override returns (uint256) {
-        return _calculateScoreByAccount(extension, round, account);
+        return _calculateAccountScore(extension, round, account);
     }
 
     function scoreByGroupId(
@@ -465,7 +465,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        return _totalScoreByGroupId[extension][round][groupId];
+        return _totalAccountScore[extension][round][groupId];
     }
 
     function distrustVotesByGroupOwner(
@@ -568,7 +568,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
         _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
 
-        _totalScoreByGroupId[extension][currentRound][groupId] = totalScore;
+        _totalAccountScore[extension][currentRound][groupId] = totalScore;
 
         uint256 groupScore = _calculateGroupScore(
             extension,
@@ -582,7 +582,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _verifiedGroupIds[extension][currentRound].push(groupId);
     }
 
-    function _calculateScoreByAccount(
+    function _calculateAccountScore(
         address extension,
         uint256 round,
         address account
