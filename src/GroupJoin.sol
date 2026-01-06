@@ -2,10 +2,9 @@
 pragma solidity =0.8.17;
 
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
-import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
-    IExtensionFactory
-} from "@extension/src/interface/IExtensionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
@@ -31,13 +30,14 @@ using RoundHistoryAddressSet for RoundHistoryAddressSet.Storage;
 using SafeERC20 for IERC20;
 
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
-    IExtensionFactory internal _factory;
+    address public FACTORY_ADDRESS;
+
+    IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
     IERC721Enumerable internal _group;
     ILOVE20Join internal _join;
 
-    address internal _factoryAddress;
     bool internal _initialized;
     // extension => account => joinedRound
     mapping(address => mapping(address => uint256))
@@ -61,27 +61,17 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     constructor() {}
 
     function initialize(address factory_) external {
-        if (_initialized) revert AlreadyInitialized();
-        if (factory_ == address(0)) revert InvalidFactory();
+        require(_initialized == false, "Already initialized");
+        require(factory_ != address(0), "Invalid factory address");
 
-        _factoryAddress = factory_;
-        _factory = IExtensionFactory(factory_);
-        _center = IExtensionCenter(
-            IExtensionFactory(factory_).CENTER_ADDRESS()
-        );
-        _groupManager = IGroupManager(
-            IGroupActionFactory(factory_).GROUP_MANAGER_ADDRESS()
-        );
-        _group = IERC721Enumerable(
-            IGroupActionFactory(_factoryAddress).GROUP_ADDRESS()
-        );
+        FACTORY_ADDRESS = factory_;
+        _factory = IExtensionGroupActionFactory(factory_);
+        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
+        _groupManager = IGroupManager(_factory.GROUP_MANAGER_ADDRESS());
+        _group = IERC721Enumerable(_factory.GROUP_ADDRESS());
         _join = ILOVE20Join(_center.joinAddress());
 
         _initialized = true;
-    }
-
-    function FACTORY_ADDRESS() external view override returns (address) {
-        return _factoryAddress;
     }
 
     function join(
@@ -278,7 +268,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
-            revert InvalidFactory();
+            revert NotRegisteredExtensionInFactory();
         }
         if (!IExtension(extension).initialized()) {
             revert ExtensionNotInitialized();

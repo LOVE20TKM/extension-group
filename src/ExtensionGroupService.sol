@@ -29,7 +29,9 @@ import {
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
-import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
+import {
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupService} from "./interface/IGroupService.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
@@ -47,7 +49,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ILOVE20Launch internal immutable _launch;
     IGroupManager internal immutable _groupManager;
     IERC721Enumerable internal immutable _group;
-    IExtensionFactory internal immutable _actionFactory;
+    IExtensionGroupActionFactory internal immutable _actionFactory;
 
     // account => actionId => groupId => recipients
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
@@ -81,14 +83,11 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         }
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
-        _actionFactory = IExtensionFactory(groupActionFactoryAddress_);
-        address groupManagerAddress = IGroupActionFactory(
+        _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_
-        ).GROUP_MANAGER_ADDRESS();
-        _groupManager = IGroupManager(groupManagerAddress);
-        address groupAddress = IGroupActionFactory(groupActionFactoryAddress_)
-            .GROUP_ADDRESS();
-        _group = IERC721Enumerable(groupAddress);
+        );
+        _groupManager = IGroupManager(_actionFactory.GROUP_MANAGER_ADDRESS());
+        _group = IERC721Enumerable(_actionFactory.GROUP_ADDRESS());
     }
 
     function join(
@@ -312,9 +311,10 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 round,
         address verifier
     ) public view returns (uint256 accountReward, uint256 totalReward) {
-        (, address[] memory exts) = IGroupActionFactory(
-            GROUP_ACTION_FACTORY_ADDRESS
-        ).votedGroupActions(GROUP_ACTION_TOKEN_ADDRESS, round);
+        (, address[] memory exts) = _actionFactory.votedGroupActions(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            round
+        );
         for (uint256 i; i < exts.length; ) {
             IGroupAction ga = IGroupAction(exts[i]);
             accountReward += ga.generatedRewardByVerifier(round, verifier);

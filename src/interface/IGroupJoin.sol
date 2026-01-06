@@ -12,8 +12,7 @@ interface IGroupJoin {
     error GroupCapacityExceeded();
     error GroupAccountsFull();
     error CannotJoinDeactivatedGroup();
-    error InvalidFactory();
-    error AlreadyInitialized();
+    error NotRegisteredExtensionInFactory();
     error ExtensionNotInitialized();
 
     event Join(

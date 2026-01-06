@@ -13,10 +13,9 @@ import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
-import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {
-    IExtensionFactory
-} from "@extension/src/interface/IExtensionFactory.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {
@@ -32,7 +31,7 @@ contract GroupManager is IGroupManager {
 
     uint256 public constant PRECISION = 1e18;
 
-    IExtensionFactory internal _factory;
+    IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IERC721Enumerable internal _group;
     ILOVE20Stake internal _stake;
@@ -64,13 +63,9 @@ contract GroupManager is IGroupManager {
         require(factory_ != address(0), "Invalid factory");
 
         FACTORY_ADDRESS = factory_;
-        _factory = IExtensionFactory(factory_);
-        _center = IExtensionCenter(
-            IExtensionFactory(factory_).CENTER_ADDRESS()
-        );
-        _group = IERC721Enumerable(
-            IGroupActionFactory(FACTORY_ADDRESS).GROUP_ADDRESS()
-        );
+        _factory = IExtensionGroupActionFactory(factory_);
+        _center = IExtensionCenter(_factory.CENTER_ADDRESS());
+        _group = IERC721Enumerable(_factory.GROUP_ADDRESS());
         _stake = ILOVE20Stake(_center.stakeAddress());
         _vote = ILOVE20Vote(_center.voteAddress());
         _join = ILOVE20Join(_center.joinAddress());
