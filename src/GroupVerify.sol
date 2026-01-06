@@ -163,7 +163,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
 
         if (
-            _groupJoin.accountCountByGroupIdByRound(
+            _groupJoin.accountsByGroupIdByRoundCount(
                 extension,
                 groupId,
                 currentRound
@@ -211,7 +211,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             revert InvalidStartIndex();
         }
 
-        uint256 accountCount = _groupJoin.accountCountByGroupIdByRound(
+        uint256 accountCount = _groupJoin.accountsByGroupIdByRoundCount(
             extension,
             groupId,
             currentRound
@@ -524,11 +524,11 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) internal returns (uint256 totalScore) {
         for (uint256 i = 0; i < originScores.length; i++) {
             if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
-            address account = _groupJoin.accountByGroupIdAndIndexByRound(
+            address account = _groupJoin.accountsByGroupIdByRoundAtIndex(
                 extension,
                 groupId,
-                startIndex + i,
-                currentRound
+                currentRound,
+                startIndex + i
             );
             _originScoreByAccount[extension][currentRound][
                 account

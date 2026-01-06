@@ -379,19 +379,14 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 3. Verify count
         assertEq(
-            h.getGroupManager().actionIdsCount(
-                h.firstTokenAddress()
-            ),
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
             1,
             "Count should be 1"
         );
 
         // 4. Verify at index
         assertEq(
-            h.getGroupManager().actionIdsAtIndex(
-                h.firstTokenAddress(),
-                0
-            ),
+            h.getGroupManager().actionIdsAtIndex(h.firstTokenAddress(), 0),
             actionId,
             "ActionId at index 0 should match"
         );
@@ -448,9 +443,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 2. Verify actionId is tracked
         assertEq(
-            h.getGroupManager().actionIdsCount(
-                h.firstTokenAddress()
-            ),
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
             1,
             "Should have 1 actionId before deactivate"
         );
@@ -461,9 +454,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 4. Verify actionId is removed
         assertEq(
-            h.getGroupManager().actionIdsCount(
-                h.firstTokenAddress()
-            ),
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
             0,
             "Should have 0 actionIds after deactivate"
         );
@@ -499,9 +490,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 3. Verify both actionIds are tracked globally
         assertEq(
-            h.getGroupManager().actionIdsCount(
-                h.firstTokenAddress()
-            ),
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
             2,
             "Should have 2 actionIds globally"
         );
@@ -539,9 +528,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         // ActionId1 should be removed from global set since it has no more active groups
         assertEq(
-            h.getGroupManager().actionIdsCount(
-                h.firstTokenAddress()
-            ),
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
             1,
             "Should have 1 actionId globally after group1 deactivated"
         );
@@ -552,9 +539,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // 8. Verify all actionIds removed
         assertEq(
-            h.getGroupManager().actionIdsCount(
-                h.firstTokenAddress()
-            ),
+            h.getGroupManager().actionIdsCount(h.firstTokenAddress()),
             0,
             "Should have 0 actionIds globally after all deactivated"
         );
@@ -566,5 +551,466 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             0,
             "Group2 should have 0 actionIds after deactivate"
         );
+    }
+
+    // ============ accountsByGroupId Tests ============
+
+    /// @notice Test accountsByGroupId with single member
+    function test_accountsByGroupId_SingleMember() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Member joins
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        // 3. Verify accountsByGroupId
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accounts = groupJoin.accountsByGroupId(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId
+        );
+        assertEq(accounts.length, 1, "Should have 1 account");
+        assertEq(accounts[0], member1().userAddress, "Account should match");
+    }
+
+    /// @notice Test accountsByGroupId with multiple members
+    function test_accountsByGroupId_MultipleMembers() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Multiple members join
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        GroupUserParams memory m3;
+        m3.flow = member3();
+        m3.joinAmount = 30e18;
+        m3.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m3, bobGroup1);
+
+        // 3. Verify accountsByGroupId
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accounts = groupJoin.accountsByGroupId(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId
+        );
+        assertEq(accounts.length, 3, "Should have 3 accounts");
+        assertTrue(
+            _containsAddress(accounts, member1().userAddress),
+            "Should contain member1"
+        );
+        assertTrue(
+            _containsAddress(accounts, member2().userAddress),
+            "Should contain member2"
+        );
+        assertTrue(
+            _containsAddress(accounts, member3().userAddress),
+            "Should contain member3"
+        );
+    }
+
+    /// @notice Test accountsByGroupId after member exit
+    function test_accountsByGroupId_AfterExit() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Members join
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        // 3. Verify initial state
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accountsBefore = groupJoin.accountsByGroupId(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId
+        );
+        assertEq(
+            accountsBefore.length,
+            2,
+            "Should have 2 accounts before exit"
+        );
+
+        // 4. Member exits
+        h.group_exit(m1, bobGroup1);
+
+        // 5. Verify accountsByGroupId after exit
+        address[] memory accountsAfter = groupJoin.accountsByGroupId(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId
+        );
+        assertEq(accountsAfter.length, 1, "Should have 1 account after exit");
+        assertEq(
+            accountsAfter[0],
+            member2().userAddress,
+            "Should only contain member2"
+        );
+    }
+
+    /// @notice Test accountsByGroupIdByRound with single round
+    function test_accountsByGroupIdByRound_SingleRound() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        uint256 round1 = h.joinContract().currentRound();
+
+        // 2. Members join in round 1
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        // 3. Verify accountsByGroupIdByRound for round 1
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round1
+        );
+        assertEq(accounts.length, 2, "Should have 2 accounts in round 1");
+        assertTrue(
+            _containsAddress(accounts, member1().userAddress),
+            "Should contain member1"
+        );
+        assertTrue(
+            _containsAddress(accounts, member2().userAddress),
+            "Should contain member2"
+        );
+    }
+
+    /// @notice Test accountsByGroupIdByRound across multiple rounds
+    function test_accountsByGroupIdByRound_MultipleRounds() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        uint256 round1 = h.joinContract().currentRound();
+
+        // 2. Member joins in round 1
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        // 3. Another member joins in the same round 1
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 10e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        // 4. Advance to round 2
+        h.next_phase();
+        uint256 round2 = h.joinContract().currentRound();
+
+        // 5. Verify round 1 accounts (should have both m1 and m2)
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accountsRound1 = groupJoin.accountsByGroupIdByRound(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round1
+        );
+        assertEq(accountsRound1.length, 2, "Round 1 should have 2 accounts");
+        assertTrue(
+            _containsAddress(accountsRound1, member1().userAddress),
+            "Round 1 should contain member1"
+        );
+        assertTrue(
+            _containsAddress(accountsRound1, member2().userAddress),
+            "Round 1 should contain member2"
+        );
+
+        // 6. Verify round 2 accounts (should still have both m1 and m2, as they persist)
+        address[] memory accountsRound2 = groupJoin.accountsByGroupIdByRound(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round2
+        );
+        assertEq(accountsRound2.length, 2, "Round 2 should have 2 accounts");
+        assertTrue(
+            _containsAddress(accountsRound2, member1().userAddress),
+            "Round 2 should contain member1"
+        );
+        assertTrue(
+            _containsAddress(accountsRound2, member2().userAddress),
+            "Round 2 should contain member2"
+        );
+    }
+
+    /// @notice Test accountsByGroupIdByRound after member exit
+    function test_accountsByGroupIdByRound_AfterExit() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        uint256 round1 = h.joinContract().currentRound();
+
+        // 2. Members join in round 1
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        // 3. Advance to round 2
+        h.next_phase();
+        uint256 round2 = h.joinContract().currentRound();
+
+        // 4. Member exits in round 2
+        h.group_exit(m1, bobGroup1);
+
+        // 5. Verify round 1 accounts (should still have both)
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accountsRound1 = groupJoin.accountsByGroupIdByRound(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round1
+        );
+        assertEq(
+            accountsRound1.length,
+            2,
+            "Round 1 should still have 2 accounts"
+        );
+
+        // 6. Verify round 2 accounts (should only have m2)
+        address[] memory accountsRound2 = groupJoin.accountsByGroupIdByRound(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round2
+        );
+        assertEq(
+            accountsRound2.length,
+            1,
+            "Round 2 should have 1 account after exit"
+        );
+        assertEq(
+            accountsRound2[0],
+            member2().userAddress,
+            "Round 2 should only contain member2"
+        );
+    }
+
+    /// @notice Test accountsByGroupId consistency with accountsByGroupIdAtIndex
+    function test_accountsByGroupId_Consistency() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        // 2. Multiple members join
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        GroupUserParams memory m3;
+        m3.flow = member3();
+        m3.joinAmount = 30e18;
+        m3.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m3, bobGroup1);
+
+        // 3. Verify consistency between accountsByGroupId and accountsByGroupIdAtIndex
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accounts = groupJoin.accountsByGroupId(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId
+        );
+        uint256 count = groupJoin.accountsByGroupIdCount(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId
+        );
+
+        assertEq(accounts.length, count, "Array length should match count");
+        for (uint256 i = 0; i < count; i++) {
+            address accountAtIndex = groupJoin.accountsByGroupIdAtIndex(
+                bobGroup1.groupActionAddress,
+                bobGroup1.groupId,
+                i
+            );
+            assertTrue(
+                _containsAddress(accounts, accountAtIndex),
+                "Account at index should be in array"
+            );
+        }
+    }
+
+    /// @notice Test accountsByGroupIdByRound consistency with accountsByGroupIdByRoundAtIndex
+    function test_accountsByGroupIdByRound_Consistency() public {
+        // 1. Setup group action
+        address extensionAddr = h.group_action_create(bobGroup1);
+        bobGroup1.groupActionAddress = extensionAddr;
+        uint256 actionId = h.submit_group_action(bobGroup1);
+        bobGroup1.flow.actionId = actionId;
+        bobGroup1.groupActionId = actionId;
+
+        h.vote(bobGroup1.flow);
+        h.next_phase();
+        h.group_activate(bobGroup1);
+
+        uint256 round1 = h.joinContract().currentRound();
+
+        // 2. Multiple members join
+        GroupUserParams memory m1;
+        m1.flow = member1();
+        m1.joinAmount = 10e18;
+        m1.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m1, bobGroup1);
+
+        GroupUserParams memory m2;
+        m2.flow = member2();
+        m2.joinAmount = 20e18;
+        m2.groupActionAddress = bobGroup1.groupActionAddress;
+        h.group_join(m2, bobGroup1);
+
+        // 3. Verify consistency between accountsByGroupIdByRound and accountsByGroupIdByRoundAtIndex
+        IGroupJoin groupJoin = IGroupJoin(
+            h.groupActionFactory().GROUP_JOIN_ADDRESS()
+        );
+        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round1
+        );
+        uint256 count = groupJoin.accountsByGroupIdByRoundCount(
+            bobGroup1.groupActionAddress,
+            bobGroup1.groupId,
+            round1
+        );
+
+        assertEq(accounts.length, count, "Array length should match count");
+        for (uint256 i = 0; i < count; i++) {
+            address accountAtIndex = groupJoin.accountsByGroupIdByRoundAtIndex(
+                bobGroup1.groupActionAddress,
+                bobGroup1.groupId,
+                round1,
+                i
+            );
+            assertTrue(
+                _containsAddress(accounts, accountAtIndex),
+                "Account at index should be in array"
+            );
+        }
+    }
+
+    // ============ Helper Functions ============
+
+    function _containsAddress(
+        address[] memory array,
+        address target
+    ) internal pure returns (bool) {
+        for (uint256 i = 0; i < array.length; i++) {
+            if (array[i] == target) {
+                return true;
+            }
+        }
+        return false;
     }
 }

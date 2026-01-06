@@ -182,6 +182,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
+    function accountsByGroupId(
+        address extension,
+        uint256 groupId
+    ) external view override returns (address[] memory) {
+        return _accountsHistory[extension][groupId].values();
+    }
+
     function accountsByGroupIdCount(
         address extension,
         uint256 groupId
@@ -236,19 +243,26 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _totalJoinedAmountHistory[extension].value(round);
     }
 
-    function accountCountByGroupIdByRound(
+    function accountsByGroupIdByRoundCount(
         address extension,
         uint256 groupId,
         uint256 round
     ) external view override returns (uint256) {
         return _accountsHistory[extension][groupId].countByRound(round);
     }
-
-    function accountByGroupIdAndIndexByRound(
+    function accountsByGroupIdByRound(
         address extension,
         uint256 groupId,
-        uint256 index,
         uint256 round
+    ) external view override returns (address[] memory) {
+        return _accountsHistory[extension][groupId].valuesByRound(round);
+    }
+
+    function accountsByGroupIdByRoundAtIndex(
+        address extension,
+        uint256 groupId,
+        uint256 round,
+        uint256 index
     ) external view override returns (address) {
         return
             _accountsHistory[extension][groupId].atIndexByRound(index, round);
