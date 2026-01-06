@@ -66,6 +66,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     // extension => round => groupId => verifier address
     mapping(address => mapping(uint256 => mapping(uint256 => address)))
         internal _verifierByGroupId;
+    // extension => round => groupId => submitter address who submitted the original scores
+    mapping(address => mapping(uint256 => mapping(uint256 => address)))
+        internal _submitterByGroupId;
     // extension => round => verifier => list of verified group ids
     mapping(address => mapping(uint256 => mapping(address => uint256[])))
         internal _groupIdsByVerifier;
@@ -138,7 +141,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
     }
 
-    function verifyWithOriginScores(
+    function submitOriginScores(
         address extension,
         uint256 groupId,
         uint256 startIndex,
@@ -170,7 +173,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             currentRound,
             groupId,
             startIndex,
-            originScores
+            originScores,
+            msg.sender
         );
     }
 
@@ -191,7 +195,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 currentRound,
         uint256 groupId,
         uint256 startIndex,
-        uint256[] calldata originScores
+        uint256[] calldata originScores,
+        address submitter
     ) internal {
         mapping(uint256 => uint256)
             storage verifiedCount = _verifiedAccountCount[extension][
@@ -228,22 +233,23 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 finalBatchScore = batchScoreMap[groupId];
         bool isComplete = verifiedCount[groupId] == accountCount;
 
-        emit VerifyWithOriginScores(
-            tokenAddress,
-            currentRound,
-            actionId,
-            groupId,
-            startIndex,
-            originScores.length,
-            isComplete
-        );
+        emit SubmitOriginScores({
+            tokenAddress: tokenAddress,
+            round: currentRound,
+            actionId: actionId,
+            groupId: groupId,
+            startIndex: startIndex,
+            count: originScores.length,
+            isComplete: isComplete
+        });
 
         if (isComplete) {
             _finalizeVerification(
                 extension,
                 currentRound,
                 groupId,
-                finalBatchScore
+                finalBatchScore,
+                submitter
             );
         }
     }
@@ -430,6 +436,14 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _verifierByGroupId[extension][round][groupId];
     }
 
+    function submitterByGroupId(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view override returns (address) {
+        return _submitterByGroupId[extension][round][groupId];
+    }
+
     function groupIdsByVerifier(
         address extension,
         uint256 round,
@@ -547,7 +561,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         uint256 currentRound,
         uint256 groupId,
-        uint256 totalScore
+        uint256 totalScore,
+        address submitter
     ) internal {
         address groupOwner = _group.ownerOf(groupId);
         uint256 capacityReduction = _calculateCapacityReduction(
@@ -562,6 +577,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         // Record verifier (NFT owner, not delegated verifier)
         _verifierByGroupId[extension][currentRound][groupId] = groupOwner;
+
+        // Record submitted verifier (actual submitter, may be delegated verifier)
+        _submitterByGroupId[extension][currentRound][groupId] = submitter;
 
         if (
             _groupIdsByVerifier[extension][currentRound][groupOwner].length == 0

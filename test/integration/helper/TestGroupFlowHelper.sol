@@ -837,7 +837,7 @@ contract TestGroupFlowHelper is Test {
         GroupVerify groupVerifyContract = GroupVerify(
             groupActionFactory.GROUP_VERIFY_ADDRESS()
         );
-        groupVerifyContract.verifyWithOriginScores(
+        groupVerifyContract.submitOriginScores(
             groupOwner.groupActionAddress,
             groupOwner.groupId,
             0,

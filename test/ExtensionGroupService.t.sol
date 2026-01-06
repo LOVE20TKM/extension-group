@@ -180,7 +180,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         scores[0] = score;
 
         vm.prank(owner);
-        newGroupVerify.verifyWithOriginScores(
+        newGroupVerify.submitOriginScores(
             address(groupAction),
             groupId,
             0,

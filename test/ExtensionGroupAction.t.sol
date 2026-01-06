@@ -202,7 +202,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[1] = 90;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -299,7 +299,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 85;
 
         vm.prank(delegatedVerifier);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -334,7 +334,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -395,7 +395,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -403,7 +403,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
 
         vm.prank(groupOwner2);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId2,
             0,
@@ -527,7 +527,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 0;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -557,7 +557,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = MAX_ORIGIN_SCORE;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -635,7 +635,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             1
         );
 
-        // Capacity check is done during verifyWithOriginScores, so let's test that path
+        // Capacity check is done during submitOriginScores, so let's test that path
         advanceRound();
         uint256 round = verify.currentRound();
         vote.setVotedActionIds(address(token), round, ACTION_ID);
@@ -648,7 +648,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // This should succeed since we're within capacity
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -681,7 +681,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,
@@ -715,7 +715,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores2[0] = 90;
 
         vm.prank(groupOwner1);
-        groupVerify.verifyWithOriginScores(
+        groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
             0,

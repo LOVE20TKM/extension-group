@@ -19,7 +19,7 @@ interface IGroupVerify {
     error ExtensionNotInitialized();
     error DistrustVoteZeroAmount();
 
-    event VerifyWithOriginScores(
+    event SubmitOriginScores(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
@@ -49,7 +49,7 @@ interface IGroupVerify {
 
     function FACTORY_ADDRESS() external view returns (address);
 
-    function verifyWithOriginScores(
+    function submitOriginScores(
         address extension,
         uint256 groupId,
         uint256 startIndex,
@@ -144,6 +144,12 @@ interface IGroupVerify {
     ) external view returns (address);
 
     function verifierByGroupId(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view returns (address);
+
+    function submitterByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
