@@ -58,7 +58,8 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
 
         // Get alice's verify votes
-        uint256 aliceVerifyVotes = h.verifyContract()
+        uint256 aliceVerifyVotes = h
+            .verifyContract()
             .scoreByVerifierByActionIdByAccount(
                 h.firstTokenAddress(),
                 round,
@@ -170,7 +171,8 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
 
         // Get alice's verify votes
-        uint256 aliceVerifyVotes = h.verifyContract()
+        uint256 aliceVerifyVotes = h
+            .verifyContract()
             .scoreByVerifierByActionIdByAccount(
                 h.firstTokenAddress(),
                 round,
@@ -257,4 +259,3 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
     }
 }
-
