@@ -86,11 +86,9 @@ interface IGroupJoin {
         uint256 round
     ) external view returns (uint256);
 
-    function totalJoinedAmount(
-        address extension
-    ) external view returns (uint256);
+    function joinedAmount(address extension) external view returns (uint256);
 
-    function totalJoinedAmountByRound(
+    function joinedAmountByRound(
         address extension,
         uint256 round
     ) external view returns (uint256);
@@ -114,7 +112,7 @@ interface IGroupJoin {
         uint256 index
     ) external view returns (address);
 
-    function amountByAccountByRound(
+    function joinedAmountByAccountByRound(
         address extension,
         address account,
         uint256 round

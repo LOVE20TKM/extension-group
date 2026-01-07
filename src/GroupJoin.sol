@@ -245,13 +245,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _totalJoinedAmountHistoryByGroupId[extension][groupId].value(round);
     }
 
-    function totalJoinedAmount(
+    function joinedAmount(
         address extension
     ) external view override returns (uint256) {
         return _totalJoinedAmountHistory[extension].latestValue();
     }
 
-    function totalJoinedAmountByRound(
+    function joinedAmountByRound(
         address extension,
         uint256 round
     ) external view override returns (uint256) {
@@ -284,7 +284,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _accountsHistory[extension][groupId].atIndexByRound(index, round);
     }
 
-    function amountByAccountByRound(
+    function joinedAmountByAccountByRound(
         address extension,
         address account,
         uint256 round

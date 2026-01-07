@@ -144,6 +144,10 @@ interface IGroupManager {
     function staked(address extension) external view returns (uint256);
 
     function totalStaked(address tokenAddress) external view returns (uint256);
+    function totalStakedByAccount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256);
 
     function actionIdsByGroupId(
         address tokenAddress,
@@ -178,15 +182,4 @@ interface IGroupManager {
         address tokenAddress,
         address account
     ) external view returns (bool);
-
-    function totalStakedValueByAccount(
-        address tokenAddress,
-        address targetTokenAddress,
-        address account
-    ) external view returns (uint256);
-
-    function totalStakedValue(
-        address tokenAddress,
-        address targetTokenAddress
-    ) external view returns (uint256);
 }

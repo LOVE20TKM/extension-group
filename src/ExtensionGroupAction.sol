@@ -99,30 +99,29 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         }
     }
 
-    function isJoinedValueConverted()
-        external
-        view
-        override(ExtensionBase)
-        returns (bool)
-    {
-        return JOIN_TOKEN_ADDRESS != TOKEN_ADDRESS;
-    }
-
-    function joinedValue()
+    function joinedAmount()
         external
         view
         override(ExtensionBase)
         returns (uint256)
     {
-        uint256 totalAmount = _groupJoin.totalJoinedAmount(address(this));
-        return _convertToTokenValue(totalAmount);
+        return _groupJoin.joinedAmount(address(this));
     }
 
-    function joinedValueByAccount(
+    function joinedAmountByAccount(
         address account
     ) external view override(ExtensionBase) returns (uint256) {
         (, uint256 amount, ) = _groupJoin.joinInfo(address(this), account);
-        return _convertToTokenValue(amount);
+        return amount;
+    }
+
+    function joinedAmountTokenAddress()
+        external
+        view
+        override(ExtensionBase)
+        returns (address)
+    {
+        return JOIN_TOKEN_ADDRESS;
     }
 
     function _calculateReward(
@@ -172,19 +171,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
             groupId
         );
         return (totalReward * groupScore) / totalScore;
-    }
-
-    function _convertToTokenValue(
-        uint256 amount
-    ) internal view returns (uint256) {
-        if (amount == 0) return 0;
-        if (JOIN_TOKEN_ADDRESS == TOKEN_ADDRESS) return amount;
-        return
-            TokenConversionLib.convertLPToTokenValue(
-                JOIN_TOKEN_ADDRESS,
-                amount,
-                TOKEN_ADDRESS
-            );
     }
 
     function _validateJoinToken(

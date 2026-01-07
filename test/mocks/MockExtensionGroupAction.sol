@@ -39,16 +39,7 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         actionId = actionId_;
     }
 
-    function isJoinedValueConverted()
-        external
-        pure
-        override(ExtensionBase)
-        returns (bool)
-    {
-        return true;
-    }
-
-    function joinedValue()
+    function joinedAmount()
         external
         pure
         override(ExtensionBase)
@@ -57,10 +48,19 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         return 0;
     }
 
-    function joinedValueByAccount(
+    function joinedAmountByAccount(
         address /*account*/
     ) external pure override(ExtensionBase) returns (uint256) {
         return 0;
+    }
+
+    function joinedAmountTokenAddress()
+        external
+        view
+        override(ExtensionBase)
+        returns (address)
+    {
+        return JOIN_TOKEN_ADDRESS;
     }
 
     function rewardByAccount(

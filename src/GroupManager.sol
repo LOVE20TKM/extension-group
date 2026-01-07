@@ -429,58 +429,19 @@ contract GroupManager is IGroupManager {
         return _totalStaked[tokenAddress];
     }
 
-    function totalStakedValueByAccount(
+    function totalStakedByAccount(
         address tokenAddress,
-        address targetTokenAddress,
         address account
-    ) public view override returns (uint256 total) {
+    ) public view returns (uint256 total) {
         uint256[] memory aids = actionIds(tokenAddress);
         for (uint256 i; i < aids.length; ) {
             address ext = _center.extension(tokenAddress, aids[i]);
-            uint256 stakedAmount = stakedByOwner(ext, account);
-
-            total += _convertToTokenValue(
-                tokenAddress,
-                stakedAmount,
-                targetTokenAddress
-            );
+            total += stakedByOwner(ext, account);
             unchecked {
                 ++i;
             }
         }
-    }
-
-    function totalStakedValue(
-        address tokenAddress,
-        address targetTokenAddress
-    ) public view override returns (uint256 total) {
-        uint256 totalStakedAmount = _totalStaked[tokenAddress];
-        if (totalStakedAmount == 0) return 0;
-
-        return
-            _convertToTokenValue(
-                tokenAddress,
-                totalStakedAmount,
-                targetTokenAddress
-            );
-    }
-
-    function _convertToTokenValue(
-        address stakeToken,
-        uint256 amount,
-        address targetTokenAddress
-    ) internal view returns (uint256) {
-        if (amount == 0) return 0;
-
-        if (stakeToken == targetTokenAddress) return amount;
-
-        return
-            TokenConversionLib.convertViaUniswap(
-                _center.uniswapV2FactoryAddress(),
-                stakeToken,
-                targetTokenAddress,
-                amount
-            );
+        return total;
     }
 
     function actionIdsByGroupId(

@@ -122,7 +122,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _;
     }
 
-    modifier onlyGroupOwner(address extension, uint256 groupId) {
+    modifier onlyGroupOwner(uint256 groupId) {
         if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
         _;
     }
@@ -131,7 +131,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address delegate
-    ) external override onlyGroupOwner(extension, groupId) {
+    ) external override onlyGroupOwner(groupId) {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         _delegateByGroupId[extension][groupId] = delegate;
@@ -404,7 +404,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         if (originScoreVal == 0) return 0;
 
-        uint256 amount = _groupJoin.amountByAccountByRound(
+        uint256 amount = _groupJoin.joinedAmountByAccountByRound(
             extension,
             account,
             round
@@ -670,7 +670,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
             totalScore +=
                 originScores[i] *
-                _groupJoin.amountByAccountByRound(
+                _groupJoin.joinedAmountByAccountByRound(
                     extension,
                     account,
                     currentRound

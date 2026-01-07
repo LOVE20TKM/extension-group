@@ -275,30 +275,32 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         }
     }
 
-    function isJoinedValueConverted()
-        external
-        pure
-        override(ExtensionBase)
-        returns (bool)
-    {
-        return true;
-    }
-
-    function joinedValue()
+    function joinedAmount()
         external
         view
         override(ExtensionBase)
         returns (uint256)
     {
-        return _getTotalStaked();
+        return _groupManager.totalStaked(GROUP_ACTION_TOKEN_ADDRESS);
     }
 
-    function joinedValueByAccount(
+    function joinedAmountByAccount(
         address account
     ) external view override(ExtensionBase) returns (uint256) {
-        if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
-            return 0;
-        return _getTotalStakedByAccount(account);
+        return
+            _groupManager.totalStakedByAccount(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                account
+            );
+    }
+
+    function joinedAmountTokenAddress()
+        external
+        view
+        override(ExtensionBase)
+        returns (address)
+    {
+        return GROUP_ACTION_TOKEN_ADDRESS;
     }
 
     function hasActiveGroups(address account) public view returns (bool) {
@@ -431,25 +433,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 bps,
                 amounts,
                 groupReward - distributed
-            );
-    }
-
-    function _getTotalStaked() internal view returns (uint256) {
-        return
-            _groupManager.totalStakedValue(
-                GROUP_ACTION_TOKEN_ADDRESS,
-                TOKEN_ADDRESS
-            );
-    }
-
-    function _getTotalStakedByAccount(
-        address account
-    ) internal view returns (uint256) {
-        return
-            _groupManager.totalStakedValueByAccount(
-                GROUP_ACTION_TOKEN_ADDRESS,
-                TOKEN_ADDRESS,
-                account
             );
     }
 

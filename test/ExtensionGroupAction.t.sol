@@ -187,7 +187,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Verify join state
         assertEq(
-            groupJoin.totalJoinedAmount(address(groupAction)),
+            groupJoin.joinedAmount(address(groupAction)),
             joinAmount1 + joinAmount2
         );
         assertEq(
@@ -231,10 +231,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        assertEq(
-            groupJoin.totalJoinedAmount(address(groupAction)),
-            joinAmount2
-        );
+        assertEq(groupJoin.joinedAmount(address(groupAction)), joinAmount2);
         assertEq(
             groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
             1
@@ -409,14 +406,9 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         assertEq(groupVerify.verifiersCount(address(groupAction), round), 2);
     }
 
-    // ============ IExtensionJoinedValue Tests ============
+    // ============ IExtensionJoinedAmount Tests ============
 
-    function test_isJoinedValueConverted() public view {
-        // joinToken == tokenAddress, so no conversion needed
-        assertFalse(groupAction.isJoinedValueConverted());
-    }
-
-    function test_JoinedValue() public {
+    function test_JoinedAmount() public {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 20e18;
         setupUser(user1, joinAmount1, address(groupJoin));
@@ -438,10 +430,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupAction.joinedValue(), joinAmount1 + joinAmount2);
+        assertEq(groupAction.joinedAmount(), joinAmount1 + joinAmount2);
     }
 
-    function test_JoinedValueByAccount() public {
+    function test_JoinedAmountByAccount() public {
         uint256 joinAmount = 15e18;
         setupUser(user1, joinAmount, address(groupJoin));
 
@@ -453,8 +445,8 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupAction.joinedValueByAccount(user1), joinAmount);
-        assertEq(groupAction.joinedValueByAccount(user2), 0);
+        assertEq(groupAction.joinedAmountByAccount(user1), joinAmount);
+        assertEq(groupAction.joinedAmountByAccount(user2), 0);
     }
 
     // ============ Reward Functions Tests ============
@@ -484,13 +476,13 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupJoin.totalJoinedAmount(address(groupAction)), joinAmount);
+        assertEq(groupJoin.joinedAmount(address(groupAction)), joinAmount);
 
         // Exit
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        assertEq(groupJoin.totalJoinedAmount(address(groupAction)), 0);
+        assertEq(groupJoin.joinedAmount(address(groupAction)), 0);
 
         // Rejoin (possibly different group)
         vm.prank(user1);
@@ -501,7 +493,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupJoin.totalJoinedAmount(address(groupAction)), joinAmount);
+        assertEq(groupJoin.joinedAmount(address(groupAction)), joinAmount);
         (, , uint256 groupId) = groupJoin.joinInfo(address(groupAction), user1);
         assertEq(groupId, groupId2);
     }
@@ -802,7 +794,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token),
             "tokenAddress mismatch"
         );
-        assertFalse(action.isJoinedValueConverted());
     }
 
     function test_ValidJoinToken_LPContainingToken() public {
@@ -825,10 +816,9 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Get joinTokenAddress from extension config
         address joinTokenAddress = action.JOIN_TOKEN_ADDRESS();
         assertEq(joinTokenAddress, address(lpToken));
-        assertTrue(action.isJoinedValueConverted());
     }
 
-    function test_JoinedValue_WithLPToken() public {
+    function test_JoinedAmount_WithLPToken() public {
         // Deploy action with LP as joinToken
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
@@ -893,21 +883,16 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         vm.prank(user1);
         groupJoin.join(address(action), groupId, lpAmount, new string[](0));
 
-        // Calculate expected value:
-        // tokenReserve = 1000e18 (token is token0)
-        // joinedValue = tokenReserve * lpAmount * 2 / totalSupply
-        uint256 totalSupply = lpToken.totalSupply();
-        uint256 expectedValue = (1000e18 * lpAmount * 2) / totalSupply;
-
+        // No conversion, directly return LP amount
         assertEq(
-            action.joinedValue(),
-            expectedValue,
-            "Total joinedValue should be LP converted value"
+            action.joinedAmount(),
+            lpAmount,
+            "Total joinedAmount should be LP amount"
         );
         assertEq(
-            action.joinedValueByAccount(user1),
-            expectedValue,
-            "Account joinedValue should be LP converted value"
+            action.joinedAmountByAccount(user1),
+            lpAmount,
+            "Account joinedAmount should be LP amount"
         );
     }
 }

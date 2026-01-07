@@ -4,9 +4,7 @@ pragma solidity =0.8.17;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./helper/TestGroupFlowHelper.sol";
-import {
-    ExtensionGroupAction
-} from "../../src/ExtensionGroupAction.sol";
+import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
 import {GroupJoin} from "../../src/GroupJoin.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 
@@ -66,9 +64,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         assertEq(
-            groupJoin.totalJoinedAmount(
-                bobGroup1.groupActionAddress
-            ),
+            groupJoin.joinedAmount(bobGroup1.groupActionAddress),
             30e18,
             "Total joined mismatch"
         );
@@ -84,7 +80,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
 
     function _claimAndVerifyRewards() internal {
         h.next_phase();
-        
+
         (_totalReward, ) = h.mintContract().actionRewardByActionIdByAccount(
             h.firstTokenAddress(),
             _verifyRound,
@@ -101,16 +97,26 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
 
     function _claimMember1Reward() internal {
         // score=80, joinAmount=10e18, groupTotal=2600e18
-        uint256 expected = (_totalReward * 80 * 10e18) / (80 * 10e18 + 90 * 20e18);
-        
-        (uint256 contractExpected, ) = _ga.rewardByAccount(_verifyRound, member1().userAddress);
+        uint256 expected = (_totalReward * 80 * 10e18) /
+            (80 * 10e18 + 90 * 20e18);
+
+        (uint256 contractExpected, ) = _ga.rewardByAccount(
+            _verifyRound,
+            member1().userAddress
+        );
         assertEq(contractExpected, expected, "M1 contract matches");
 
         GroupUserParams memory m1;
         m1.flow = member1();
-        uint256 balBefore = IERC20(h.firstTokenAddress()).balanceOf(m1.flow.userAddress);
-        uint256 claimed = h.group_action_claim_reward(m1, bobGroup1, _verifyRound);
-        
+        uint256 balBefore = IERC20(h.firstTokenAddress()).balanceOf(
+            m1.flow.userAddress
+        );
+        uint256 claimed = h.group_action_claim_reward(
+            m1,
+            bobGroup1,
+            _verifyRound
+        );
+
         assertEq(claimed, expected, "M1 claimed matches");
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(m1.flow.userAddress),
@@ -121,16 +127,26 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
 
     function _claimMember2Reward() internal {
         // score=90, joinAmount=20e18, groupTotal=2600e18
-        uint256 expected = (_totalReward * 90 * 20e18) / (80 * 10e18 + 90 * 20e18);
-        
-        (uint256 contractExpected, ) = _ga.rewardByAccount(_verifyRound, member2().userAddress);
+        uint256 expected = (_totalReward * 90 * 20e18) /
+            (80 * 10e18 + 90 * 20e18);
+
+        (uint256 contractExpected, ) = _ga.rewardByAccount(
+            _verifyRound,
+            member2().userAddress
+        );
         assertEq(contractExpected, expected, "M2 contract matches");
 
         GroupUserParams memory m2;
         m2.flow = member2();
-        uint256 balBefore = IERC20(h.firstTokenAddress()).balanceOf(m2.flow.userAddress);
-        uint256 claimed = h.group_action_claim_reward(m2, bobGroup1, _verifyRound);
-        
+        uint256 balBefore = IERC20(h.firstTokenAddress()).balanceOf(
+            m2.flow.userAddress
+        );
+        uint256 claimed = h.group_action_claim_reward(
+            m2,
+            bobGroup1,
+            _verifyRound
+        );
+
         assertEq(claimed, expected, "M2 claimed matches");
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(m2.flow.userAddress),
@@ -140,13 +156,21 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
     }
 
     function _verifyRewardRatio() internal {
-        (uint256 m1Claimed, ) = _ga.rewardByAccount(_verifyRound, member1().userAddress);
-        (uint256 m2Claimed, ) = _ga.rewardByAccount(_verifyRound, member2().userAddress);
-        
+        (uint256 m1Claimed, ) = _ga.rewardByAccount(
+            _verifyRound,
+            member1().userAddress
+        );
+        (uint256 m2Claimed, ) = _ga.rewardByAccount(
+            _verifyRound,
+            member2().userAddress
+        );
+
         // ratio = 4:9 (800e18 : 1800e18)
         uint256 product1 = m2Claimed * 4;
         uint256 product2 = m1Claimed * 9;
-        uint256 diff = product1 > product2 ? product1 - product2 : product2 - product1;
+        uint256 diff = product1 > product2
+            ? product1 - product2
+            : product2 - product1;
         assertTrue(diff * 1e10 < product1, "Reward ratio 4:9");
     }
 }

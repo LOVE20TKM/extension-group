@@ -705,39 +705,35 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(distributions[0].basisPoints[0], 3e17);
     }
 
-    // ============ IExtensionJoinedValue Tests ============
+    // ============ IExtensionJoinedAmount Tests ============
 
-    function test_isJoinedValueConverted() public view {
-        assertTrue(groupService.isJoinedValueConverted());
-    }
-
-    function test_JoinedValue() public {
+    function test_JoinedAmount() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
         setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 80);
 
-        // joinedValue should return totalStaked from groupManager
-        uint256 joinedVal = groupService.joinedValue();
+        // joinedAmount should return totalStaked from groupManager
+        uint256 joinedVal = groupService.joinedAmount();
         assertEq(joinedVal, newGroupManager.staked(address(groupAction)));
     }
 
-    function test_JoinedValueByAccount() public {
+    function test_JoinedAmountByAccount() public {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
 
-        uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
+        uint256 ownerValue = groupService.joinedAmountByAccount(groupOwner1);
         assertEq(
             ownerValue,
             newGroupManager.stakedByOwner(address(groupAction), groupOwner1)
         );
 
         // Non-joined account
-        uint256 user2Value = groupService.joinedValueByAccount(user2);
+        uint256 user2Value = groupService.joinedAmountByAccount(user2);
         assertEq(user2Value, 0);
     }
 
-    function test_JoinedValue_IncludesAllActions_NotJustVoted() public {
+    function test_JoinedAmount_IncludesAllActions_NotJustVoted() public {
         // Setup first action (ACTION_ID = 0) with voting
         // Note: groupId1 and groupId2 are already activated in ACTION_ID during setUp
         // So we have activation stake for ACTION_ID
@@ -777,15 +773,15 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
             0
         );
 
-        // Verify joinedValue includes both actions (not just voted one)
+        // Verify joinedAmount includes both actions (not just voted one)
         // Note: action1 has 2 activated groups (groupId1, groupId2), action2 has 1 (groupId3)
-        uint256 joinedVal = groupService.joinedValue();
+        uint256 joinedVal = groupService.joinedAmount();
         uint256 expectedTotal = newGroupManager.staked(address(groupAction)) +
             newGroupManager.staked(groupAction2Address);
         assertEq(
             joinedVal,
             expectedTotal,
-            "joinedValue should include all actions, not just voted ones"
+            "joinedAmount should include all actions, not just voted ones"
         );
         assertTrue(joinedVal > 0, "joinedVal should be greater than 0");
         // Verify action2's stake is included (1 activation stake)
@@ -796,7 +792,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         );
     }
 
-    function test_JoinedValueByAccount_IncludesAllActions_NotJustVoted()
+    function test_JoinedAmountByAccount_IncludesAllActions_NotJustVoted()
         public
     {
         // Setup first action (ACTION_ID = 0) with voting
@@ -839,8 +835,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
 
-        // Verify joinedValueByAccount includes both actions
-        uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
+        // Verify joinedAmountByAccount includes both actions
+        uint256 ownerValue = groupService.joinedAmountByAccount(groupOwner1);
         uint256 expectedTotal = newGroupManager.stakedByOwner(
             address(groupAction),
             groupOwner1
@@ -848,7 +844,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(
             ownerValue,
             expectedTotal,
-            "joinedValueByAccount should include all actions, not just voted ones"
+            "joinedAmountByAccount should include all actions, not just voted ones"
         );
         // Verify groupOwner1 has stake in action2
         assertEq(
@@ -1557,8 +1553,8 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
     // ============ Token Conversion Tests ============
 
-    /// @notice Test joinedValue when stakeToken equals tokenAddress (no conversion needed, stakeToken is now always TOKEN_ADDRESS)
-    function test_JoinedValue_StakeTokenEqualsTokenAddress() public {
+    /// @notice Test joinedAmount when stakeToken equals tokenAddress (no conversion needed, stakeToken is now always TOKEN_ADDRESS)
+    function test_JoinedAmount_StakeTokenEqualsTokenAddress() public {
         uint256 stakeAmount = 1000e18;
 
         (
@@ -1594,18 +1590,18 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
 
-        // Verify joinedValue equals total staked (no conversion)
+        // Verify joinedAmount equals total staked (no conversion)
         uint256 totalStaked = newGroupManager.staked(address(groupAction));
-        uint256 joinedVal = groupService.joinedValue();
+        uint256 joinedVal = groupService.joinedAmount();
         assertEq(
             joinedVal,
             totalStaked,
-            "JoinedValue should equal totalStaked"
+            "JoinedAmount should equal totalStaked"
         );
     }
 
-    /// @notice Test joinedValue with token as stakeToken (stakeToken must be TOKEN_ADDRESS now)
-    function test_JoinedValue_WithToken() public {
+    /// @notice Test joinedAmount with token as stakeToken (stakeToken must be TOKEN_ADDRESS now)
+    function test_JoinedAmount_WithToken() public {
         uint256 stakeAmount = 100e18;
 
         (
@@ -1639,11 +1635,11 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         uint256 staked = newGroupManager.staked(address(groupAction));
         assertEq(staked, stakeAmount, "Token staked should be 100e18");
 
-        uint256 joinedVal = groupService.joinedValue();
+        uint256 joinedVal = groupService.joinedAmount();
         assertEq(
             joinedVal,
             stakeAmount,
-            "JoinedValue should equal staked amount (no conversion needed)"
+            "JoinedAmount should equal staked amount (no conversion needed)"
         );
     }
 }

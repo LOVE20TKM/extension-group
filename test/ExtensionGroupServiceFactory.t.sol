@@ -5,13 +5,9 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     ExtensionGroupServiceFactory
 } from "../src/ExtensionGroupServiceFactory.sol";
-import {
-    IGroupServiceFactory
-} from "../src/interface/IGroupServiceFactory.sol";
+import {IGroupServiceFactory} from "../src/interface/IGroupServiceFactory.sol";
 import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
-import {
-    IGroupService
-} from "../src/interface/IGroupService.sol";
+import {IGroupService} from "../src/interface/IGroupService.sol";
 import {
     ExtensionGroupActionFactory
 } from "../src/ExtensionGroupActionFactory.sol";
@@ -33,7 +29,7 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
     uint256 constant MAX_RECIPIENTS = 100;
 
     // Event declaration for testing
-    event ExtensionCreate(
+    event CreateExtension(
         address indexed extension,
         address indexed tokenAddress
     );
@@ -204,9 +200,9 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         assertFalse(factory.exists(address(0)));
     }
 
-    // ============ ExtensionCreate Event Tests ============
+    // ============ CreateExtension Event Tests ============
 
-    function test_CreateExtension_EmitsExtensionCreate() public {
+    function test_CreateExtension_EmitsCreateExtension() public {
         token.approve(address(factory), 1e18);
 
         // Calculate expected extension address
@@ -217,7 +213,7 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         vm.expectEmit(true, true, false, false);
-        emit ExtensionCreate(expectedExtension, address(token));
+        emit CreateExtension(expectedExtension, address(token));
 
         address extension = factory.createExtension(
             address(token),

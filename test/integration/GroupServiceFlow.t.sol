@@ -47,22 +47,22 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
         h.group_service_join(bobGroup1);
 
-        // Verify joinedValue after join
+        // Verify joinedAmount after join
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
-        uint256 joinedVal = gs.joinedValue();
+        uint256 joinedVal = gs.joinedAmount();
         uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
         );
         assertEq(
             joinedVal,
             expectedJoinedVal,
-            "joinedValue should match totalStaked from groupManager"
+            "joinedAmount should match totalStaked from groupManager"
         );
 
-        // Verify joinedValueByAccount for Bob
-        uint256 bobJoinedVal = gs.joinedValueByAccount(
+        // Verify joinedAmountByAccount for Bob
+        uint256 bobJoinedVal = gs.joinedAmountByAccount(
             bobGroup1.flow.userAddress
         );
         uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
@@ -72,7 +72,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,
-            "joinedValueByAccount for Bob should match"
+            "joinedAmountByAccount for Bob should match"
         );
 
         // Bob sets recipients for his service reward distribution
@@ -442,22 +442,22 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         bobGroup2.groupServiceActionId = aliceGroup.groupServiceActionId;
         h.group_service_join(bobGroup1);
 
-        // Verify joinedValue after join (should include both groups)
+        // Verify joinedAmount after join (should include both groups)
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
-        uint256 joinedVal = gs.joinedValue();
+        uint256 joinedVal = gs.joinedAmount();
         uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
         );
         assertEq(
             joinedVal,
             expectedJoinedVal,
-            "joinedValue should match totalStaked from groupManager"
+            "joinedAmount should match totalStaked from groupManager"
         );
 
-        // Verify joinedValueByAccount for Bob (should include both groups)
-        uint256 bobJoinedVal = gs.joinedValueByAccount(
+        // Verify joinedAmountByAccount for Bob (should include both groups)
+        uint256 bobJoinedVal = gs.joinedAmountByAccount(
             bobGroup1.flow.userAddress
         );
         uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
@@ -467,7 +467,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,
-            "joinedValueByAccount for Bob should match"
+            "joinedAmountByAccount for Bob should match"
         );
 
         // Set different recipients for different groups
@@ -588,8 +588,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
     }
 
-    /// @notice Test joinedValue includes all actions, not just voted ones
-    function test_joinedValue_includes_all_actions_not_just_voted() public {
+    /// @notice Test joinedAmount includes all actions, not just voted ones
+    function test_joinedAmount_includes_all_actions_not_just_voted() public {
         // 1. Create and submit first group action by bob (with voting)
         bobGroup1.groupActionAddress = h.group_action_create(bobGroup1);
         bobGroup1.groupActionId = h.submit_group_action(bobGroup1);
@@ -634,11 +634,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
         h.group_service_join(bobGroup1);
 
-        // 8. Verify joinedValue includes both actions
+        // 8. Verify joinedAmount includes both actions
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
-        uint256 joinedVal = gs.joinedValue();
+        uint256 joinedVal = gs.joinedAmount();
         // Use original actionIds for expected value calculation since groups were activated with those
         uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
@@ -646,13 +646,13 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(
             joinedVal,
             expectedJoinedVal,
-            "joinedValue should include all actions (both have groups activated)"
+            "joinedAmount should include all actions (both have groups activated)"
         );
-        assertTrue(joinedVal > 0, "joinedValue should be greater than 0");
+        assertTrue(joinedVal > 0, "joinedAmount should be greater than 0");
     }
 
-    /// @notice Test joinedValueByAccount includes all actions, not just voted ones
-    function test_joinedValueByAccount_includes_all_actions_not_just_voted()
+    /// @notice Test joinedAmountByAccount includes all actions, not just voted ones
+    function test_joinedAmountByAccount_includes_all_actions_not_just_voted()
         public
     {
         // 1. Create and submit first group action by bob (with voting)
@@ -705,11 +705,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         bobGroup1.groupServiceActionId = aliceGroup.groupServiceActionId;
         h.group_service_join(bobGroup1);
 
-        // 8. Verify joinedValueByAccount includes both actions
+        // 8. Verify joinedAmountByAccount includes both actions
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
-        uint256 bobJoinedVal = gs.joinedValueByAccount(
+        uint256 bobJoinedVal = gs.joinedAmountByAccount(
             bobGroup1.flow.userAddress
         );
         // Use original actionIds for expected value calculation since groups were activated with those
@@ -724,7 +724,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,
-            "joinedValueByAccount should include all actions"
+            "joinedAmountByAccount should include all actions"
         );
         assertTrue(bobJoinedVal > 0, "bobJoinedVal should be greater than 0");
     }

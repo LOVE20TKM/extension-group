@@ -171,8 +171,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         assertEq(amount, 15e18, "Amount should be 15e18");
     }
 
-    /// @notice Test IExtensionJoinedValue interface
-    function test_joined_value_calculation() public {
+    /// @notice Test IExtensionJoinedAmount interface
+    function test_joined_amount_calculation() public {
         // 1. Setup
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -186,11 +186,11 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         ExtensionGroupAction groupAction = ExtensionGroupAction(extensionAddr);
 
-        // Initial joined value should be 0
+        // Initial joined amount should be 0
         assertEq(
-            groupAction.joinedValue(),
+            groupAction.joinedAmount(),
             0,
-            "Initial joined value should be 0"
+            "Initial joined amount should be 0"
         );
 
         // 2. Members join
@@ -206,25 +206,21 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         m2.groupActionAddress = bobGroup1.groupActionAddress;
         h.group_join(m2, bobGroup1);
 
-        // 3. Verify joined values
+        // 3. Verify joined amounts
         assertEq(
-            groupAction.joinedValue(),
+            groupAction.joinedAmount(),
             30e18,
-            "Total joined value mismatch"
+            "Total joined amount mismatch"
         );
         assertEq(
-            groupAction.joinedValueByAccount(member1().userAddress),
+            groupAction.joinedAmountByAccount(member1().userAddress),
             10e18,
-            "Member1 joined value mismatch"
+            "Member1 joined amount mismatch"
         );
         assertEq(
-            groupAction.joinedValueByAccount(member2().userAddress),
+            groupAction.joinedAmountByAccount(member2().userAddress),
             20e18,
-            "Member2 joined value mismatch"
-        );
-        assertFalse(
-            groupAction.isJoinedValueConverted(),
-            "Should not be calculated when joinToken == tokenAddress"
+            "Member2 joined amount mismatch"
         );
     }
 
