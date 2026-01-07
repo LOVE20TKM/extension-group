@@ -428,6 +428,42 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _capacityReductionByGroupId[extension][round][groupId];
     }
 
+    function capacityReduction(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view override returns (uint256) {
+        return _capacityReductionByGroupId[extension][round][groupId];
+    }
+
+    function distrustReduction(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view override returns (uint256) {
+        address groupOwner = _verifierByGroupId[extension][round][groupId];
+        if (groupOwner == address(0)) {
+            return PRECISION;
+        }
+
+        uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
+            groupOwner
+        ];
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
+        uint256 totalVotes = _vote.votesNumByActionId(
+            tokenAddress,
+            round,
+            actionId
+        );
+
+        if (totalVotes == 0) {
+            return 0;
+        }
+
+        return ((totalVotes - distrustVotes) * PRECISION) / totalVotes;
+    }
+
     function totalGroupScore(
         address extension,
         uint256 round
@@ -687,14 +723,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address submitter
     ) internal {
         address groupOwner = _group.ownerOf(groupId);
-        _capacityReductionByGroupId[extension][currentRound][
-            groupId
-        ] = _calculateCapacityReduction(
-            extension,
-            currentRound,
-            groupOwner,
-            groupId
-        );
 
         // Record verifier (NFT owner, not delegated verifier)
         _verifierByGroupId[extension][currentRound][groupId] = groupOwner;
@@ -707,8 +735,21 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         ) {
             _verifiers[extension][currentRound].push(groupOwner);
         }
+        _isVerified[extension][currentRound][groupId] = true;
+        _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
+        _verifiedGroupIds[extension][currentRound].push(groupId);
 
         _totalAccountScore[extension][currentRound][groupId] = totalScore;
+
+        // Calculate group score
+        _capacityReductionByGroupId[extension][currentRound][
+            groupId
+        ] = _calculateCapacityReduction(
+            extension,
+            currentRound,
+            groupOwner,
+            groupId
+        );
 
         uint256 calculatedGroupScore = _calculateGroupScore(
             extension,
@@ -717,10 +758,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         _groupScore[extension][currentRound][groupId] = calculatedGroupScore;
         _totalGroupScore[extension][currentRound] += calculatedGroupScore;
-
-        _isVerified[extension][currentRound][groupId] = true;
-        _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
-        _verifiedGroupIds[extension][currentRound].push(groupId);
     }
 
     function _calculateCapacityReduction(
@@ -768,6 +805,20 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return (remainingCapacity * PRECISION) / currentGroupCapacity;
     }
 
+    function _computeGroupScore(
+        uint256 groupAmount,
+        uint256 totalVotes,
+        uint256 distrustVotes,
+        uint256 capacityReduction
+    ) internal pure returns (uint256) {
+        if (totalVotes == 0) {
+            return 0;
+        }
+        return
+            (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
+                capacityReduction) / PRECISION;
+    }
+
     function _calculateGroupScore(
         address extension,
         uint256 round,
@@ -793,12 +844,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round
         ][groupId];
 
-        if (totalVotes == 0) {
-            return 0;
-        }
         return
-            (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
-                capacityReduction) / PRECISION;
+            _computeGroupScore(
+                groupAmount,
+                totalVotes,
+                distrustVotes,
+                capacityReduction
+            );
     }
 
     function _updateDistrustForOwnerGroups(
@@ -856,6 +908,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 distrustVotes,
         uint256 totalGroupScore_
     ) internal returns (uint256 newTotalGroupScore) {
+        if (!_isVerified[extension][round][groupId]) {
+            return totalGroupScore_;
+        }
+
         uint256 oldScore = scoreMap[groupId];
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
             extension,
@@ -864,8 +920,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         uint256 capacityReduction = capacityReductionMap[groupId];
 
-        uint256 newScore = (((groupAmount * (totalVotes - distrustVotes)) /
-            totalVotes) * capacityReduction) / PRECISION;
+        uint256 newScore = _computeGroupScore(
+            groupAmount,
+            totalVotes,
+            distrustVotes,
+            capacityReduction
+        );
 
         scoreMap[groupId] = newScore;
         return totalGroupScore_ - oldScore + newScore;

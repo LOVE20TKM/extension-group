@@ -251,4 +251,16 @@ interface IGroupVerify {
         uint256 round,
         uint256 index
     ) external view returns (address);
+
+    function capacityReduction(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function distrustReduction(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) external view returns (uint256);
 }
