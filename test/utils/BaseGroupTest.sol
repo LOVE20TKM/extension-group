@@ -160,7 +160,6 @@ abstract contract BaseGroupTest is Test {
         internal
         view
         returns (
-            address stakeTokenAddress,
             address joinTokenAddress,
             uint256 activationStakeAmount,
             uint256 maxJoinAmountRatio,
@@ -168,7 +167,6 @@ abstract contract BaseGroupTest is Test {
         )
     {
         return (
-            address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,

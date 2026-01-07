@@ -28,7 +28,6 @@ contract GroupManagerTest is BaseGroupTest {
         extension1 = new MockExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -37,7 +36,6 @@ contract GroupManagerTest is BaseGroupTest {
         extension2 = new MockExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -971,7 +969,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStaked(address(extension1)),
+            groupManager.staked(address(extension1)),
             0,
             "Should have 0 staked initially"
         );
@@ -988,7 +986,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStaked(address(extension1)),
+            groupManager.staked(address(extension1)),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             "Should have 1 stake amount"
         );
@@ -1005,13 +1003,13 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStaked(address(extension1)),
+            groupManager.staked(address(extension1)),
             GROUP_ACTIVATION_STAKE_AMOUNT * 2,
             "Should have 2 stake amounts"
         );
     }
 
-    /// @notice Test: totalStakedByOwner returns correct amount
+    /// @notice Test: stakedByOwner returns correct amount
     function test_totalStakedByActionIdByOwner_ReturnsCorrectAmount() public {
         uint256 groupId1 = setupGroupOwner(groupOwner1, 10000e18, "Group1");
         uint256 groupId2 = setupGroupOwner(groupOwner1, 10000e18, "Group2");
@@ -1022,7 +1020,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStakedByOwner(address(extension1), groupOwner1),
+            groupManager.stakedByOwner(address(extension1), groupOwner1),
             0,
             "Should have 0 staked initially"
         );
@@ -1039,7 +1037,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStakedByOwner(address(extension1), groupOwner1),
+            groupManager.stakedByOwner(address(extension1), groupOwner1),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             "Should have 1 stake amount"
         );
@@ -1056,7 +1054,7 @@ contract GroupManagerTest is BaseGroupTest {
         );
 
         assertEq(
-            groupManager.totalStakedByOwner(address(extension1), groupOwner1),
+            groupManager.stakedByOwner(address(extension1), groupOwner1),
             GROUP_ACTIVATION_STAKE_AMOUNT * 2,
             "Should have 2 stake amounts"
         );

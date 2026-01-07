@@ -21,7 +21,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     IGroupVerify internal immutable _groupVerify;
     IGroupManager internal immutable _groupManager;
 
-    address public immutable STAKE_TOKEN_ADDRESS;
     address public immutable JOIN_TOKEN_ADDRESS;
     uint256 public immutable ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable MAX_JOIN_AMOUNT_RATIO;
@@ -33,7 +32,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     constructor(
         address factory_,
         address tokenAddress_,
-        address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
@@ -46,7 +44,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         _groupManager = IGroupManager(factory.GROUP_MANAGER_ADDRESS());
         _center.setExtensionDelegate(groupJoinAddress);
 
-        STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;

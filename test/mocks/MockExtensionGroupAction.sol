@@ -14,7 +14,6 @@ import {IExtension} from "@extension/src/interface/IExtension.sol";
 contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     // ============ Config Immutables ============
 
-    address public immutable override STAKE_TOKEN_ADDRESS;
     address public immutable override JOIN_TOKEN_ADDRESS;
     uint256 public immutable override ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable override MAX_JOIN_AMOUNT_RATIO;
@@ -23,13 +22,11 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     constructor(
         address factory_,
         address tokenAddress_,
-        address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
     ) ExtensionBaseReward(factory_, tokenAddress_) {
-        STAKE_TOKEN_ADDRESS = stakeTokenAddress_;
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;

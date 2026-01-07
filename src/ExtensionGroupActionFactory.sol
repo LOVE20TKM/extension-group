@@ -37,7 +37,6 @@ contract ExtensionGroupActionFactory is
 
     function createExtension(
         address tokenAddress_,
-        address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
@@ -47,7 +46,6 @@ contract ExtensionGroupActionFactory is
             new ExtensionGroupAction(
                 address(this),
                 tokenAddress_,
-                stakeTokenAddress_,
                 joinTokenAddress_,
                 activationStakeAmount_,
                 maxJoinAmountRatio_,

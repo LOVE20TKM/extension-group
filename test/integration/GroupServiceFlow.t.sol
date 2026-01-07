@@ -52,7 +52,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             aliceGroup.groupServiceAddress
         );
         uint256 joinedVal = gs.joinedValue();
-        uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
+        uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
         );
         assertEq(
@@ -65,7 +65,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 bobJoinedVal = gs.joinedValueByAccount(
             bobGroup1.flow.userAddress
         );
-        uint256 expectedBobJoinedVal = h.getGroupManager().totalStakedByOwner(
+        uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
             bobGroup1.groupActionAddress,
             bobGroup1.flow.userAddress
         );
@@ -447,7 +447,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             aliceGroup.groupServiceAddress
         );
         uint256 joinedVal = gs.joinedValue();
-        uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
+        uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
         );
         assertEq(
@@ -460,7 +460,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 bobJoinedVal = gs.joinedValueByAccount(
             bobGroup1.flow.userAddress
         );
-        uint256 expectedBobJoinedVal = h.getGroupManager().totalStakedByOwner(
+        uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
             bobGroup1.groupActionAddress,
             bobGroup1.flow.userAddress
         );
@@ -640,9 +640,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
         uint256 joinedVal = gs.joinedValue();
         // Use original actionIds for expected value calculation since groups were activated with those
-        uint256 expectedJoinedVal = h.getGroupManager().totalStaked(
+        uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
-        ) + h.getGroupManager().totalStaked(aliceGroup.groupActionAddress);
+        ) + h.getGroupManager().staked(aliceGroup.groupActionAddress);
         assertEq(
             joinedVal,
             expectedJoinedVal,
@@ -713,11 +713,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             bobGroup1.flow.userAddress
         );
         // Use original actionIds for expected value calculation since groups were activated with those
-        uint256 expectedBobJoinedVal = h.getGroupManager().totalStakedByOwner(
+        uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
             bobGroup1.groupActionAddress,
             bobGroup1.flow.userAddress
         ) +
-            h.getGroupManager().totalStakedByOwner(
+            h.getGroupManager().stakedByOwner(
                 aliceGroup.groupActionAddress,
                 bobGroup1.flow.userAddress
             );

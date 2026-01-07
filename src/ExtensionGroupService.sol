@@ -446,7 +446,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address account
     ) internal view returns (uint256) {
         return
-            _groupManager.totalStakedValueByTokenAddress(
+            _groupManager.totalStakedValueByAccount(
                 GROUP_ACTION_TOKEN_ADDRESS,
                 TOKEN_ADDRESS,
                 account

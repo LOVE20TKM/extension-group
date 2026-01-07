@@ -88,7 +88,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         token.approve(address(actionFactory), type(uint256).max);
         address groupActionAddress = actionFactory.createExtension(
             address(token), // tokenAddress
-            address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -718,7 +717,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         // joinedValue should return totalStaked from groupManager
         uint256 joinedVal = groupService.joinedValue();
-        assertEq(joinedVal, newGroupManager.totalStaked(address(groupAction)));
+        assertEq(joinedVal, newGroupManager.staked(address(groupAction)));
     }
 
     function test_JoinedValueByAccount() public {
@@ -730,10 +729,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
         assertEq(
             ownerValue,
-            newGroupManager.totalStakedByOwner(
-                address(groupAction),
-                groupOwner1
-            )
+            newGroupManager.stakedByOwner(address(groupAction), groupOwner1)
         );
 
         // Non-joined account
@@ -749,7 +745,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         // Setup second action (ACTION_ID = 1) without voting
         uint256 actionId2 = 1;
         address groupAction2Address = actionFactory.createExtension(
-            address(token),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -785,9 +780,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         // Verify joinedValue includes both actions (not just voted one)
         // Note: action1 has 2 activated groups (groupId1, groupId2), action2 has 1 (groupId3)
         uint256 joinedVal = groupService.joinedValue();
-        uint256 expectedTotal = newGroupManager.totalStaked(
-            address(groupAction)
-        ) + newGroupManager.totalStaked(groupAction2Address);
+        uint256 expectedTotal = newGroupManager.staked(address(groupAction)) +
+            newGroupManager.staked(groupAction2Address);
         assertEq(
             joinedVal,
             expectedTotal,
@@ -796,7 +790,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         assertTrue(joinedVal > 0, "joinedVal should be greater than 0");
         // Verify action2's stake is included (1 activation stake)
         assertEq(
-            newGroupManager.totalStaked(groupAction2Address),
+            newGroupManager.staked(groupAction2Address),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             "action2 should have 1 activation stake"
         );
@@ -811,7 +805,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         // Setup second action (ACTION_ID = 1) without voting
         uint256 actionId2 = 1;
         address groupAction2Address = actionFactory.createExtension(
-            address(token),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -848,14 +841,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         // Verify joinedValueByAccount includes both actions
         uint256 ownerValue = groupService.joinedValueByAccount(groupOwner1);
-        uint256 expectedTotal = newGroupManager.totalStakedByOwner(
+        uint256 expectedTotal = newGroupManager.stakedByOwner(
             address(groupAction),
             groupOwner1
-        ) +
-            newGroupManager.totalStakedByOwner(
-                groupAction2Address,
-                groupOwner1
-            );
+        ) + newGroupManager.stakedByOwner(groupAction2Address, groupOwner1);
         assertEq(
             ownerValue,
             expectedTotal,
@@ -863,10 +852,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         );
         // Verify groupOwner1 has stake in action2
         assertEq(
-            newGroupManager.totalStakedByOwner(
-                groupAction2Address,
-                groupOwner1
-            ),
+            newGroupManager.stakedByOwner(groupAction2Address, groupOwner1),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             "groupOwner1 should have stake in action2"
         );
@@ -1137,7 +1123,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         token.approve(address(actionFactory), type(uint256).max);
         address groupAction2Address = actionFactory.createExtension(
             address(token), // tokenAddress
-            address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -1277,7 +1262,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         token.mint(address(this), 1e18);
         token.approve(address(actionFactory), type(uint256).max);
         address newExtension = actionFactory.createExtension(
-            address(token),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -1445,7 +1429,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
 /**
  * @title ExtensionGroupServiceStakeTokenTest
- * @notice Test suite for stakeToken conversion in ExtensionGroupService
+ * @notice Test suite for token conversion in ExtensionGroupService (stakeToken is now TOKEN_ADDRESS)
  */
 contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
     ExtensionGroupActionFactory public actionFactory;
@@ -1502,7 +1486,6 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
     // ============ Helper Functions ============
 
     function _setupGroupActionAndService(
-        address stakeTokenAddress,
         uint256 stakeAmount,
         uint256 actionId,
         uint256 serviceActionId,
@@ -1518,14 +1501,13 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         verify.setCurrentRound(testRound);
         join.setCurrentRound(testRound);
 
-        // Create GroupAction using factory with specified stakeToken
+        // Create GroupAction using factory
         if (token.balanceOf(address(this)) < 2e18) {
             token.mint(address(this), 2e18);
         }
         token.approve(address(actionFactory), type(uint256).max);
         address groupActionAddress = actionFactory.createExtension(
             address(token), // tokenAddress
-            stakeTokenAddress, // stakeTokenAddress
             address(token), // joinTokenAddress
             stakeAmount,
             MAX_JOIN_AMOUNT_RATIO,
@@ -1573,22 +1555,16 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         token.mint(address(groupService), 1e18);
     }
 
-    // ============ StakeToken Conversion Tests ============
+    // ============ Token Conversion Tests ============
 
-    /// @notice Test joinedValue when stakeToken equals tokenAddress (no conversion needed)
+    /// @notice Test joinedValue when stakeToken equals tokenAddress (no conversion needed, stakeToken is now always TOKEN_ADDRESS)
     function test_JoinedValue_StakeTokenEqualsTokenAddress() public {
         uint256 stakeAmount = 1000e18;
 
         (
             ExtensionGroupAction groupAction,
             ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(token),
-                stakeAmount,
-                100,
-                101,
-                10
-            );
+        ) = _setupGroupActionAndService(stakeAmount, 100, 101, 10);
 
         // Setup user and activate group
         setupUser(groupOwner1, stakeAmount, address(newGroupManager));
@@ -1619,7 +1595,7 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         groupService.join(new string[](0));
 
         // Verify joinedValue equals total staked (no conversion)
-        uint256 totalStaked = newGroupManager.totalStaked(address(groupAction));
+        uint256 totalStaked = newGroupManager.staked(address(groupAction));
         uint256 joinedVal = groupService.joinedValue();
         assertEq(
             joinedVal,
@@ -1628,41 +1604,26 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         );
     }
 
-    /// @notice Test joinedValue with LP token as stakeToken
-    function test_JoinedValue_WithLPToken() public {
-        // Create LP pair for token/otherToken
-        address lpToken = uniswapFactory.createPair(
-            address(token),
-            address(otherToken)
-        );
-
-        // Set LP reserves: 1000 token (token0), 2000 otherToken (token1)
-        MockUniswapV2Pair(lpToken).setReserves(1000e18, 2000e18);
-
-        // Mint LP tokens to simulate totalSupply (100 LP total)
-        MockUniswapV2Pair(lpToken).mint(address(this), 100e18);
-
-        uint256 lpStakeAmount = 10e18;
+    /// @notice Test joinedValue with token as stakeToken (stakeToken must be TOKEN_ADDRESS now)
+    function test_JoinedValue_WithToken() public {
+        uint256 stakeAmount = 100e18;
 
         (
             ExtensionGroupAction groupAction,
             ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(lpToken, lpStakeAmount, 200, 201, 20);
+        ) = _setupGroupActionAndService(stakeAmount, 200, 201, 20);
 
-        // Setup: mint and approve LP tokens for newGroupManager
-        MockUniswapV2Pair(lpToken).mint(groupOwner1, 20e18);
+        // Setup: mint and approve token for newGroupManager
+        token.mint(groupOwner1, 200e18);
         vm.prank(groupOwner1);
-        MockUniswapV2Pair(lpToken).approve(
-            address(newGroupManager),
-            type(uint256).max
-        );
+        token.approve(address(newGroupManager), type(uint256).max);
 
-        // Activate group with LP token stake
+        // Activate group with token stake
         vm.prank(groupOwner1, groupOwner1);
         newGroupManager.activateGroup(
             address(groupAction),
             groupId1,
-            "LPGroup",
+            "TokenGroup",
             0,
             1e18,
             0,
@@ -1673,179 +1634,16 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
 
-        // Calculate expected value:
-        // LP staked = 10e18
-        // LP totalSupply = 120e18 (100 minted to test contract + 20 to groupOwner1)
-        // token reserve = 1000e18 (token is token0)
-        // LP value = (tokenReserve * lpAmount * 2) / totalSupply
-        //          = (1000e18 * 10e18 * 2) / 120e18 = 166.67e18
-        uint256 lpStaked = newGroupManager.totalStaked(address(groupAction));
-        assertEq(lpStaked, lpStakeAmount, "LP staked should be 10e18");
-
-        uint256 joinedVal = groupService.joinedValue();
-        uint256 lpTotalSupply = 120e18; // 100 + 20 minted
-        uint256 expectedValue = (1000e18 * lpStakeAmount * 2) / lpTotalSupply;
-        assertEq(
-            joinedVal,
-            expectedValue,
-            "JoinedValue should be LP converted value"
-        );
-    }
-
-    /// @notice Test joinedValue with token that has Uniswap pair to tokenAddress
-    function test_JoinedValue_WithUniswapPair() public {
-        // Create pair for token/otherToken
-        address pairAddr = uniswapFactory.createPair(
-            address(token),
-            address(otherToken)
-        );
-
-        // Set reserves: 1000 token, 500 otherToken (1:0.5 ratio)
-        // price: 1 otherToken = 2 token
-        MockUniswapV2Pair(pairAddr).setReserves(1000e18, 500e18);
-
-        uint256 stakeAmount = 100e18;
-
-        (
-            ExtensionGroupAction groupAction,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(otherToken),
-                stakeAmount,
-                300,
-                301,
-                30
-            );
-
-        // Setup: mint and approve otherToken for newGroupManager
-        otherToken.mint(groupOwner1, 200e18);
-        vm.prank(groupOwner1);
-        otherToken.approve(address(newGroupManager), type(uint256).max);
-
-        // Activate group with otherToken stake
-        vm.prank(groupOwner1, groupOwner1);
-        newGroupManager.activateGroup(
-            address(groupAction),
-            groupId1,
-            "OtherTokenGroup",
-            0,
-            1e18,
-            0,
-            0
-        );
-
-        // Owner joins service
-        vm.prank(groupOwner1);
-        groupService.join(new string[](0));
-
-        // Calculate expected value:
-        // otherToken staked = 100e18
-        // reserves: 1000 token, 500 otherToken
-        // converted value = (100e18 * 1000e18) / 500e18 = 200e18
-        uint256 staked = newGroupManager.totalStaked(address(groupAction));
-        assertEq(staked, stakeAmount, "OtherToken staked should be 100e18");
-
-        uint256 joinedVal = groupService.joinedValue();
-        uint256 expectedValue = (stakeAmount * 1000e18) / 500e18;
-        assertEq(
-            joinedVal,
-            expectedValue,
-            "JoinedValue should be converted via Uniswap"
-        );
-    }
-
-    /// @notice Test joinedValue returns 0 when no Uniswap pair exists
-    function test_JoinedValue_NoPairReturnsZero() public {
-        uint256 stakeAmount = 100e18;
-
-        // Deploy without creating Uniswap pair
-        (
-            ExtensionGroupAction groupAction,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(otherToken),
-                stakeAmount,
-                400,
-                401,
-                40
-            );
-
-        // Setup: mint and approve otherToken for newGroupManager
-        otherToken.mint(groupOwner1, 200e18);
-        vm.prank(groupOwner1);
-        otherToken.approve(address(newGroupManager), type(uint256).max);
-
-        // Activate group with otherToken stake
-        vm.prank(groupOwner1, groupOwner1);
-        newGroupManager.activateGroup(
-            address(groupAction),
-            groupId1,
-            "NoPairGroup",
-            0,
-            1e18,
-            0,
-            0
-        );
-
-        // Owner joins service
-        vm.prank(groupOwner1);
-        groupService.join(new string[](0));
-
-        // joinedValue should return 0 (no pair exists)
-        uint256 joinedVal = groupService.joinedValue();
-        assertEq(joinedVal, 0, "JoinedValue should be 0 when no pair exists");
-    }
-
-    /// @notice Test LP token detection - non-LP token should use Uniswap conversion
-    function test_LPTokenDetection_NonLPToken() public {
-        // Create pair for conversion
-        address pairAddr = uniswapFactory.createPair(
-            address(token),
-            address(otherToken)
-        );
-        MockUniswapV2Pair(pairAddr).setReserves(1000e18, 500e18);
-
-        uint256 stakeAmount = 100e18;
-
-        (
-            ExtensionGroupAction groupAction,
-            ExtensionGroupService groupService
-        ) = _setupGroupActionAndService(
-                address(otherToken),
-                stakeAmount,
-                500,
-                501,
-                50
-            );
-
-        // Mint enough tokens for activation stake (stakeAmount is 100e18, but we need more for safety)
-        otherToken.mint(groupOwner1, stakeAmount * 3); // 300e18 to be safe
-        vm.prank(groupOwner1);
-        otherToken.approve(address(newGroupManager), type(uint256).max);
-
-        vm.prank(groupOwner1, groupOwner1);
-        newGroupManager.activateGroup(
-            address(groupAction),
-            groupId1,
-            "NonLPGroup",
-            0,
-            1e18,
-            0,
-            0
-        );
-
-        vm.prank(groupOwner1);
-        groupService.join(new string[](0));
-
-        // Verify it uses Uniswap conversion (not LP conversion)
-        // Uniswap conversion: (amount * tokenReserve) / otherReserve
-        uint256 expectedUniswap = (stakeAmount * 1000e18) / 500e18; // 200e18
+        // Since stakeToken is TOKEN_ADDRESS and targetTokenAddress is also TOKEN_ADDRESS,
+        // no conversion is needed
+        uint256 staked = newGroupManager.staked(address(groupAction));
+        assertEq(staked, stakeAmount, "Token staked should be 100e18");
 
         uint256 joinedVal = groupService.joinedValue();
         assertEq(
             joinedVal,
-            expectedUniswap,
-            "Should use Uniswap conversion for non-LP token"
+            stakeAmount,
+            "JoinedValue should equal staked amount (no conversion needed)"
         );
     }
 }

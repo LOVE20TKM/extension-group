@@ -12,7 +12,6 @@ interface IGroupActionFactory {
 
     function createExtension(
         address tokenAddress_,
-        address stakeTokenAddress_,
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,

@@ -23,8 +23,6 @@ interface IGroupAction {
         address verifier
     ) external view returns (uint256);
 
-    function STAKE_TOKEN_ADDRESS() external view returns (address);
-
     function JOIN_TOKEN_ADDRESS() external view returns (address);
 
     function ACTIVATION_STAKE_AMOUNT() external view returns (uint256);

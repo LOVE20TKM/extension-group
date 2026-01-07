@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    ExtensionFactoryBase
-} from "@extension/src/ExtensionFactoryBase.sol";
-import {
-    IGroupActionFactory
-} from "../../src/interface/IGroupActionFactory.sol";
+import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
+import {IGroupActionFactory} from "../../src/interface/IGroupActionFactory.sol";
 import {IGroupManager} from "../../src/interface/IGroupManager.sol";
 import {GroupJoin} from "../../src/GroupJoin.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
@@ -55,7 +51,6 @@ contract MockExtensionGroupActionFactory is
     function createExtension(
         address,
         address,
-        address,
         uint256,
         uint256,
         uint256
@@ -90,4 +85,3 @@ contract MockExtensionGroupActionFactory is
         return (actionIds_, extensions);
     }
 }
-

@@ -94,7 +94,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -109,7 +108,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         token.approve(address(factory), 1e18);
 
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -131,7 +129,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -147,7 +144,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         token.approve(address(factory), 1e18);
 
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -173,7 +169,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address ext1 = factory.createExtension(
             address(token),
-            address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -182,7 +177,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address ext2 = factory.createExtension(
             address(token2),
-            address(token2),
             address(token2), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -190,7 +184,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
 
         address ext3 = factory.createExtension(
-            address(token3),
             address(token3),
             address(token3), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -210,7 +203,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         token.approve(address(factory), 1e18);
 
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -237,7 +229,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         token.approve(address(factory), 1e18);
 
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -271,7 +262,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
@@ -294,7 +284,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
     function test_VotedGroupActions_SingleValid() public {
         token.approve(address(factory), 1e18);
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -320,7 +309,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         address ext1 = factory.createExtension(
             address(token),
             address(token),
-            address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
@@ -330,7 +318,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         token2.mint(address(this), 1e18);
         token2.approve(address(factory), 1e18);
         address ext2 = factory.createExtension(
-            address(token2),
             address(token2),
             address(token2),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -356,7 +343,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
     function test_VotedGroupActions_FiltersInvalidExtension() public {
         token.approve(address(factory), 1e18);
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -393,7 +379,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         address extension = factory.createExtension(
             address(token),
             address(token),
-            address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
@@ -427,7 +412,6 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         // It gets extension from submit.actionInfo.whiteListAddress
         token.approve(address(factory), 1e18);
         address extension = factory.createExtension(
-            address(token),
             address(token),
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,

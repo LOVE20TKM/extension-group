@@ -103,7 +103,6 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token), // stakeTokenAddress
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -753,7 +752,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token), // stakeToken
             invalidToken, // invalid joinToken
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -772,7 +770,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
             address(badLp), // LP doesn't contain token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -784,7 +781,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Should not revert
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
-            address(token),
             address(token),
             address(token), // joinToken = token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -814,7 +810,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
             address(lpToken), // LP containing token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
@@ -837,7 +832,6 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Deploy action with LP as joinToken
         ExtensionGroupAction action = new ExtensionGroupAction(
             address(mockGroupActionFactory),
-            address(token),
             address(token),
             address(lpToken),
             GROUP_ACTIVATION_STAKE_AMOUNT,

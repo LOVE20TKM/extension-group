@@ -48,7 +48,9 @@ contract GroupManager is IGroupManager {
         internal _descriptionHistory;
     // extension => activeGroupIds
     mapping(address => EnumerableSet.UintSet) internal _activeGroupIds;
-    // extension => totalStaked
+    // extension => staked
+    mapping(address => uint256) internal _staked;
+    // tokenAddress => totalStaked
     mapping(address => uint256) internal _totalStaked;
     // tokenAddress => groupId => extensions
     mapping(address => mapping(uint256 => EnumerableSet.AddressSet))
@@ -104,7 +106,7 @@ contract GroupManager is IGroupManager {
         IGroupAction ext = IGroupAction(extension);
         uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
 
-        IERC20(ext.STAKE_TOKEN_ADDRESS()).safeTransferFrom(
+        IERC20(IExtension(extension).TOKEN_ADDRESS()).safeTransferFrom(
             msg.sender,
             address(this),
             stakeAmount
@@ -147,8 +149,9 @@ contract GroupManager is IGroupManager {
 
         IGroupAction extConfig = IGroupAction(extension);
         uint256 stakedAmount = extConfig.ACTIVATION_STAKE_AMOUNT();
-        _totalStaked[extension] -= stakedAmount;
-        IERC20(extConfig.STAKE_TOKEN_ADDRESS()).safeTransfer(
+        _staked[extension] -= stakedAmount;
+        _totalStaked[tokenAddress] -= stakedAmount;
+        IERC20(IExtension(extension).TOKEN_ADDRESS()).safeTransfer(
             msg.sender,
             stakedAmount
         );
@@ -235,7 +238,7 @@ contract GroupManager is IGroupManager {
     function activeGroupIdsByOwner(
         address extension,
         address owner
-    ) external view override returns (uint256[] memory) {
+    ) public view override returns (uint256[] memory) {
         uint256 nftBalance = _group.balanceOf(owner);
         uint256[] memory result = new uint256[](nftBalance);
         uint256 count;
@@ -405,32 +408,28 @@ contract GroupManager is IGroupManager {
         return (baseCapacity * ext.MAX_VERIFY_CAPACITY_FACTOR()) / PRECISION;
     }
 
-    function totalStakedByOwner(
+    function stakedByOwner(
         address extension,
         address owner
-    ) public view override returns (uint256 staked) {
-        IGroupAction ext = IGroupAction(extension);
-        uint256 nftBalance = _group.balanceOf(owner);
-        for (uint256 i; i < nftBalance; ) {
-            uint256 gId = _group.tokenOfOwnerByIndex(owner, i);
-            if (_groupInfo[extension][gId].isActive) {
-                staked += ext.ACTIVATION_STAKE_AMOUNT();
-            }
-            unchecked {
-                ++i;
-            }
-        }
+    ) public view override returns (uint256 amount) {
+        uint256[] memory activeIds = activeGroupIdsByOwner(extension, owner);
+        if (activeIds.length == 0) return 0;
 
-        return staked;
+        uint256 stakeAmount = IGroupAction(extension).ACTIVATION_STAKE_AMOUNT();
+        return activeIds.length * stakeAmount;
+    }
+
+    function staked(address extension) public view override returns (uint256) {
+        return _staked[extension];
     }
 
     function totalStaked(
-        address extension
+        address tokenAddress
     ) public view override returns (uint256) {
-        return _totalStaked[extension];
+        return _totalStaked[tokenAddress];
     }
 
-    function totalStakedValueByTokenAddress(
+    function totalStakedValueByAccount(
         address tokenAddress,
         address targetTokenAddress,
         address account
@@ -438,11 +437,10 @@ contract GroupManager is IGroupManager {
         uint256[] memory aids = actionIds(tokenAddress);
         for (uint256 i; i < aids.length; ) {
             address ext = _center.extension(tokenAddress, aids[i]);
-            address stakeToken = IGroupAction(ext).STAKE_TOKEN_ADDRESS();
-            uint256 stakedAmount = totalStakedByOwner(ext, account);
+            uint256 stakedAmount = stakedByOwner(ext, account);
 
             total += _convertToTokenValue(
-                stakeToken,
+                tokenAddress,
                 stakedAmount,
                 targetTokenAddress
             );
@@ -456,21 +454,15 @@ contract GroupManager is IGroupManager {
         address tokenAddress,
         address targetTokenAddress
     ) public view override returns (uint256 total) {
-        uint256[] memory aids = actionIds(tokenAddress);
-        for (uint256 i; i < aids.length; ) {
-            address ext = _center.extension(tokenAddress, aids[i]);
-            address stakeToken = IGroupAction(ext).STAKE_TOKEN_ADDRESS();
-            uint256 stakedAmount = totalStaked(ext);
+        uint256 totalStakedAmount = _totalStaked[tokenAddress];
+        if (totalStakedAmount == 0) return 0;
 
-            total += _convertToTokenValue(
-                stakeToken,
-                stakedAmount,
+        return
+            _convertToTokenValue(
+                tokenAddress,
+                totalStakedAmount,
                 targetTokenAddress
             );
-            unchecked {
-                ++i;
-            }
-        }
     }
 
     function _convertToTokenValue(
@@ -481,20 +473,6 @@ contract GroupManager is IGroupManager {
         if (amount == 0) return 0;
 
         if (stakeToken == targetTokenAddress) return amount;
-
-        if (
-            TokenConversionLib.isLPTokenContainingTarget(
-                stakeToken,
-                targetTokenAddress
-            )
-        ) {
-            return
-                TokenConversionLib.convertLPToTokenValue(
-                    stakeToken,
-                    amount,
-                    targetTokenAddress
-                );
-        }
 
         return
             TokenConversionLib.convertViaUniswap(
@@ -616,7 +594,8 @@ contract GroupManager is IGroupManager {
         uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
 
         _activeGroupIds[extension].add(groupId);
-        _totalStaked[extension] += stakeAmount;
+        _staked[extension] += stakeAmount;
+        _totalStaked[tokenAddress] += stakeAmount;
         _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
         _extensionsWithGroupActivation[tokenAddress].add(extension);
     }
