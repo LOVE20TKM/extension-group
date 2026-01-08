@@ -1192,6 +1192,95 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(totalReward2, 0);
     }
 
+    // ============ generatedReward Tests ============
+
+    function test_GeneratedReward_NoReward() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        uint256 totalReward = groupService.generatedReward(round);
+
+        // No reward minted yet
+        assertEq(totalReward, 0);
+    }
+
+    function test_GeneratedReward_SingleGroupAction() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        // Verify generatedReward matches generatedRewardByVerifier's totalReward
+        uint256 totalReward = groupService.generatedReward(round);
+        (, uint256 totalRewardByVerifier) = groupService
+            .generatedRewardByVerifier(round, groupOwner1);
+
+        assertEq(totalReward, totalRewardByVerifier);
+    }
+
+    function test_GeneratedReward_MultipleGroupActions() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 90);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        // generatedReward should return the same value regardless of verifier
+        uint256 totalReward = groupService.generatedReward(round);
+        (, uint256 totalReward1) = groupService.generatedRewardByVerifier(
+            round,
+            groupOwner1
+        );
+        (, uint256 totalReward2) = groupService.generatedRewardByVerifier(
+            round,
+            groupOwner2
+        );
+
+        // All should return the same totalReward (sum of all voted actions)
+        assertEq(totalReward, totalReward1);
+        assertEq(totalReward, totalReward2);
+        assertEq(totalReward1, totalReward2);
+    }
+
+    function test_GeneratedReward_ConsistencyWithMultipleVerifiers() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 90);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+
+        // generatedReward should be consistent regardless of which verifier we query
+        uint256 totalReward = groupService.generatedReward(round);
+        (, uint256 totalRewardByOwner1) = groupService
+            .generatedRewardByVerifier(round, groupOwner1);
+        (, uint256 totalRewardByOwner2) = groupService
+            .generatedRewardByVerifier(round, groupOwner2);
+        (, uint256 totalRewardByUser3) = groupService.generatedRewardByVerifier(
+            round,
+            user3
+        );
+
+        // All should return the same totalReward
+        assertEq(totalReward, totalRewardByOwner1);
+        assertEq(totalReward, totalRewardByOwner2);
+        assertEq(totalReward, totalRewardByUser3);
+    }
+
     // ============ Different Groups Same Owner Tests ============
 
     function test_DifferentGroupsDifferentRecipients() public {

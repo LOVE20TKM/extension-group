@@ -94,6 +94,8 @@ interface IGroupService {
         address verifier
     ) external view returns (uint256 accountReward, uint256 totalReward);
 
+    function generatedReward(uint256 round) external view returns (uint256);
+
     function setRecipients(
         uint256 actionId,
         uint256 groupId,

@@ -164,7 +164,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) external view returns (uint256) {
         uint256 groupReward = _calculateGroupServiceReward(
             round,
-            groupOwner,
             actionId_,
             groupId
         );
@@ -271,6 +270,21 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         }
     }
 
+    function generatedReward(uint256 round) public view returns (uint256) {
+        (, address[] memory exts) = _actionFactory.votedGroupActions(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            round
+        );
+        uint256 totalReward;
+        for (uint256 i; i < exts.length; ) {
+            totalReward += IReward(address(exts[i])).reward(round);
+            unchecked {
+                ++i;
+            }
+        }
+        return totalReward;
+    }
+
     function _setRecipients(
         address account,
         uint256 actionId_,
@@ -357,7 +371,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) internal view returns (GroupDistribution memory) {
         uint256 groupReward = _calculateGroupServiceReward(
             round,
-            groupOwner,
             actionId_,
             groupId
         );
@@ -417,14 +430,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     function _calculateGroupServiceReward(
         uint256 round,
-        address groupOwner,
         uint256 actionId_,
         uint256 groupId
     ) internal view returns (uint256) {
-        (uint256 ownerReward, ) = rewardByAccount(round, groupOwner);
-        if (ownerReward == 0) return 0;
+        uint256 totalServiceReward = reward(round);
+        if (totalServiceReward == 0) return 0;
 
-        (uint256 totalReward, ) = generatedRewardByVerifier(round, groupOwner);
+        uint256 totalReward = generatedReward(round);
         if (totalReward == 0) return 0;
 
         address extension = _checkActionId(actionId_);
@@ -435,7 +447,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
         if (groupReward == 0) return 0;
 
-        return (ownerReward * groupReward) / totalReward;
+        return (totalServiceReward * groupReward) / totalReward;
     }
 
     function _claimReward(
@@ -485,7 +497,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) internal returns (uint256 distributed) {
         uint256 groupReward = _calculateGroupServiceReward(
             round,
-            msg.sender,
             actionId_,
             groupId
         );
