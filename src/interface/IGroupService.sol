@@ -14,7 +14,7 @@ interface IGroupService {
     error NotGroupOwner();
     error RecipientCannotBeSelf();
 
-    event RecipientsUpdate(
+    event UpdateRecipients(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
@@ -34,7 +34,7 @@ interface IGroupService {
         uint256 ownerAmount;
     }
 
-    function BASIS_POINTS_BASE() external view returns (uint256);
+    function PRECISION() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
 
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);

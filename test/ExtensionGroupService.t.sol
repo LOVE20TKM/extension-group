@@ -33,7 +33,7 @@ import {
  */
 contract ExtensionGroupServiceTest is BaseGroupTest {
     // Re-declare event for testing (updated with groupId)
-    event RecipientsUpdate(
+    event UpdateRecipients(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
@@ -870,7 +870,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         uint256 round = verify.currentRound();
 
         vm.expectEmit(true, true, true, true);
-        emit RecipientsUpdate(
+        emit UpdateRecipients(
             address(token),
             round,
             ACTION_ID,

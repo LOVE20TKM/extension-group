@@ -39,7 +39,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
 
-    uint256 public constant BASIS_POINTS_BASE = 1e18;
+    uint256 public constant PRECISION = 1e18;
     uint256 public constant DEFAULT_MAX_RECIPIENTS = 100;
 
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
@@ -197,7 +197,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         for (uint256 i; i < addrs.length; ) {
             if (addrs[i] == recipient) {
-                return (groupReward * bps[i]) / BASIS_POINTS_BASE;
+                return (groupReward * bps[i]) / PRECISION;
             }
             unchecked {
                 ++i;
@@ -347,7 +347,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 ++i;
             }
         }
-        if (totalBps > BASIS_POINTS_BASE) revert InvalidBasisPoints();
+        if (totalBps > PRECISION) revert InvalidBasisPoints();
         _checkNoDuplicates(addrs);
 
         uint256 round = _verify.currentRound();
@@ -372,7 +372,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             }
         }
 
-        emit RecipientsUpdate(
+        emit UpdateRecipients(
             TOKEN_ADDRESS,
             round,
             actionId_,
@@ -443,7 +443,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) internal pure returns (uint256[] memory amounts, uint256 distributed) {
         amounts = new uint256[](addrs.length);
         for (uint256 i; i < addrs.length; ) {
-            amounts[i] = (groupReward * bps[i]) / BASIS_POINTS_BASE;
+            amounts[i] = (groupReward * bps[i]) / PRECISION;
             distributed += amounts[i];
             unchecked {
                 ++i;
