@@ -578,7 +578,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 actionId,
         uint256 groupId,
         string memory message
-    ) internal {
+    ) internal view {
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(recipient) - balanceBefore,
             ExtensionGroupService(serviceAddr).rewardByRecipient(

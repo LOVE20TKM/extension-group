@@ -126,8 +126,8 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     ) internal view override returns (uint256) {
         uint256 groupId = _groupJoin.groupIdByAccountByRound(
             address(this),
-            account,
-            round
+            round,
+            account
         );
         if (groupId == 0) return 0;
 

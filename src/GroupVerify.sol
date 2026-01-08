@@ -204,8 +204,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         uint256 accountCount = _groupJoin.accountsByGroupIdByRoundCount(
             extension,
-            groupId,
-            currentRound
+            currentRound,
+            groupId
         );
         if (startIndex + originScores.length > accountCount) {
             revert ScoresExceedAccountCount();
@@ -343,8 +343,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) public view override returns (uint256) {
         uint256 groupId = _groupJoin.groupIdByAccountByRound(
             extension,
-            account,
-            round
+            round,
+            account
         );
 
         // If account is not in any group, return 0
@@ -372,7 +372,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         // Accounts are verified in order from index 0 to verifiedCount - 1
         for (uint256 i = 0; i < verifiedCount; i++) {
             address verifiedAccount = _groupJoin
-                .accountsByGroupIdByRoundAtIndex(extension, groupId, round, i);
+                .accountsByGroupIdByRoundAtIndex(extension, round, groupId, i);
             if (verifiedAccount == account) {
                 // Account is verified, get deduction value
                 uint256 deduction = _originScoreDeductionByAccount[extension][
@@ -409,8 +409,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         uint256 amount = _groupJoin.joinedAmountByAccountByRound(
             extension,
-            account,
-            round
+            round,
+            account
         );
         return originScoreVal * amount;
     }
@@ -715,8 +715,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
             address account = _groupJoin.accountsByGroupIdByRoundAtIndex(
                 extension,
-                groupId,
                 currentRound,
+                groupId,
                 startIndex + i
             );
 
@@ -733,8 +733,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
                 originScores[i] *
                 _groupJoin.joinedAmountByAccountByRound(
                     extension,
-                    account,
-                    currentRound
+                    currentRound,
+                    account
                 );
         }
         return totalScore;
@@ -814,8 +814,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         for (uint256 i = 0; i < verifierGroupIds.length; i++) {
             verifiedCapacity += _groupJoin.totalJoinedAmountByGroupIdByRound(
                 extension,
-                verifierGroupIds[i],
-                round
+                round,
+                verifierGroupIds[i]
             );
         }
 
@@ -835,8 +835,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 currentGroupCapacity = _groupJoin
             .totalJoinedAmountByGroupIdByRound(
                 extension,
-                currentGroupId,
-                round
+                round,
+                currentGroupId
             );
 
         if (remainingCapacity >= currentGroupCapacity) {
@@ -868,8 +868,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address groupOwner = _group.ownerOf(groupId);
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
             extension,
-            groupId,
-            round
+            round,
+            groupId
         );
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
             groupOwner
@@ -956,8 +956,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 oldScore = scoreMap[groupId];
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
             extension,
-            groupId,
-            round
+            round,
+            groupId
         );
         uint256 capacityReduction_ = capacityReductionMap[groupId];
 

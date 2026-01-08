@@ -79,7 +79,6 @@ contract MockExtensionGroupActionFactory is
     )
         external
         pure
-        override
         returns (uint256[] memory actionIds_, address[] memory extensions)
     {
         return (actionIds_, extensions);

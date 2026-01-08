@@ -79,7 +79,7 @@ contract GroupManager is IGroupManager {
     function activateGroup(
         address extension,
         uint256 groupId,
-        string memory description,
+        string memory desc,
         uint256 maxCapacity,
         uint256 minJoinAmount,
         uint256 maxJoinAmount_,
@@ -95,7 +95,7 @@ contract GroupManager is IGroupManager {
         _activateGroup(
             extension,
             groupId,
-            description,
+            desc,
             maxCapacity,
             minJoinAmount,
             maxJoinAmount_,
@@ -200,7 +200,7 @@ contract GroupManager is IGroupManager {
         override
         returns (
             uint256 groupId_,
-            string memory description,
+            string memory desc,
             uint256 maxCapacity,
             uint256 minJoinAmount,
             uint256 maxJoinAmount_,
@@ -224,10 +224,10 @@ contract GroupManager is IGroupManager {
         );
     }
 
-    function descriptionByRound(
+    function description(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view override returns (string memory) {
         RoundHistoryString.History storage descHistory = _descriptionHistory[
             extension
@@ -485,7 +485,7 @@ contract GroupManager is IGroupManager {
     function _updateGroupInfoFields(
         address extension,
         uint256 groupId,
-        string memory description,
+        string memory desc,
         uint256 maxCapacity,
         uint256 minJoinAmount,
         uint256 maxJoinAmount_,
@@ -497,23 +497,20 @@ contract GroupManager is IGroupManager {
         }
 
         GroupInfo storage group = _groupInfo[extension][groupId];
-        group.description = description;
+        group.description = desc;
         group.maxCapacity = maxCapacity;
         group.minJoinAmount = minJoinAmount;
         group.maxJoinAmount = maxJoinAmount_;
         group.maxAccounts = maxAccounts_;
 
-        _descriptionHistory[extension][groupId].record(
-            currentRound,
-            description
-        );
+        _descriptionHistory[extension][groupId].record(currentRound, desc);
 
         emit UpdateGroupInfo({
             tokenAddress: IExtension(extension).TOKEN_ADDRESS(),
             actionId: IExtension(extension).actionId(),
             round: currentRound,
             groupId: groupId,
-            description: description,
+            description: desc,
             maxCapacity: maxCapacity,
             minJoinAmount: minJoinAmount,
             maxJoinAmount: maxJoinAmount_,
@@ -524,7 +521,7 @@ contract GroupManager is IGroupManager {
     function _activateGroup(
         address extension,
         uint256 groupId,
-        string memory description,
+        string memory desc,
         uint256 maxCapacity,
         uint256 minJoinAmount,
         uint256 maxJoinAmount_,
@@ -537,7 +534,7 @@ contract GroupManager is IGroupManager {
         _updateGroupInfoFields(
             extension,
             groupId,
-            description,
+            desc,
             maxCapacity,
             minJoinAmount,
             maxJoinAmount_,

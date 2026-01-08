@@ -44,18 +44,18 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     IERC721Enumerable internal immutable _group;
     IExtensionGroupActionFactory internal immutable _actionFactory;
 
-    // account => actionId => groupId => recipients
+    // owner => actionId => groupId => recipients
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
         internal _recipientsHistory;
-    // account => actionId => groupId => ratios
+    // owner => actionId => groupId => ratios
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryUint256Array.History)))
         internal _ratiosHistory;
-    // account => actionIds
+    // owner => actionIds
     mapping(address => RoundHistoryUint256Array.History)
         internal _actionIdsWithRecipients;
-    // account => actionId => groupIds
+    // owner => actionId => groupIds
     mapping(address => mapping(uint256 => RoundHistoryUint256Array.History))
-        internal _groupIdsWithRecipients;
+        internal _groupIdsByActionIdWithRecipients;
 
     constructor(
         address factory_,
@@ -146,12 +146,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         return _actionIdsWithRecipients[account].values(round);
     }
 
-    function groupIdsWithRecipients(
+    function groupIdsByActionIdWithRecipients(
         address account,
         uint256 actionId_,
         uint256 round
     ) external view returns (uint256[] memory) {
-        return _groupIdsWithRecipients[account][actionId_].values(round);
+        return
+            _groupIdsByActionIdWithRecipients[account][actionId_].values(round);
     }
 
     function rewardByRecipient(
@@ -285,12 +286,18 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         if (addrs.length > 0) {
             _actionIdsWithRecipients[account].add(round, actionId_);
-            _groupIdsWithRecipients[account][actionId_].add(round, groupId);
+            _groupIdsByActionIdWithRecipients[account][actionId_].add(
+                round,
+                groupId
+            );
         } else if (
-            _groupIdsWithRecipients[account][actionId_].remove(round, groupId)
+            _groupIdsByActionIdWithRecipients[account][actionId_].remove(
+                round,
+                groupId
+            )
         ) {
             if (
-                _groupIdsWithRecipients[account][actionId_]
+                _groupIdsByActionIdWithRecipients[account][actionId_]
                     .values(round)
                     .length == 0
             ) {
@@ -456,8 +463,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             round
         );
         for (uint256 i; i < aids.length; ) {
-            uint256[] memory gids = _groupIdsWithRecipients[msg.sender][aids[i]]
-                .values(round);
+            uint256[] memory gids = _groupIdsByActionIdWithRecipients[
+                msg.sender
+            ][aids[i]].values(round);
             for (uint256 j; j < gids.length; ) {
                 distributed += _distributeForGroup(round, aids[i], gids[j]);
                 unchecked {

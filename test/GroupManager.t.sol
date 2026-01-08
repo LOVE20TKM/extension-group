@@ -627,7 +627,7 @@ contract GroupManagerTest is BaseGroupTest {
         // Verify updated info
         (
             uint256 groupId_,
-            string memory description,
+            string memory desc,
             uint256 maxCapacity,
             uint256 minJoinAmount,
             uint256 maxJoinAmount,
@@ -639,7 +639,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         assertEq(groupId_, groupId, "GroupId should match");
         assertEq(
-            description,
+            desc,
             "Updated Description",
             "Description should be updated"
         );
@@ -780,7 +780,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         (
             uint256 groupId_,
-            string memory description,
+            string memory desc,
             uint256 maxCapacity,
             uint256 minJoinAmount,
             uint256 maxJoinAmount,
@@ -791,7 +791,7 @@ contract GroupManagerTest is BaseGroupTest {
         ) = groupManager.groupInfo(address(extension1), groupId);
 
         assertEq(groupId_, groupId, "GroupId should match");
-        assertEq(description, "Test Description", "Description should match");
+        assertEq(desc, "Test Description", "Description should match");
         assertEq(maxCapacity, 100, "MaxCapacity should match");
         assertEq(minJoinAmount, 1e18, "MinJoinAmount should match");
         assertEq(maxJoinAmount, 2e18, "MaxJoinAmount should match");

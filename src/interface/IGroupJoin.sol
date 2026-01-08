@@ -71,8 +71,8 @@ interface IGroupJoin {
 
     function groupIdByAccountByRound(
         address extension,
-        address account,
-        uint256 round
+        uint256 round,
+        address account
     ) external view returns (uint256);
 
     function totalJoinedAmountByGroupId(
@@ -82,8 +82,8 @@ interface IGroupJoin {
 
     function totalJoinedAmountByGroupIdByRound(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view returns (uint256);
 
     function joinedAmount(address extension) external view returns (uint256);
@@ -95,26 +95,26 @@ interface IGroupJoin {
 
     function accountsByGroupIdByRound(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view returns (address[] memory);
 
     function accountsByGroupIdByRoundCount(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view returns (uint256);
 
     function accountsByGroupIdByRoundAtIndex(
         address extension,
-        uint256 groupId,
         uint256 round,
+        uint256 groupId,
         uint256 index
     ) external view returns (address);
 
     function joinedAmountByAccountByRound(
         address extension,
-        address account,
-        uint256 round
+        uint256 round,
+        address account
     ) external view returns (uint256);
 }

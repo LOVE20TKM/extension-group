@@ -90,7 +90,7 @@ interface IGroupManager {
         view
         returns (
             uint256 groupId_,
-            string memory description,
+            string memory desc,
             uint256 maxCapacity,
             uint256 minJoinAmount,
             uint256 maxJoinAmount,
@@ -100,10 +100,10 @@ interface IGroupManager {
             uint256 deactivatedRound
         );
 
-    function descriptionByRound(
+    function description(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view returns (string memory);
 
     function activeGroupIdsByOwner(

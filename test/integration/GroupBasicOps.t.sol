@@ -728,8 +728,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         address[] memory accounts = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round1
+            round1,
+            bobGroup1.groupId
         );
         assertEq(accounts.length, 2, "Should have 2 accounts in round 1");
         assertTrue(
@@ -781,8 +781,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         address[] memory accountsRound1 = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round1
+            round1,
+            bobGroup1.groupId
         );
         assertEq(accountsRound1.length, 2, "Round 1 should have 2 accounts");
         assertTrue(
@@ -797,8 +797,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 6. Verify round 2 accounts (should still have both m1 and m2, as they persist)
         address[] memory accountsRound2 = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round2
+            round2,
+            bobGroup1.groupId
         );
         assertEq(accountsRound2.length, 2, "Round 2 should have 2 accounts");
         assertTrue(
@@ -852,8 +852,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         address[] memory accountsRound1 = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round1
+            round1,
+            bobGroup1.groupId
         );
         assertEq(
             accountsRound1.length,
@@ -864,8 +864,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 6. Verify round 2 accounts (should only have m2)
         address[] memory accountsRound2 = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round2
+            round2,
+            bobGroup1.groupId
         );
         assertEq(
             accountsRound2.length,
@@ -972,21 +972,21 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
         address[] memory accounts = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round1
+            round1,
+            bobGroup1.groupId
         );
         uint256 count = groupJoin.accountsByGroupIdByRoundCount(
             bobGroup1.groupActionAddress,
-            bobGroup1.groupId,
-            round1
+            round1,
+            bobGroup1.groupId
         );
 
         assertEq(accounts.length, count, "Array length should match count");
         for (uint256 i = 0; i < count; i++) {
             address accountAtIndex = groupJoin.accountsByGroupIdByRoundAtIndex(
                 bobGroup1.groupActionAddress,
-                bobGroup1.groupId,
                 round1,
+                bobGroup1.groupId,
                 i
             );
             assertTrue(

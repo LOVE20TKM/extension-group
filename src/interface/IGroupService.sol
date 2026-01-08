@@ -45,7 +45,7 @@ interface IGroupService {
         uint256 round
     ) external view returns (uint256[] memory);
 
-    function groupIdsWithRecipients(
+    function groupIdsByActionIdWithRecipients(
         address account,
         uint256 actionId,
         uint256 round

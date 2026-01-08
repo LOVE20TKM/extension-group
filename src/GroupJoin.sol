@@ -221,8 +221,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function groupIdByAccountByRound(
         address extension,
-        address account,
-        uint256 round
+        uint256 round,
+        address account
     ) external view override returns (uint256) {
         return _groupIdHistoryByAccount[extension][account].value(round);
     }
@@ -238,8 +238,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function totalJoinedAmountByGroupIdByRound(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view override returns (uint256) {
         return
             _totalJoinedAmountHistoryByGroupId[extension][groupId].value(round);
@@ -260,24 +260,24 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function accountsByGroupIdByRound(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view override returns (address[] memory) {
         return _accountsHistory[extension][groupId].valuesByRound(round);
     }
 
     function accountsByGroupIdByRoundCount(
         address extension,
-        uint256 groupId,
-        uint256 round
+        uint256 round,
+        uint256 groupId
     ) external view override returns (uint256) {
         return _accountsHistory[extension][groupId].countByRound(round);
     }
 
     function accountsByGroupIdByRoundAtIndex(
         address extension,
-        uint256 groupId,
         uint256 round,
+        uint256 groupId,
         uint256 index
     ) external view override returns (address) {
         return
@@ -286,8 +286,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function joinedAmountByAccountByRound(
         address extension,
-        address account,
-        uint256 round
+        uint256 round,
+        address account
     ) external view override returns (uint256) {
         return _amountHistoryByAccount[extension][account].value(round);
     }
