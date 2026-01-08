@@ -47,9 +47,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     // account => actionId => groupId => recipients
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
         internal _recipientsHistory;
-    // account => actionId => groupId => basisPoints
+    // account => actionId => groupId => ratios
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryUint256Array.History)))
-        internal _basisPointsHistory;
+        internal _ratiosHistory;
     // account => actionIds
     mapping(address => RoundHistoryUint256Array.History)
         internal _actionIdsWithRecipients;
@@ -63,6 +63,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address groupActionTokenAddress_,
         address groupActionFactoryAddress_
     ) ExtensionBaseRewardJoin(factory_, tokenAddress_) {
+        GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
+        GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
+
         _launch = ILOVE20Launch(_center.launchAddress());
 
         if (groupActionTokenAddress_ != tokenAddress_) {
@@ -74,8 +77,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 revert InvalidGroupActionTokenAddress();
             }
         }
-        GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
-        GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
+
         _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_
         );
@@ -95,20 +97,24 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         super.join(verificationInfos);
     }
 
+    function _checkActionId(
+        uint256 actionId_
+    ) internal view returns (address extension) {
+        extension = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
+        if (!_actionFactory.exists(extension)) revert InvalidExtension();
+        return extension;
+    }
+
     function setRecipients(
         uint256 actionId_,
         uint256 groupId,
         address[] calldata addrs,
-        uint256[] calldata basisPoints
+        uint256[] calldata ratios
     ) external {
-        if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, msg.sender))
-            revert NotJoined();
-
-        address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
-        if (!_actionFactory.exists(ext)) revert InvalidExtension();
+        _checkActionId(actionId_);
         if (_group.ownerOf(groupId) != msg.sender) revert NotGroupOwner();
 
-        _setRecipients(msg.sender, actionId_, groupId, addrs, basisPoints);
+        _setRecipients(msg.sender, actionId_, groupId, addrs, ratios);
     }
 
     function recipients(
@@ -116,31 +122,21 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 actionId_,
         uint256 groupId,
         uint256 round
-    )
-        external
-        view
-        returns (address[] memory addrs, uint256[] memory basisPoints)
-    {
+    ) external view returns (address[] memory addrs, uint256[] memory ratios) {
         addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
             round
         );
-        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
-            .values(round);
+        ratios = _ratiosHistory[groupOwner][actionId_][groupId].values(round);
     }
 
     function recipientsLatest(
         address groupOwner,
         uint256 actionId_,
         uint256 groupId
-    )
-        external
-        view
-        returns (address[] memory addrs, uint256[] memory basisPoints)
-    {
+    ) external view returns (address[] memory addrs, uint256[] memory ratios) {
         addrs = _recipientsHistory[groupOwner][actionId_][groupId]
             .latestValues();
-        basisPoints = _basisPointsHistory[groupOwner][actionId_][groupId]
-            .latestValues();
+        ratios = _ratiosHistory[groupOwner][actionId_][groupId].latestValues();
     }
 
     function actionIdsWithRecipients(
@@ -176,22 +172,21 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address[] memory addrs = _recipientsHistory[groupOwner][actionId_][
             groupId
         ].values(round);
-        uint256[] memory bps = _basisPointsHistory[groupOwner][actionId_][
-            groupId
-        ].values(round);
+        uint256[] memory ratios = _ratiosHistory[groupOwner][actionId_][groupId]
+            .values(round);
 
         if (recipient == groupOwner) {
             (, uint256 distributed) = _calculateRecipientAmounts(
                 groupReward,
                 addrs,
-                bps
+                ratios
             );
             return groupReward - distributed;
         }
 
         for (uint256 i; i < addrs.length; ) {
             if (addrs[i] == recipient) {
-                return (groupReward * bps[i]) / PRECISION;
+                return (groupReward * ratios[i]) / PRECISION;
             }
             unchecked {
                 ++i;
@@ -210,7 +205,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         view
         returns (
             address[] memory addrs,
-            uint256[] memory basisPoints,
+            uint256[] memory ratios,
             uint256[] memory amounts,
             uint256 ownerAmount
         )
@@ -221,12 +216,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             actionId_,
             groupId
         );
-        return (
-            dist.recipients,
-            dist.basisPoints,
-            dist.amounts,
-            dist.ownerAmount
-        );
+        return (dist.recipients, dist.ratios, dist.amounts, dist.ownerAmount);
     }
 
     function joinedAmount()
@@ -285,33 +275,15 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 actionId_,
         uint256 groupId,
         address[] memory addrs,
-        uint256[] memory basisPoints
+        uint256[] memory ratios
     ) internal {
-        uint256 len = addrs.length;
-        if (len != basisPoints.length) revert ArrayLengthMismatch();
-        if (len > DEFAULT_MAX_RECIPIENTS) revert TooManyRecipients();
-
-        uint256 totalBps;
-        for (uint256 i; i < len; ) {
-            if (addrs[i] == address(0)) revert ZeroAddress();
-            if (addrs[i] == account) revert RecipientCannotBeSelf();
-            if (basisPoints[i] == 0) revert ZeroBasisPoints();
-            totalBps += basisPoints[i];
-            unchecked {
-                ++i;
-            }
-        }
-        if (totalBps > PRECISION) revert InvalidBasisPoints();
-        _checkNoDuplicates(addrs);
+        _validateRecipients(account, addrs, ratios);
 
         uint256 round = _verify.currentRound();
         _recipientsHistory[account][actionId_][groupId].record(round, addrs);
-        _basisPointsHistory[account][actionId_][groupId].record(
-            round,
-            basisPoints
-        );
+        _ratiosHistory[account][actionId_][groupId].record(round, ratios);
 
-        if (len > 0) {
+        if (addrs.length > 0) {
             _actionIdsWithRecipients[account].add(round, actionId_);
             _groupIdsWithRecipients[account][actionId_].add(round, groupId);
         } else if (
@@ -326,32 +298,48 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             }
         }
 
-        emit UpdateRecipients(
-            TOKEN_ADDRESS,
-            round,
-            actionId_,
-            groupId,
-            account,
-            addrs,
-            basisPoints
-        );
+        emit UpdateRecipients({
+            tokenAddress: TOKEN_ADDRESS,
+            round: round,
+            actionId: actionId_,
+            groupId: groupId,
+            account: account,
+            recipients: addrs,
+            ratios: ratios
+        });
     }
 
-    function _checkNoDuplicates(address[] memory addrs) internal pure {
+    function _validateRecipients(
+        address account,
+        address[] memory addrs,
+        uint256[] memory ratios
+    ) internal pure {
         uint256 len = addrs.length;
-        if (len <= 1) return;
-        for (uint256 i = 1; i < len; ) {
-            address addr = addrs[i];
-            for (uint256 j; j < i; ) {
-                if (addrs[j] == addr) revert DuplicateAddress();
-                unchecked {
-                    ++j;
+        if (len != ratios.length) revert ArrayLengthMismatch();
+        if (len > DEFAULT_MAX_RECIPIENTS) revert TooManyRecipients();
+
+        uint256 totalRatios;
+        for (uint256 i; i < len; ) {
+            if (addrs[i] == address(0)) revert ZeroAddress();
+            if (addrs[i] == account) revert RecipientCannotBeSelf();
+            if (ratios[i] == 0) revert ZeroRatio();
+            totalRatios += ratios[i];
+
+            if (i > 0) {
+                address addr = addrs[i];
+                for (uint256 j; j < i; ) {
+                    if (addrs[j] == addr) revert DuplicateAddress();
+                    unchecked {
+                        ++j;
+                    }
                 }
             }
+
             unchecked {
                 ++i;
             }
         }
+        if (totalRatios > PRECISION) revert InvalidRatio();
     }
 
     function _buildGroupDistribution(
@@ -369,14 +357,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address[] memory addrs = _recipientsHistory[groupOwner][actionId_][
             groupId
         ].values(round);
-        uint256[] memory bps = _basisPointsHistory[groupOwner][actionId_][
-            groupId
-        ].values(round);
+        uint256[] memory ratios = _ratiosHistory[groupOwner][actionId_][groupId]
+            .values(round);
 
         (
             uint256[] memory amounts,
             uint256 distributed
-        ) = _calculateRecipientAmounts(groupReward, addrs, bps);
+        ) = _calculateRecipientAmounts(groupReward, addrs, ratios);
 
         return
             GroupDistribution(
@@ -384,7 +371,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 groupId,
                 groupReward,
                 addrs,
-                bps,
+                ratios,
                 amounts,
                 groupReward - distributed
             );
@@ -393,11 +380,11 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _calculateRecipientAmounts(
         uint256 groupReward,
         address[] memory addrs,
-        uint256[] memory bps
+        uint256[] memory ratios
     ) internal pure returns (uint256[] memory amounts, uint256 distributed) {
         amounts = new uint256[](addrs.length);
         for (uint256 i; i < addrs.length; ) {
-            amounts[i] = (groupReward * bps[i]) / PRECISION;
+            amounts[i] = (groupReward * ratios[i]) / PRECISION;
             distributed += amounts[i];
             unchecked {
                 ++i;
@@ -409,9 +396,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 round,
         address account
     ) internal view override returns (uint256) {
-        if (!_center.isAccountJoined(TOKEN_ADDRESS, actionId, account))
-            return 0;
-
         uint256 total = reward(round);
         if (total == 0) return 0;
 
@@ -436,10 +420,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         (uint256 totalReward, ) = generatedRewardByVerifier(round, groupOwner);
         if (totalReward == 0) return 0;
 
-        address ext = _center.extension(GROUP_ACTION_TOKEN_ADDRESS, actionId_);
-        if (ext == address(0)) return 0;
+        address extension = _checkActionId(actionId_);
 
-        uint256 groupReward = IGroupAction(ext).generatedRewardByGroupId(
+        uint256 groupReward = IGroupAction(extension).generatedRewardByGroupId(
             round,
             groupId
         );
@@ -503,14 +486,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address[] memory addrs = _recipientsHistory[msg.sender][actionId_][
             groupId
         ].values(round);
-        uint256[] memory bps = _basisPointsHistory[msg.sender][actionId_][
-            groupId
-        ].values(round);
+        uint256[] memory ratios = _ratiosHistory[msg.sender][actionId_][groupId]
+            .values(round);
 
         (uint256[] memory amounts, ) = _calculateRecipientAmounts(
             groupReward,
             addrs,
-            bps
+            ratios
         );
 
         IERC20 token = IERC20(TOKEN_ADDRESS);

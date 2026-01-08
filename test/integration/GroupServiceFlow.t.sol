@@ -105,11 +105,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         address[] memory recipients = new address[](2);
         recipients[0] = member2().userAddress;
         recipients[1] = member3().userAddress;
-        uint256[] memory basisPoints = new uint256[](2);
-        basisPoints[0] = 5e17; // 50%
-        basisPoints[1] = 3e17; // 30%
+        uint256[] memory ratios = new uint256[](2);
+        ratios[0] = 5e17; // 50%
+        ratios[1] = 3e17; // 30%
         bobGroup1.recipients = recipients;
-        bobGroup1.basisPoints = basisPoints;
+        bobGroup1.ratios = ratios;
         h.group_service_set_recipients(bobGroup1);
     }
 
@@ -205,7 +205,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 expectedTotal
     ) internal {
         // Verify recipients configuration
-        (address[] memory addrs, uint256[] memory bps) = gs.recipients(
+        (address[] memory addrs, uint256[] memory ratios) = gs.recipients(
             bobGroup1.flow.userAddress,
             bobGroup1.groupActionId,
             bobGroup1.groupId,
@@ -214,8 +214,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(addrs.length, 2, "Should have 2 recipients");
         assertEq(addrs[0], member2().userAddress, "Recipient 0 = member2");
         assertEq(addrs[1], member3().userAddress, "Recipient 1 = member3");
-        assertEq(bps[0], 5e17, "Recipient 0 = 50%");
-        assertEq(bps[1], 3e17, "Recipient 1 = 30%");
+        assertEq(ratios[0], 5e17, "Recipient 0 = 50%");
+        assertEq(ratios[1], 3e17, "Recipient 1 = 30%");
 
         // Calculate expected amounts
         uint256 expectedM2 = (expectedTotal * 5e17) / 1e18;
@@ -260,7 +260,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // Verify rewardDistribution
         (
             address[] memory distAddrs,
-            uint256[] memory distBps,
+            uint256[] memory distRatios,
             uint256[] memory distAmounts,
             uint256 ownerAmt
         ) = gs.rewardDistribution(
@@ -274,8 +274,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(distAmounts[0], expectedM2, "Distribution amt 0");
         assertEq(distAmounts[1], expectedM3, "Distribution amt 1");
         assertEq(ownerAmt, expectedBob, "Owner amount");
-        assertEq(distBps[0], 5e17, "Distribution bps 0");
-        assertEq(distBps[1], 3e17, "Distribution bps 1");
+        assertEq(distRatios[0], 5e17, "Distribution ratios 0");
+        assertEq(distRatios[1], 3e17, "Distribution ratios 1");
     }
 
     function _claimAndVerifyServiceTransfers(
@@ -474,20 +474,20 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         address[] memory recipients1 = new address[](2);
         recipients1[0] = member3().userAddress;
         recipients1[1] = member4().userAddress;
-        uint256[] memory bps1 = new uint256[](2);
-        bps1[0] = 3e17;
-        bps1[1] = 2e17;
+        uint256[] memory ratios1 = new uint256[](2);
+        ratios1[0] = 3e17;
+        ratios1[1] = 2e17;
         bobGroup1.recipients = recipients1;
-        bobGroup1.basisPoints = bps1;
+        bobGroup1.ratios = ratios1;
         h.group_service_set_recipients(bobGroup1);
 
         // Group2: 60% to member5
         address[] memory recipients2 = new address[](1);
         recipients2[0] = member5().userAddress;
-        uint256[] memory bps2 = new uint256[](1);
-        bps2[0] = 6e17;
+        uint256[] memory ratios2 = new uint256[](1);
+        ratios2[0] = 6e17;
         bobGroup2.recipients = recipients2;
-        bobGroup2.basisPoints = bps2;
+        bobGroup2.ratios = ratios2;
         h.group_service_set_recipients(bobGroup2);
 
         // === Verify Phase ===

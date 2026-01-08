@@ -3,10 +3,10 @@ pragma solidity =0.8.17;
 
 interface IGroupService {
     error NoActiveGroups();
-    error InvalidBasisPoints();
+    error InvalidRatio();
     error TooManyRecipients();
     error ZeroAddress();
-    error ZeroBasisPoints();
+    error ZeroRatio();
     error ArrayLengthMismatch();
     error DuplicateAddress();
     error InvalidGroupActionTokenAddress();
@@ -21,7 +21,7 @@ interface IGroupService {
         uint256 indexed groupId,
         address account,
         address[] recipients,
-        uint256[] basisPoints
+        uint256[] ratios
     );
 
     struct GroupDistribution {
@@ -29,7 +29,7 @@ interface IGroupService {
         uint256 groupId;
         uint256 groupReward;
         address[] recipients;
-        uint256[] basisPoints;
+        uint256[] ratios;
         uint256[] amounts;
         uint256 ownerAmount;
     }
@@ -56,19 +56,13 @@ interface IGroupService {
         uint256 actionId,
         uint256 groupId,
         uint256 round
-    )
-        external
-        view
-        returns (address[] memory addrs, uint256[] memory basisPoints);
+    ) external view returns (address[] memory addrs, uint256[] memory ratios);
 
     function recipientsLatest(
         address groupOwner,
         uint256 actionId,
         uint256 groupId
-    )
-        external
-        view
-        returns (address[] memory addrs, uint256[] memory basisPoints);
+    ) external view returns (address[] memory addrs, uint256[] memory ratios);
 
     function rewardByRecipient(
         uint256 round,
@@ -88,7 +82,7 @@ interface IGroupService {
         view
         returns (
             address[] memory addrs,
-            uint256[] memory basisPoints,
+            uint256[] memory ratios,
             uint256[] memory amounts,
             uint256 ownerAmount
         );
@@ -104,6 +98,6 @@ interface IGroupService {
         uint256 actionId,
         uint256 groupId,
         address[] calldata addrs,
-        uint256[] calldata basisPoints
+        uint256[] calldata ratios
     ) external;
 }
