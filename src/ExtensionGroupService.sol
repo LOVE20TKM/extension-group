@@ -9,13 +9,7 @@ import {
     ExtensionBaseRewardJoin
 } from "@extension/src/ExtensionBaseRewardJoin.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
-import {IExtension} from "@extension/src/interface/IExtension.sol";
-import {IJoin} from "@extension/src/interface/IJoin.sol";
 import {IReward} from "@extension/src/interface/IReward.sol";
-import {
-    IExtensionFactory
-} from "@extension/src/interface/IExtensionFactory.sol";
-import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {
     RoundHistoryAddressArray
 } from "@extension/src/lib/RoundHistoryAddressArray.sol";
