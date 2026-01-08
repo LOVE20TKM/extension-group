@@ -80,7 +80,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         return _calculateRewardByGroupId(round, groupId);
     }
 
-    function generatedRewardByVerifier(
+    function generatedActionRewardByVerifier(
         uint256 round,
         address verifier
     ) external view override returns (uint256 amount) {

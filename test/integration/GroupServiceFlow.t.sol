@@ -170,7 +170,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
 
         // 3. Calculate expected bobGroup1's service reward
         // bobGroup1 is only provider with only group action, so he gets 100%
-        uint256 bobGroup1GeneratedReward = ga.generatedRewardByVerifier(
+        uint256 bobGroup1GeneratedReward = ga.generatedActionRewardByVerifier(
             verifyRound,
             bobGroup1.flow.userAddress
         );

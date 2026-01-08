@@ -18,7 +18,7 @@ interface IGroupAction {
         uint256 groupId
     ) external view returns (uint256);
 
-    function generatedRewardByVerifier(
+    function generatedActionRewardByVerifier(
         uint256 round,
         address verifier
     ) external view returns (uint256);

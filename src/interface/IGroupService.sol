@@ -24,16 +24,6 @@ interface IGroupService {
         uint256[] ratios
     );
 
-    struct GroupDistribution {
-        uint256 actionId;
-        uint256 groupId;
-        uint256 groupReward;
-        address[] recipients;
-        uint256[] ratios;
-        uint256[] amounts;
-        uint256 ownerAmount;
-    }
-
     function PRECISION() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
 
@@ -89,12 +79,14 @@ interface IGroupService {
 
     function hasActiveGroups(address account) external view returns (bool);
 
-    function generatedRewardByVerifier(
+    function generatedActionRewardByVerifier(
         uint256 round,
         address verifier
-    ) external view returns (uint256 accountReward, uint256 totalReward);
+    ) external view returns (uint256 amount);
 
-    function generatedReward(uint256 round) external view returns (uint256);
+    function generatedActionReward(
+        uint256 round
+    ) external view returns (uint256);
 
     function setRecipients(
         uint256 actionId,

@@ -27,6 +27,9 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupService} from "./interface/IGroupService.sol";
+import {
+    ReentrancyGuard
+} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
@@ -162,7 +165,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 groupId,
         address recipient
     ) external view returns (uint256) {
-        uint256 groupReward = _calculateGroupServiceReward(
+        uint256 groupReward = _calculateRewardByGroupId(
             round,
             actionId_,
             groupId
@@ -210,13 +213,32 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             uint256 ownerAmount
         )
     {
-        GroupDistribution memory dist = _buildGroupDistribution(
+        uint256 groupReward = _calculateRewardByGroupId(
             round,
-            groupOwner,
             actionId_,
             groupId
         );
-        return (dist.recipients, dist.ratios, dist.amounts, dist.ownerAmount);
+        addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
+            round
+        );
+        ratios = _ratiosHistory[groupOwner][actionId_][groupId].values(round);
+
+        uint256 distributed;
+        (amounts, distributed) = _calculateRecipientAmounts(
+            groupReward,
+            addrs,
+            ratios
+        );
+        ownerAmount = groupReward - distributed;
+    }
+
+    function joinedAmountTokenAddress()
+        external
+        view
+        override(ExtensionBase)
+        returns (address)
+    {
+        return GROUP_ACTION_TOKEN_ADDRESS;
     }
 
     function joinedAmount()
@@ -238,39 +260,31 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             );
     }
 
-    function joinedAmountTokenAddress()
-        external
-        view
-        override(ExtensionBase)
-        returns (address)
-    {
-        return GROUP_ACTION_TOKEN_ADDRESS;
-    }
-
     function hasActiveGroups(address account) public view returns (bool) {
         return
             _groupManager.hasActiveGroups(GROUP_ACTION_TOKEN_ADDRESS, account);
     }
 
-    function generatedRewardByVerifier(
+    function generatedActionRewardByVerifier(
         uint256 round,
         address verifier
-    ) public view returns (uint256 accountReward, uint256 totalReward) {
+    ) public view override returns (uint256 amount) {
         (, address[] memory exts) = _actionFactory.votedGroupActions(
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
         for (uint256 i; i < exts.length; ) {
             IGroupAction ga = IGroupAction(exts[i]);
-            accountReward += ga.generatedRewardByVerifier(round, verifier);
-            totalReward += IReward(address(ga)).reward(round);
+            amount += ga.generatedActionRewardByVerifier(round, verifier);
             unchecked {
                 ++i;
             }
         }
     }
 
-    function generatedReward(uint256 round) public view returns (uint256) {
+    function generatedActionReward(
+        uint256 round
+    ) public view returns (uint256) {
         (, address[] memory exts) = _actionFactory.votedGroupActions(
             GROUP_ACTION_TOKEN_ADDRESS,
             round
@@ -363,40 +377,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         if (totalRatios > PRECISION) revert InvalidRatio();
     }
 
-    function _buildGroupDistribution(
-        uint256 round,
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId
-    ) internal view returns (GroupDistribution memory) {
-        uint256 groupReward = _calculateGroupServiceReward(
-            round,
-            actionId_,
-            groupId
-        );
-        address[] memory addrs = _recipientsHistory[groupOwner][actionId_][
-            groupId
-        ].values(round);
-        uint256[] memory ratios = _ratiosHistory[groupOwner][actionId_][groupId]
-            .values(round);
-
-        (
-            uint256[] memory amounts,
-            uint256 distributed
-        ) = _calculateRecipientAmounts(groupReward, addrs, ratios);
-
-        return
-            GroupDistribution(
-                actionId_,
-                groupId,
-                groupReward,
-                addrs,
-                ratios,
-                amounts,
-                groupReward - distributed
-            );
-    }
-
     function _calculateRecipientAmounts(
         uint256 groupReward,
         address[] memory addrs,
@@ -416,19 +396,22 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 round,
         address account
     ) internal view override returns (uint256) {
-        uint256 total = reward(round);
-        if (total == 0) return 0;
+        uint256 totalServiceReward = reward(round);
+        if (totalServiceReward == 0) return 0;
 
-        (uint256 accountR, uint256 allR) = generatedRewardByVerifier(
+        uint256 generatedByVerifier = generatedActionRewardByVerifier(
             round,
             account
         );
-        if (accountR == 0 || allR == 0) return 0;
+        if (generatedByVerifier == 0) return 0;
 
-        return (total * accountR) / allR;
+        uint256 generatedTotal = generatedActionReward(round);
+        if (generatedTotal == 0) return 0;
+
+        return (totalServiceReward * generatedByVerifier) / generatedTotal;
     }
 
-    function _calculateGroupServiceReward(
+    function _calculateRewardByGroupId(
         uint256 round,
         uint256 actionId_,
         uint256 groupId
@@ -436,8 +419,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 totalServiceReward = reward(round);
         if (totalServiceReward == 0) return 0;
 
-        uint256 totalReward = generatedReward(round);
-        if (totalReward == 0) return 0;
+        uint256 totalActionReward = generatedActionReward(round);
+        if (totalActionReward == 0) return 0;
 
         address extension = _checkActionId(actionId_);
 
@@ -447,7 +430,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
         if (groupReward == 0) return 0;
 
-        return (totalServiceReward * groupReward) / totalReward;
+        return (totalServiceReward * groupReward) / totalActionReward;
     }
 
     function _claimReward(
@@ -495,7 +478,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 actionId_,
         uint256 groupId
     ) internal returns (uint256 distributed) {
-        uint256 groupReward = _calculateGroupServiceReward(
+        uint256 groupReward = _calculateRewardByGroupId(
             round,
             actionId_,
             groupId
