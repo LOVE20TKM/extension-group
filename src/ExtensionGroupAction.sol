@@ -3,17 +3,12 @@ pragma solidity =0.8.17;
 
 import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
-import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
-import {
-    IExtensionFactory,
-    DEFAULT_JOIN_AMOUNT
-} from "@extension/src/interface/IExtensionFactory.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
 contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
@@ -49,7 +44,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;
         MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
 
-        _validateJoinToken(joinTokenAddress_, tokenAddress_);
+        _validateJoinToken(joinTokenAddress_);
     }
 
     function burnUnclaimedReward(uint256 round) external override {
@@ -66,16 +61,16 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         _prepareRewardIfNeeded(round);
 
         uint256 rewardAmount = _reward[round];
-        if (rewardAmount > 0 && _burnedReward[round] == 0) {
-            _burnedReward[round] = rewardAmount;
-            ILOVE20Token(TOKEN_ADDRESS).burn(rewardAmount);
-            emit UnclaimedRewardBurn(
-                TOKEN_ADDRESS,
-                round,
-                actionId,
-                rewardAmount
-            );
-        }
+        if (rewardAmount == 0 || _burnedReward[round] > 0) return;
+
+        _burnedReward[round] = rewardAmount;
+        ILOVE20Token(TOKEN_ADDRESS).burn(rewardAmount);
+        emit BurnUnclaimedReward({
+            tokenAddress: TOKEN_ADDRESS,
+            round: round,
+            actionId: actionId,
+            amount: rewardAmount
+        });
     }
 
     function generatedRewardByGroupId(
@@ -97,6 +92,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         for (uint256 i = 0; i < groupIds.length; i++) {
             amount += _calculateRewardByGroupId(round, groupIds[i]);
         }
+        return amount;
     }
 
     function joinedAmount()
@@ -128,13 +124,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         uint256 round,
         address account
     ) internal view override returns (uint256) {
-        uint256 accountScore = _groupVerify.accountScore(
-            address(this),
-            round,
-            account
-        );
-        if (accountScore == 0) return 0;
-
         uint256 groupId = _groupJoin.groupIdByAccountByRound(
             address(this),
             account,
@@ -142,8 +131,12 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         );
         if (groupId == 0) return 0;
 
-        uint256 groupReward = _calculateRewardByGroupId(round, groupId);
-        if (groupReward == 0) return 0;
+        uint256 accountScore = _groupVerify.accountScore(
+            address(this),
+            round,
+            account
+        );
+        if (accountScore == 0) return 0;
 
         uint256 groupTotalScore = _groupVerify.totalAccountScore(
             address(this),
@@ -151,6 +144,9 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
             groupId
         );
         if (groupTotalScore == 0) return 0;
+
+        uint256 groupReward = _calculateRewardByGroupId(round, groupId);
+        if (groupReward == 0) return 0;
 
         return (groupReward * accountScore) / groupTotalScore;
     }
@@ -173,16 +169,13 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         return (totalReward * groupScore) / totalScore;
     }
 
-    function _validateJoinToken(
-        address joinTokenAddress_,
-        address tokenAddress_
-    ) private view {
+    function _validateJoinToken(address joinTokenAddress_) private view {
         if (joinTokenAddress_ == TOKEN_ADDRESS) return;
 
         if (
             !TokenConversionLib.isLPTokenContainingTarget(
                 joinTokenAddress_,
-                tokenAddress_
+                TOKEN_ADDRESS
             )
         ) {
             revert IGroupJoin.InvalidJoinTokenAddress();

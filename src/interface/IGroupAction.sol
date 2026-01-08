@@ -4,7 +4,7 @@ pragma solidity =0.8.17;
 interface IGroupAction {
     error RoundHasVerifiedGroups();
 
-    event UnclaimedRewardBurn(
+    event BurnUnclaimedReward(
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
