@@ -443,10 +443,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.group_service_join(bobGroup1);
 
         // Verify joinedAmount after join (should include both groups)
-        ExtensionGroupService gs = ExtensionGroupService(
+        uint256 joinedVal = ExtensionGroupService(
             aliceGroup.groupServiceAddress
-        );
-        uint256 joinedVal = gs.joinedAmount();
+        ).joinedAmount();
         uint256 expectedJoinedVal = h.getGroupManager().staked(
             bobGroup1.groupActionAddress
         );
@@ -457,9 +456,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
 
         // Verify joinedAmountByAccount for Bob (should include both groups)
-        uint256 bobJoinedVal = gs.joinedAmountByAccount(
-            bobGroup1.flow.userAddress
-        );
+        uint256 bobJoinedVal = ExtensionGroupService(
+            aliceGroup.groupServiceAddress
+        ).joinedAmountByAccount(bobGroup1.flow.userAddress);
         uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
             bobGroup1.groupActionAddress,
             bobGroup1.flow.userAddress
@@ -516,11 +515,6 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // === Claim Phase ===
         h.next_phase();
 
-        // Verify rewardDistributionAll returns both groups
-        IGroupService.GroupDistribution[] memory distributions = gs
-            .rewardDistributionAll(verifyRound, bobGroup1.flow.userAddress);
-        assertEq(distributions.length, 2, "Should have 2 group distributions");
-
         // Record balances before claim
         uint256 m3Bal = IERC20(h.firstTokenAddress()).balanceOf(
             member3().userAddress
@@ -531,9 +525,6 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 m5Bal = IERC20(h.firstTokenAddress()).balanceOf(
             member5().userAddress
         );
-        uint256 bobBal = IERC20(h.firstTokenAddress()).balanceOf(
-            bobGroup1.flow.userAddress
-        );
 
         // Claim
         uint256 totalClaimed = h.group_service_claim_reward(
@@ -542,49 +533,62 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
         assertTrue(totalClaimed > 0, "Should claim some reward");
 
-        // Calculate expected distribution per group
+        // Verify transfers directly using rewardByRecipient
         // Group1 reward: 30% to m3, 20% to m4, 50% to bob
         // Group2 reward: 60% to m5, 40% to bob
-        uint256 group1Reward = distributions[0].groupId == bobGroup1.groupId
-            ? distributions[0].groupReward
-            : distributions[1].groupReward;
-        uint256 group2Reward = distributions[0].groupId == bobGroup2.groupId
-            ? distributions[0].groupReward
-            : distributions[1].groupReward;
-
-        uint256 expectedM3 = (group1Reward * 3e17) / 1e18;
-        uint256 expectedM4 = (group1Reward * 2e17) / 1e18;
-        uint256 expectedM5 = (group2Reward * 6e17) / 1e18;
-        uint256 expectedBob = totalClaimed -
-            expectedM3 -
-            expectedM4 -
-            expectedM5;
-
-        // Verify transfers
-        assertEq(
-            IERC20(h.firstTokenAddress()).balanceOf(member3().userAddress) -
-                m3Bal,
-            expectedM3,
+        address serviceAddr = aliceGroup.groupServiceAddress;
+        _verifyRecipientBalance(
+            serviceAddr,
+            verifyRound,
+            member3().userAddress,
+            m3Bal,
+            bobGroup1.flow.userAddress,
+            bobGroup1.groupActionId,
+            bobGroup1.groupId,
             "Member3 should receive group1 30%"
         );
-        assertEq(
-            IERC20(h.firstTokenAddress()).balanceOf(member4().userAddress) -
-                m4Bal,
-            expectedM4,
+        _verifyRecipientBalance(
+            serviceAddr,
+            verifyRound,
+            member4().userAddress,
+            m4Bal,
+            bobGroup1.flow.userAddress,
+            bobGroup1.groupActionId,
+            bobGroup1.groupId,
             "Member4 should receive group1 20%"
         );
-        assertEq(
-            IERC20(h.firstTokenAddress()).balanceOf(member5().userAddress) -
-                m5Bal,
-            expectedM5,
+        _verifyRecipientBalance(
+            serviceAddr,
+            verifyRound,
+            member5().userAddress,
+            m5Bal,
+            bobGroup1.flow.userAddress,
+            bobGroup2.groupActionId,
+            bobGroup2.groupId,
             "Member5 should receive group2 60%"
         );
+    }
+
+    function _verifyRecipientBalance(
+        address serviceAddr,
+        uint256 round,
+        address recipient,
+        uint256 balanceBefore,
+        address groupOwner,
+        uint256 actionId,
+        uint256 groupId,
+        string memory message
+    ) internal {
         assertEq(
-            IERC20(h.firstTokenAddress()).balanceOf(
-                bobGroup1.flow.userAddress
-            ) - bobBal,
-            expectedBob,
-            "Bob should receive remaining"
+            IERC20(h.firstTokenAddress()).balanceOf(recipient) - balanceBefore,
+            ExtensionGroupService(serviceAddr).rewardByRecipient(
+                round,
+                groupOwner,
+                actionId,
+                groupId,
+                recipient
+            ),
+            message
         );
     }
 

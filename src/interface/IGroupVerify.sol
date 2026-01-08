@@ -175,6 +175,22 @@ interface IGroupVerify {
         uint256 index
     ) external view returns (uint256);
 
+    function actionIdsByVerifier(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256[] memory);
+
+    function actionIdsByVerifierCount(
+        uint256 round,
+        address verifier
+    ) external view returns (uint256);
+
+    function actionIdsByVerifierAtIndex(
+        uint256 round,
+        address verifier,
+        uint256 index
+    ) external view returns (uint256);
+
     function verifiedGroupIds(
         address extension,
         uint256 round

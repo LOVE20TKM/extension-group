@@ -235,46 +235,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
     }
 
-    function rewardDistributionAll(
-        uint256 round,
-        address groupOwner
-    ) external view returns (GroupDistribution[] memory distributions) {
-        uint256[] memory aids = _actionIdsWithRecipients[groupOwner].values(
-            round
-        );
-
-        uint256 total;
-        for (uint256 i; i < aids.length; ) {
-            total += _groupIdsWithRecipients[groupOwner][aids[i]]
-                .values(round)
-                .length;
-            unchecked {
-                ++i;
-            }
-        }
-
-        distributions = new GroupDistribution[](total);
-        uint256 idx;
-        for (uint256 i; i < aids.length; ) {
-            uint256[] memory gids = _groupIdsWithRecipients[groupOwner][aids[i]]
-                .values(round);
-            for (uint256 j; j < gids.length; ) {
-                distributions[idx++] = _buildGroupDistribution(
-                    round,
-                    groupOwner,
-                    aids[i],
-                    gids[j]
-                );
-                unchecked {
-                    ++j;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
     function joinedAmount()
         external
         view

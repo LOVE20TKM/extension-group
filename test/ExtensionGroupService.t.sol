@@ -669,42 +669,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(ownerAmount, 0);
     }
 
-    // ============ rewardDistributionAll Tests ============
-
-    function test_RewardDistributionAll() public {
-        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
-
-        vm.prank(groupOwner1);
-        groupService.join(new string[](0));
-
-        // Set recipients for groupId1
-        address[] memory recipients = new address[](1);
-        recipients[0] = address(0x100);
-        uint256[] memory basisPoints = new uint256[](1);
-        basisPoints[0] = 3e17;
-
-        vm.prank(groupOwner1);
-        groupService.setRecipients(
-            ACTION_ID,
-            groupId1,
-            recipients,
-            basisPoints
-        );
-
-        uint256 round = verify.currentRound();
-
-        IGroupService.GroupDistribution[] memory distributions = groupService
-            .rewardDistributionAll(round, groupOwner1);
-
-        // Should have 1 distribution (for groupId1)
-        assertEq(distributions.length, 1);
-        assertEq(distributions[0].actionId, ACTION_ID);
-        assertEq(distributions[0].groupId, groupId1);
-        assertEq(distributions[0].recipients.length, 1);
-        assertEq(distributions[0].recipients[0], address(0x100));
-        assertEq(distributions[0].basisPoints[0], 3e17);
-    }
-
     // ============ IExtensionJoinedAmount Tests ============
 
     function test_JoinedAmount() public {

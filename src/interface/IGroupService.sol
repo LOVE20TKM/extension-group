@@ -93,11 +93,6 @@ interface IGroupService {
             uint256 ownerAmount
         );
 
-    function rewardDistributionAll(
-        uint256 round,
-        address groupOwner
-    ) external view returns (GroupDistribution[] memory distributions);
-
     function hasActiveGroups(address account) external view returns (bool);
 
     function generatedRewardByVerifier(

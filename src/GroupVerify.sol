@@ -73,6 +73,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         internal _groupIdsByVerifier;
     // extension => round => list of verifiers
     mapping(address => mapping(uint256 => address[])) internal _verifiers;
+    // round => verifier => list of actionIds
+    mapping(uint256 => mapping(address => uint256[]))
+        internal _actionIdsByVerifier;
 
     // extension => round => groupId => capacity reduction factor
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
@@ -572,6 +575,28 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupIdsByVerifier[extension][round][verifier][index];
     }
 
+    function actionIdsByVerifier(
+        uint256 round,
+        address verifier
+    ) external view override returns (uint256[] memory) {
+        return _actionIdsByVerifier[round][verifier];
+    }
+
+    function actionIdsByVerifierCount(
+        uint256 round,
+        address verifier
+    ) external view override returns (uint256) {
+        return _actionIdsByVerifier[round][verifier].length;
+    }
+
+    function actionIdsByVerifierAtIndex(
+        uint256 round,
+        address verifier,
+        uint256 index
+    ) external view override returns (uint256) {
+        return _actionIdsByVerifier[round][verifier][index];
+    }
+
     function verifiedGroupIds(
         address extension,
         uint256 round
@@ -738,6 +763,22 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _isVerified[extension][currentRound][groupId] = true;
         _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
         _verifiedGroupIds[extension][currentRound].push(groupId);
+
+        // Record actionId for verifier (with deduplication)
+        uint256 actionId = IExtension(extension).actionId();
+        uint256[] storage actionIds = _actionIdsByVerifier[currentRound][
+            groupOwner
+        ];
+        bool exists = false;
+        for (uint256 i = 0; i < actionIds.length; i++) {
+            if (actionIds[i] == actionId) {
+                exists = true;
+                break;
+            }
+        }
+        if (!exists) {
+            actionIds.push(actionId);
+        }
 
         _totalAccountScore[extension][currentRound][groupId] = totalScore;
 
