@@ -6,9 +6,6 @@ import {ExtensionGroupAction} from "./ExtensionGroupAction.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
-import {IGroupManager} from "./interface/IGroupManager.sol";
-import {IGroupJoin} from "./interface/IGroupJoin.sol";
-import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
@@ -99,5 +96,6 @@ contract ExtensionGroupActionFactory is
             mstore(extensions, valid)
             mstore(actionIds_, valid)
         }
+        return (actionIds_, extensions);
     }
 }
