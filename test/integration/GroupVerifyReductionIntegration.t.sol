@@ -181,13 +181,6 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
                 extensionAddr
             );
 
-        // Get total votes for calculation
-        uint256 totalVotes = h.voteContract().votesNumByActionId(
-            h.firstTokenAddress(),
-            round,
-            actionId
-        );
-
         // Cast distrust vote: use a small portion of alice's verify votes
         uint256 distrustVotes = aliceVerifyVotes / 10; // 10% of alice's verify votes
         if (distrustVotes == 0) {
@@ -238,9 +231,6 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
 
         // Group score should be: groupAmount * distrustReduction * capacityReduction / PRECISION
         uint256 groupAmount = 10e18;
-        uint256 expectedScore = (groupAmount *
-            distrustReduction *
-            capacityReduction) / (PRECISION * PRECISION);
 
         // Verify group score is calculated correctly
         // Group score = groupAmount * distrustReduction * capacityReduction / PRECISION^2

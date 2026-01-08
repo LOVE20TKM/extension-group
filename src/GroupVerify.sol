@@ -809,14 +809,14 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 groupAmount,
         uint256 totalVotes,
         uint256 distrustVotes,
-        uint256 capacityReduction
+        uint256 capacityReduction_
     ) internal pure returns (uint256) {
         if (totalVotes == 0) {
             return 0;
         }
         return
             (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
-                capacityReduction) / PRECISION;
+                capacityReduction_) / PRECISION;
     }
 
     function _calculateGroupScore(
@@ -840,7 +840,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round,
             actionId
         );
-        uint256 capacityReduction = _capacityReductionByGroupId[extension][
+        uint256 capacityReduction_ = _capacityReductionByGroupId[extension][
             round
         ][groupId];
 
@@ -849,7 +849,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
                 groupAmount,
                 totalVotes,
                 distrustVotes,
-                capacityReduction
+                capacityReduction_
             );
     }
 
@@ -918,13 +918,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             groupId,
             round
         );
-        uint256 capacityReduction = capacityReductionMap[groupId];
+        uint256 capacityReduction_ = capacityReductionMap[groupId];
 
         uint256 newScore = _computeGroupScore(
             groupAmount,
             totalVotes,
             distrustVotes,
-            capacityReduction
+            capacityReduction_
         );
 
         scoreMap[groupId] = newScore;
