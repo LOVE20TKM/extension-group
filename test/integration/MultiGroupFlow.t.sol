@@ -135,7 +135,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         _verifyGroup3Rewards(ga, g3Members, verifyRound);
 
         // Verify bob's total rewards from both groups
-        _verifyBobTotalGroupRewards(ga, g1Members, g2Members, verifyRound);
+        _verifyBobTotalGroupRewards(ga, verifyRound);
     }
 
     /// @notice Test group action with multiple group owners
@@ -504,8 +504,6 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
 
     function _verifyBobTotalGroupRewards(
         ExtensionGroupAction ga,
-        GroupUserParams[3] memory g1Members,
-        GroupUserParams[3] memory g2Members,
         uint256 verifyRound
     ) internal {
         // Calculate expected sum of member rewards in both groups (from pre-calculated values)
