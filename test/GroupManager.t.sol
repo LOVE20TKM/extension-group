@@ -627,7 +627,7 @@ contract GroupManagerTest is BaseGroupTest {
         // Verify updated info
         (
             uint256 groupId_,
-            string memory desc,
+            string memory description,
             uint256 maxCapacity,
             uint256 minJoinAmount,
             uint256 maxJoinAmount,
@@ -639,7 +639,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         assertEq(groupId_, groupId, "GroupId should match");
         assertEq(
-            desc,
+            description,
             "Updated Description",
             "Description should be updated"
         );
@@ -780,7 +780,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         (
             uint256 groupId_,
-            string memory desc,
+            string memory description,
             uint256 maxCapacity,
             uint256 minJoinAmount,
             uint256 maxJoinAmount,
@@ -791,7 +791,7 @@ contract GroupManagerTest is BaseGroupTest {
         ) = groupManager.groupInfo(address(extension1), groupId);
 
         assertEq(groupId_, groupId, "GroupId should match");
-        assertEq(desc, "Test Description", "Description should match");
+        assertEq(description, "Test Description", "Description should match");
         assertEq(maxCapacity, 100, "MaxCapacity should match");
         assertEq(minJoinAmount, 1e18, "MinJoinAmount should match");
         assertEq(maxJoinAmount, 2e18, "MaxJoinAmount should match");
@@ -803,6 +803,251 @@ contract GroupManagerTest is BaseGroupTest {
             "ActivatedRound should match"
         );
         assertEq(deactivatedRound, 0, "DeactivatedRound should be 0");
+    }
+
+    /// @notice Test: descriptionByRound returns correct description for activation round
+    function test_descriptionByRound_ReturnsActivationRoundDescription() public {
+        uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "Group1");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        uint256 activationRound = join.currentRound();
+        string memory initialDesc = "Initial Description";
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(extension1),
+            groupId,
+            initialDesc,
+            100,
+            1e18,
+            2e18,
+            10
+        );
+
+        string memory desc = groupManager.descriptionByRound(
+            address(extension1),
+            activationRound,
+            groupId
+        );
+
+        assertEq(desc, initialDesc, "Description should match activation round");
+    }
+
+    /// @notice Test: descriptionByRound returns correct description after update across rounds
+    function test_descriptionByRound_ReturnsCorrectDescriptionAcrossRounds() public {
+        uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "Group1");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        uint256 round1 = join.currentRound();
+        string memory desc1 = "Round 1 Description";
+
+        // Activate in round 1
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(extension1),
+            groupId,
+            desc1,
+            100,
+            1e18,
+            2e18,
+            10
+        );
+
+        // Advance to round 2
+        advanceRound();
+        uint256 round2 = join.currentRound();
+        string memory desc2 = "Round 2 Description";
+
+        // Update description in round 2
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.updateGroupInfo(
+            address(extension1),
+            groupId,
+            desc2,
+            200,
+            2e18,
+            3e18,
+            20
+        );
+
+        // Advance to round 3
+        advanceRound();
+        uint256 round3 = join.currentRound();
+        string memory desc3 = "Round 3 Description";
+
+        // Update description in round 3
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.updateGroupInfo(
+            address(extension1),
+            groupId,
+            desc3,
+            300,
+            3e18,
+            4e18,
+            30
+        );
+
+        // Verify round 1 description is preserved
+        string memory retrievedDesc1 = groupManager.descriptionByRound(
+            address(extension1),
+            round1,
+            groupId
+        );
+        assertEq(retrievedDesc1, desc1, "Round 1 description should be preserved");
+
+        // Verify round 2 description is preserved
+        string memory retrievedDesc2 = groupManager.descriptionByRound(
+            address(extension1),
+            round2,
+            groupId
+        );
+        assertEq(retrievedDesc2, desc2, "Round 2 description should be preserved");
+
+        // Verify round 3 description is correct
+        string memory retrievedDesc3 = groupManager.descriptionByRound(
+            address(extension1),
+            round3,
+            groupId
+        );
+        assertEq(retrievedDesc3, desc3, "Round 3 description should be correct");
+
+        // Verify current groupInfo returns latest description
+        (, string memory currentDesc, , , , , , , ) = groupManager.groupInfo(
+            address(extension1),
+            groupId
+        );
+        assertEq(currentDesc, desc3, "Current description should be latest");
+    }
+
+    /// @notice Test: descriptionByRound returns empty string for non-existent round
+    function test_descriptionByRound_ReturnsEmptyForNonExistentRound() public {
+        uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "Group1");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        uint256 activationRound = join.currentRound();
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(extension1),
+            groupId,
+            "Test Description",
+            100,
+            1e18,
+            2e18,
+            10
+        );
+
+        // Query a round that doesn't exist (before activation)
+        uint256 nonExistentRound = activationRound - 1;
+        string memory desc = groupManager.descriptionByRound(
+            address(extension1),
+            nonExistentRound,
+            groupId
+        );
+
+        assertEq(bytes(desc).length, 0, "Description should be empty for non-existent round");
+    }
+
+    /// @notice Test: descriptionByRound works correctly for multiple groups
+    function test_descriptionByRound_MultipleGroups() public {
+        uint256 groupId1 = setupGroupOwner(groupOwner1, 10000e18, "Group1");
+        uint256 groupId2 = setupGroupOwner(groupOwner2, 10000e18, "Group2");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        uint256 round1 = join.currentRound();
+
+        // Activate group 1
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(extension1),
+            groupId1,
+            "Group 1 Description",
+            100,
+            1e18,
+            2e18,
+            10
+        );
+
+        // Activate group 2
+        vm.prank(groupOwner2, groupOwner2);
+        groupManager.activateGroup(
+            address(extension1),
+            groupId2,
+            "Group 2 Description",
+            200,
+            2e18,
+            3e18,
+            20
+        );
+
+        // Advance round
+        advanceRound();
+        uint256 round2 = join.currentRound();
+
+        // Update group 1
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.updateGroupInfo(
+            address(extension1),
+            groupId1,
+            "Group 1 Updated",
+            150,
+            1.5e18,
+            2.5e18,
+            15
+        );
+
+        // Verify group 1 round 1 description
+        string memory desc1Round1 = groupManager.descriptionByRound(
+            address(extension1),
+            round1,
+            groupId1
+        );
+        assertEq(desc1Round1, "Group 1 Description", "Group 1 round 1 description should match");
+
+        // Verify group 1 round 2 description
+        string memory desc1Round2 = groupManager.descriptionByRound(
+            address(extension1),
+            round2,
+            groupId1
+        );
+        assertEq(desc1Round2, "Group 1 Updated", "Group 1 round 2 description should match");
+
+        // Verify group 2 round 1 description (unchanged)
+        string memory desc2Round1 = groupManager.descriptionByRound(
+            address(extension1),
+            round1,
+            groupId2
+        );
+        assertEq(desc2Round1, "Group 2 Description", "Group 2 round 1 description should match");
+
+        // Verify group 2 round 2 description (unchanged, no update)
+        string memory desc2Round2 = groupManager.descriptionByRound(
+            address(extension1),
+            round2,
+            groupId2
+        );
+        assertEq(desc2Round2, "Group 2 Description", "Group 2 round 2 description should be same as round 1");
     }
 
     /// @notice Test: activeGroupIds returns correct group IDs

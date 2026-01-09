@@ -563,7 +563,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
     }
 
     function test_UpdateGroupInfo() public {
-        string memory newDesc = "Updated description";
+        string memory newDescription = "Updated description";
         uint256 newMin = 5e18;
         uint256 newMax = 50e18;
 
@@ -571,17 +571,17 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         groupManager.updateGroupInfo(
             address(groupAction),
             groupId1,
-            newDesc,
+            newDescription,
             0, // newMaxCapacity
             newMin,
             newMax,
             0
         );
 
-        string memory desc = _groupDescription(groupId1);
+        string memory description = _groupDescription(groupId1);
         uint256 minJoin = _minJoinAmount(groupId1);
         uint256 maxJoin = _maxJoinAmount(groupId1);
-        assertEq(desc, newDesc);
+        assertEq(description, newDescription);
         assertEq(minJoin, newMin);
         assertEq(maxJoin, newMax);
     }
