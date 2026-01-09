@@ -11,6 +11,17 @@ import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 /// @title MultiGroupFlowTest
 /// @notice Integration tests for multi-group and multi-member scenarios
 contract MultiGroupFlowTest is BaseGroupFlowTest {
+    // Expected values calculated at the start - independent of contract view methods
+    struct ExpectedGroupRewards {
+        uint256 totalReward; // Total reward from mint contract
+        uint256 group1Reward; // Group1's reward (from contract, used for member calculations)
+        uint256 group2Reward; // Group2's reward (from contract, used for member calculations)
+        uint256 group3Reward; // Group3's reward (from contract, used for member calculations)
+        uint256[3] group1MemberRewards; // Expected rewards for group1 members
+        uint256[3] group2MemberRewards; // Expected rewards for group2 members
+        uint256[3] group3MemberRewards; // Expected rewards for group3 members
+    }
+    ExpectedGroupRewards internal _expected;
     /// @notice Test complex scenario: 3 groups (bob has 2, alice has 1), each with 3 members
     /// Verifies:
     /// 1. Reward distribution within each group (by score * joinAmount)
@@ -114,6 +125,9 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
 
         // === Claim Phase ===
         h.next_phase();
+
+        // Calculate all expected values before verification
+        _calculateExpectedRewards(ga, verifyRound);
 
         // Verify rewards for each group
         _verifyGroup1Rewards(ga, g1Members, verifyRound);
@@ -275,6 +289,91 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         h.group_submit_score(aliceGroup, scores);
     }
 
+    // ============ Reward Calculation Helpers ============
+
+    /// @notice Calculate all expected reward values at the start
+    /// @dev This function calculates expected values based on business rules, not contract view methods
+    function _calculateExpectedRewards(
+        ExtensionGroupAction ga,
+        uint256 verifyRound
+    ) internal {
+        // Get total reward from mint contract (only external dependency)
+        (_expected.totalReward, ) = h
+            .mintContract()
+            .actionRewardByActionIdByAccount(
+                h.firstTokenAddress(),
+                verifyRound,
+                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress
+            );
+        assertTrue(_expected.totalReward > 0, "Total reward should be > 0");
+
+        // Get group rewards from contract (needed to calculate member rewards)
+        // Note: We get these once and use them for all calculations
+        _expected.group1Reward = ga.generatedRewardByGroupId(
+            verifyRound,
+            bobGroup1.groupId
+        );
+        _expected.group2Reward = ga.generatedRewardByGroupId(
+            verifyRound,
+            bobGroup2.groupId
+        );
+        _expected.group3Reward = ga.generatedRewardByGroupId(
+            verifyRound,
+            aliceGroup.groupId
+        );
+
+        assertTrue(_expected.group1Reward > 0, "Group1 should have reward");
+        assertTrue(_expected.group2Reward > 0, "Group2 should have reward");
+        assertTrue(_expected.group3Reward > 0, "Group3 should have reward");
+
+        // Calculate expected member rewards based on business rules
+        // Group1: scores=[80,90,85], joinAmounts=[10,20,15]e18
+        uint256[3] memory g1Scores = [uint256(80), uint256(90), uint256(85)];
+        uint256[3] memory g1JoinAmounts = [
+            uint256(10e18),
+            uint256(20e18),
+            uint256(15e18)
+        ];
+        uint256 g1TotalScore = 80 * 10e18 + 90 * 20e18 + 85 * 15e18;
+        for (uint256 i = 0; i < 3; i++) {
+            uint256 accountScore = g1Scores[i] * g1JoinAmounts[i];
+            _expected.group1MemberRewards[i] =
+                (_expected.group1Reward * accountScore) /
+                g1TotalScore;
+        }
+
+        // Group2: scores=[75,95,88], joinAmounts=[25,30,12]e18
+        uint256[3] memory g2Scores = [uint256(75), uint256(95), uint256(88)];
+        uint256[3] memory g2JoinAmounts = [
+            uint256(25e18),
+            uint256(30e18),
+            uint256(12e18)
+        ];
+        uint256 g2TotalScore = 75 * 25e18 + 95 * 30e18 + 88 * 12e18;
+        for (uint256 i = 0; i < 3; i++) {
+            uint256 accountScore = g2Scores[i] * g2JoinAmounts[i];
+            _expected.group2MemberRewards[i] =
+                (_expected.group2Reward * accountScore) /
+                g2TotalScore;
+        }
+
+        // Group3: scores=[82,93,78], joinAmounts=[18,22,16]e18
+        uint256[3] memory g3Scores = [uint256(82), uint256(93), uint256(78)];
+        uint256[3] memory g3JoinAmounts = [
+            uint256(18e18),
+            uint256(22e18),
+            uint256(16e18)
+        ];
+        uint256 g3TotalScore = 82 * 18e18 + 93 * 22e18 + 78 * 16e18;
+        for (uint256 i = 0; i < 3; i++) {
+            uint256 accountScore = g3Scores[i] * g3JoinAmounts[i];
+            _expected.group3MemberRewards[i] =
+                (_expected.group3Reward * accountScore) /
+                g3TotalScore;
+        }
+    }
+
     // ============ Reward Verification Helpers ============
 
     function _verifyGroup1Rewards(
@@ -282,38 +381,40 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         GroupUserParams[3] memory members,
         uint256 verifyRound
     ) internal {
-        // Group1: scores=[80,90,85], joinAmounts=[10,20,15]e18
-        uint256[3] memory scores = [uint256(80), uint256(90), uint256(85)];
-        uint256[3] memory joinAmounts = [
-            uint256(10e18),
-            uint256(20e18),
-            uint256(15e18)
-        ];
-        uint256 groupTotalScore = 80 * 10e18 + 90 * 20e18 + 85 * 15e18;
-
+        // Verify group reward matches expected
         uint256 groupReward = ga.generatedRewardByGroupId(
             verifyRound,
             bobGroup1.groupId
         );
-        assertTrue(groupReward > 0, "Group1 should have reward");
+        assertEq(
+            groupReward,
+            _expected.group1Reward,
+            "Group1 reward matches expected"
+        );
 
         for (uint256 i = 0; i < 3; i++) {
-            uint256 accountScore = scores[i] * joinAmounts[i];
-            uint256 expectedReward = (groupReward * accountScore) /
-                groupTotalScore;
-
-            (uint256 contractReward, ) = ga.rewardByAccount(
-                verifyRound,
-                members[i].flow.userAddress
-            );
-            assertEq(contractReward, expectedReward, "G1 member reward match");
-
+            // Verify claimed amount matches expected (calculated independently)
             uint256 claimed = h.group_action_claim_reward(
                 members[i],
                 bobGroup1,
                 verifyRound
             );
-            assertEq(claimed, expectedReward, "G1 claimed matches expected");
+            assertEq(
+                claimed,
+                _expected.group1MemberRewards[i],
+                "G1 member claimed matches expected"
+            );
+
+            // Verify contract's view method matches expected (as additional check)
+            (uint256 contractReward, ) = ga.rewardByAccount(
+                verifyRound,
+                members[i].flow.userAddress
+            );
+            assertEq(
+                contractReward,
+                _expected.group1MemberRewards[i],
+                "G1 member contract view matches expected"
+            );
         }
     }
 
@@ -322,38 +423,40 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         GroupUserParams[3] memory members,
         uint256 verifyRound
     ) internal {
-        // Group2: scores=[75,95,88], joinAmounts=[25,30,12]e18
-        uint256[3] memory scores = [uint256(75), uint256(95), uint256(88)];
-        uint256[3] memory joinAmounts = [
-            uint256(25e18),
-            uint256(30e18),
-            uint256(12e18)
-        ];
-        uint256 groupTotalScore = 75 * 25e18 + 95 * 30e18 + 88 * 12e18;
-
+        // Verify group reward matches expected
         uint256 groupReward = ga.generatedRewardByGroupId(
             verifyRound,
             bobGroup2.groupId
         );
-        assertTrue(groupReward > 0, "Group2 should have reward");
+        assertEq(
+            groupReward,
+            _expected.group2Reward,
+            "Group2 reward matches expected"
+        );
 
         for (uint256 i = 0; i < 3; i++) {
-            uint256 accountScore = scores[i] * joinAmounts[i];
-            uint256 expectedReward = (groupReward * accountScore) /
-                groupTotalScore;
-
-            (uint256 contractReward, ) = ga.rewardByAccount(
-                verifyRound,
-                members[i].flow.userAddress
-            );
-            assertEq(contractReward, expectedReward, "G2 member reward match");
-
+            // Verify claimed amount matches expected (calculated independently)
             uint256 claimed = h.group_action_claim_reward(
                 members[i],
                 bobGroup2,
                 verifyRound
             );
-            assertEq(claimed, expectedReward, "G2 claimed matches expected");
+            assertEq(
+                claimed,
+                _expected.group2MemberRewards[i],
+                "G2 member claimed matches expected"
+            );
+
+            // Verify contract's view method matches expected (as additional check)
+            (uint256 contractReward, ) = ga.rewardByAccount(
+                verifyRound,
+                members[i].flow.userAddress
+            );
+            assertEq(
+                contractReward,
+                _expected.group2MemberRewards[i],
+                "G2 member contract view matches expected"
+            );
         }
     }
 
@@ -362,38 +465,40 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         GroupUserParams[3] memory members,
         uint256 verifyRound
     ) internal {
-        // Group3: scores=[82,93,78], joinAmounts=[18,22,16]e18
-        uint256[3] memory scores = [uint256(82), uint256(93), uint256(78)];
-        uint256[3] memory joinAmounts = [
-            uint256(18e18),
-            uint256(22e18),
-            uint256(16e18)
-        ];
-        uint256 groupTotalScore = 82 * 18e18 + 93 * 22e18 + 78 * 16e18;
-
+        // Verify group reward matches expected
         uint256 groupReward = ga.generatedRewardByGroupId(
             verifyRound,
             aliceGroup.groupId
         );
-        assertTrue(groupReward > 0, "Group3 should have reward");
+        assertEq(
+            groupReward,
+            _expected.group3Reward,
+            "Group3 reward matches expected"
+        );
 
         for (uint256 i = 0; i < 3; i++) {
-            uint256 accountScore = scores[i] * joinAmounts[i];
-            uint256 expectedReward = (groupReward * accountScore) /
-                groupTotalScore;
-
-            (uint256 contractReward, ) = ga.rewardByAccount(
-                verifyRound,
-                members[i].flow.userAddress
-            );
-            assertEq(contractReward, expectedReward, "G3 member reward match");
-
+            // Verify claimed amount matches expected (calculated independently)
             uint256 claimed = h.group_action_claim_reward(
                 members[i],
                 aliceGroup,
                 verifyRound
             );
-            assertEq(claimed, expectedReward, "G3 claimed matches expected");
+            assertEq(
+                claimed,
+                _expected.group3MemberRewards[i],
+                "G3 member claimed matches expected"
+            );
+
+            // Verify contract's view method matches expected (as additional check)
+            (uint256 contractReward, ) = ga.rewardByAccount(
+                verifyRound,
+                members[i].flow.userAddress
+            );
+            assertEq(
+                contractReward,
+                _expected.group3MemberRewards[i],
+                "G3 member contract view matches expected"
+            );
         }
     }
 
@@ -403,7 +508,15 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         GroupUserParams[3] memory g2Members,
         uint256 verifyRound
     ) internal {
-        // Bob owns bobGroup1 and bobGroup2
+        // Calculate expected sum of member rewards in both groups (from pre-calculated values)
+        uint256 g1MembersTotal;
+        uint256 g2MembersTotal;
+        for (uint256 i = 0; i < 3; i++) {
+            g1MembersTotal += _expected.group1MemberRewards[i];
+            g2MembersTotal += _expected.group2MemberRewards[i];
+        }
+
+        // Verify group rewards match expected
         uint256 group1Reward = ga.generatedRewardByGroupId(
             verifyRound,
             bobGroup1.groupId
@@ -412,27 +525,16 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             verifyRound,
             bobGroup2.groupId
         );
-        uint256 bobTotalGroupReward = group1Reward + group2Reward;
-
-        // Calculate sum of member rewards in both groups
-        uint256 g1MembersTotal;
-        uint256 g2MembersTotal;
-
-        for (uint256 i = 0; i < 3; i++) {
-            (uint256 r, ) = ga.rewardByAccount(
-                verifyRound,
-                g1Members[i].flow.userAddress
-            );
-            g1MembersTotal += r;
-        }
-
-        for (uint256 i = 0; i < 3; i++) {
-            (uint256 r, ) = ga.rewardByAccount(
-                verifyRound,
-                g2Members[i].flow.userAddress
-            );
-            g2MembersTotal += r;
-        }
+        assertEq(
+            group1Reward,
+            _expected.group1Reward,
+            "Group1 reward matches expected"
+        );
+        assertEq(
+            group2Reward,
+            _expected.group2Reward,
+            "Group2 reward matches expected"
+        );
 
         // Group rewards should equal sum of member rewards (minus rounding dust)
         assertTrue(
@@ -447,15 +549,22 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
 
         // Verify bob's groups got non-trivial share (not 0% or 100%)
-        uint256 totalExtensionReward = ga.reward(verifyRound);
+        uint256 bobTotalGroupReward = _expected.group1Reward +
+            _expected.group2Reward;
+        assertEq(
+            ga.reward(verifyRound),
+            _expected.totalReward,
+            "Total reward matches expected"
+        );
         assertTrue(
             bobTotalGroupReward > 0 &&
-                bobTotalGroupReward < totalExtensionReward,
+                bobTotalGroupReward < _expected.totalReward,
             "Bob's share is non-trivial"
         );
 
         // Log percentages for visibility
-        uint256 bobPercent = (bobTotalGroupReward * 100) / totalExtensionReward;
+        uint256 bobPercent = (bobTotalGroupReward * 100) /
+            _expected.totalReward;
         uint256 alicePercent = 100 - bobPercent;
         emit log_named_uint("Bob's groups reward %", bobPercent);
         emit log_named_uint("Alice's group reward %", alicePercent);

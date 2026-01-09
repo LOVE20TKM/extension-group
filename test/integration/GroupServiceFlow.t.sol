@@ -11,6 +11,23 @@ import {IGroupService} from "../../src/interface/IGroupService.sol";
 /// @title GroupServiceFlowTest
 /// @notice Integration test for complete group service flow with reward claiming
 contract GroupServiceFlowTest is BaseGroupFlowTest {
+    // Expected values calculated at the start - independent of contract view methods
+    struct ExpectedServiceRewards {
+        uint256 gaReward; // Group Action reward from mint contract
+        uint256 serviceReward; // Service reward from mint contract
+        uint256 bobGroupReward; // Bob's group reward from service (100% since only provider)
+        uint256 member2RecipientAmount; // Member2's recipient amount (50%)
+        uint256 member3RecipientAmount; // Member3's recipient amount (30%)
+        uint256 bobOwnerAmount; // Bob's owner amount (remaining 20%)
+    }
+    ExpectedServiceRewards internal _expectedService;
+
+    struct ExpectedActionRewards {
+        uint256 totalReward; // Total action reward
+        uint256 member1Reward; // Member1's reward (100% since only member)
+        uint256 member1AccountScore; // Member1's accountScore
+    }
+    ExpectedActionRewards internal _expectedAction;
     /// @notice Test full group service flow with reward claiming
     function test_full_group_service_flow() public {
         // === Vote Phase: Both actions need different submitters ===
@@ -91,6 +108,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // === Claim Phase ===
         h.next_phase();
 
+        // Calculate all expected values before verification
+        _calculateExpectedServiceRewards(verifyRound);
+        _calculateExpectedActionRewards(verifyRound, m1);
+
         // Group service provider (bobGroup1) claims from aliceGroup's service
         _verifyServiceRewardClaim(verifyRound);
 
@@ -125,6 +146,57 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
     }
 
+    /// @notice Calculate all expected service reward values at the start
+    /// @dev This function calculates expected values based on business rules, not contract view methods
+    function _calculateExpectedServiceRewards(uint256 verifyRound) internal {
+        // Get rewards from mint contract (only external dependency)
+        (_expectedService.gaReward, ) = h
+            .mintContract()
+            .actionRewardByActionIdByAccount(
+                h.firstTokenAddress(),
+                verifyRound,
+                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress
+            );
+        assertTrue(_expectedService.gaReward > 0, "Expected GA reward > 0");
+
+        (_expectedService.serviceReward, ) = h
+            .mintContract()
+            .actionRewardByActionIdByAccount(
+                h.firstTokenAddress(),
+                verifyRound,
+                aliceGroup.groupServiceActionId,
+                aliceGroup.groupServiceAddress
+            );
+        assertTrue(_expectedService.serviceReward > 0, "Expected Service reward > 0");
+
+        // Calculate expected bobGroup1's service reward based on business rules
+        // Service reward formula: groupReward = (totalServiceReward * groupActionReward) / totalActionReward
+        // Since bobGroup1 is the only provider with only one group action:
+        // - groupActionReward = totalActionReward = expectedGAReward
+        // - Therefore: groupReward = expectedServiceReward * expectedGAReward / expectedGAReward = expectedServiceReward
+        _expectedService.bobGroupReward = _expectedService.serviceReward;
+
+        // Calculate recipient amounts based on configured ratios
+        // Recipient ratios: member2 = 50% (5e17), member3 = 30% (3e17), owner = 20% (remaining)
+        // Formula: recipientAmount = (groupReward * ratio) / 1e18
+        _expectedService.member2RecipientAmount = (_expectedService.bobGroupReward * 5e17) / 1e18;
+        _expectedService.member3RecipientAmount = (_expectedService.bobGroupReward * 3e17) / 1e18;
+        _expectedService.bobOwnerAmount = _expectedService.bobGroupReward 
+            - _expectedService.member2RecipientAmount 
+            - _expectedService.member3RecipientAmount;
+
+        // Verify expected values sum correctly (with rounding tolerance)
+        uint256 sumRecipients = _expectedService.member2RecipientAmount 
+            + _expectedService.member3RecipientAmount 
+            + _expectedService.bobOwnerAmount;
+        assertTrue(
+            sumRecipients >= _expectedService.bobGroupReward - 2 && 
+            sumRecipients <= _expectedService.bobGroupReward,
+            "Sum of recipient amounts should equal group reward (with rounding tolerance)"
+        );
+    }
+
     function _verifyServiceRewardClaim(uint256 verifyRound) internal {
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
@@ -133,73 +205,47 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             bobGroup1.groupActionAddress
         );
 
-        // 1. Get expected Group Action reward from mint contract
-        (uint256 expectedGAReward, ) = h
-            .mintContract()
-            .actionRewardByActionIdByAccount(
-                h.firstTokenAddress(),
-                verifyRound,
-                bobGroup1.groupActionId,
-                bobGroup1.groupActionAddress
-            );
-        assertTrue(expectedGAReward > 0, "Expected GA reward > 0");
+        // Verify total rewards match expected (from mint contract)
         assertEq(
             ga.reward(verifyRound),
-            expectedGAReward,
-            "GA reward matches mint"
+            _expectedService.gaReward,
+            "GA reward matches expected"
         );
-
-        // 2. Get expected Service reward from mint contract
-        (uint256 expectedServiceReward, ) = h
-            .mintContract()
-            .actionRewardByActionIdByAccount(
-                h.firstTokenAddress(),
-                verifyRound,
-                aliceGroup.groupServiceActionId,
-                aliceGroup.groupServiceAddress
-            );
-        assertTrue(expectedServiceReward > 0, "Expected Service reward > 0");
         assertEq(
             gs.reward(verifyRound),
-            expectedServiceReward,
-            "Service reward matches mint"
+            _expectedService.serviceReward,
+            "Service reward matches expected"
         );
 
-        // 3. Calculate expected bobGroup1's service reward
-        // bobGroup1 is only provider with only group action, so he gets 100%
-        uint256 bobGroup1GeneratedReward = ga.generatedActionRewardByVerifier(
+        // Verify bobGroup1's generated reward (as additional check)
+        uint256 bobGeneratedReward = ga.generatedActionRewardByVerifier(
             verifyRound,
             bobGroup1.flow.userAddress
         );
         assertEq(
-            bobGroup1GeneratedReward,
-            expectedGAReward,
-            "Bob generated all"
+            bobGeneratedReward,
+            _expectedService.gaReward,
+            "Bob generated all GA reward"
         );
 
-        uint256 expectedBobTotal = (expectedServiceReward *
-            bobGroup1GeneratedReward) / expectedGAReward;
-        assertEq(expectedBobTotal, expectedServiceReward, "Bob gets 100%");
-
-        // 4. Verify extension contract calculation matches
+        // Verify extension contract calculation matches expected
         (uint256 contractValue, bool alreadyClaimed) = gs.rewardByAccount(
             verifyRound,
             bobGroup1.flow.userAddress
         );
         assertFalse(alreadyClaimed, "Should not be claimed yet");
-        assertEq(contractValue, expectedBobTotal, "Contract matches formula");
+        assertEq(contractValue, _expectedService.bobGroupReward, "Contract matches expected");
 
-        // 5. Verify recipients and distribution
-        _verifyServiceRecipientsConfig(gs, verifyRound, expectedBobTotal);
+        // Verify recipients and distribution
+        _verifyServiceRecipientsConfig(gs, verifyRound);
 
-        // 6. Claim and verify transfers
-        _claimAndVerifyServiceTransfers(gs, verifyRound, expectedBobTotal);
+        // Claim and verify transfers
+        _claimAndVerifyServiceTransfers(gs, verifyRound);
     }
 
     function _verifyServiceRecipientsConfig(
         ExtensionGroupService gs,
-        uint256 verifyRound,
-        uint256 expectedTotal
+        uint256 verifyRound
     ) internal {
         // Verify recipients configuration
         (address[] memory addrs, uint256[] memory ratios) = gs.recipients(
@@ -214,12 +260,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(ratios[0], 5e17, "Recipient 0 = 50%");
         assertEq(ratios[1], 3e17, "Recipient 1 = 30%");
 
-        // Calculate expected amounts
-        uint256 expectedM2 = (expectedTotal * 5e17) / 1e18;
-        uint256 expectedM3 = (expectedTotal * 3e17) / 1e18;
-        uint256 expectedBob = expectedTotal - expectedM2 - expectedM3;
-
-        // Verify rewardByRecipient
+        // Verify rewardByRecipient matches expected (calculated independently)
         assertEq(
             gs.rewardByRecipient(
                 verifyRound,
@@ -228,8 +269,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
                 bobGroup1.groupId,
                 member2().userAddress
             ),
-            expectedM2,
-            "rewardByRecipient m2"
+            _expectedService.member2RecipientAmount,
+            "rewardByRecipient m2 matches expected"
         );
         assertEq(
             gs.rewardByRecipient(
@@ -239,8 +280,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
                 bobGroup1.groupId,
                 member3().userAddress
             ),
-            expectedM3,
-            "rewardByRecipient m3"
+            _expectedService.member3RecipientAmount,
+            "rewardByRecipient m3 matches expected"
         );
         assertEq(
             gs.rewardByRecipient(
@@ -250,11 +291,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
                 bobGroup1.groupId,
                 bobGroup1.flow.userAddress
             ),
-            expectedBob,
-            "rewardByRecipient bobGroup1"
+            _expectedService.bobOwnerAmount,
+            "rewardByRecipient bobGroup1 matches expected"
         );
 
-        // Verify rewardDistribution
+        // Verify rewardDistribution matches expected
         (
             address[] memory distAddrs,
             uint256[] memory distRatios,
@@ -268,24 +309,18 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             );
 
         assertEq(distAddrs.length, 2, "Distribution has 2 recipients");
-        assertEq(distAmounts[0], expectedM2, "Distribution amt 0");
-        assertEq(distAmounts[1], expectedM3, "Distribution amt 1");
-        assertEq(ownerAmt, expectedBob, "Owner amount");
+        assertEq(distAmounts[0], _expectedService.member2RecipientAmount, "Distribution amt 0 matches expected");
+        assertEq(distAmounts[1], _expectedService.member3RecipientAmount, "Distribution amt 1 matches expected");
+        assertEq(ownerAmt, _expectedService.bobOwnerAmount, "Owner amount matches expected");
         assertEq(distRatios[0], 5e17, "Distribution ratios 0");
         assertEq(distRatios[1], 3e17, "Distribution ratios 1");
     }
 
     function _claimAndVerifyServiceTransfers(
         ExtensionGroupService gs,
-        uint256 verifyRound,
-        uint256 expectedTotal
+        uint256 verifyRound
     ) internal {
-        // Calculate expected amounts
-        uint256 expectedM2 = (expectedTotal * 5e17) / 1e18;
-        uint256 expectedM3 = (expectedTotal * 3e17) / 1e18;
-        uint256 expectedBob = expectedTotal - expectedM2 - expectedM3;
-
-        // Record balances
+        // Record balances before claim
         uint256 bobGroup1Bal = IERC20(h.firstTokenAddress()).balanceOf(
             bobGroup1.flow.userAddress
         );
@@ -298,7 +333,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
 
         // Claim
         uint256 claimed = h.group_service_claim_reward(bobGroup1, verifyRound);
-        assertEq(claimed, expectedTotal, "Claimed amount mismatch");
+        assertEq(claimed, _expectedService.bobGroupReward, "Claimed amount matches expected");
 
         // Verify claimed status
         (, bool isClaimed) = gs.rewardByAccount(
@@ -307,33 +342,68 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
         assertTrue(isClaimed, "Should be marked as claimed");
 
-        // Verify token transfers
+        // Verify token transfers match expected amounts (calculated independently)
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(member2().userAddress) -
                 m2Bal,
-            expectedM2,
-            "Member2 transfer"
+            _expectedService.member2RecipientAmount,
+            "Member2 transfer matches expected"
         );
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(member3().userAddress) -
                 m3Bal,
-            expectedM3,
-            "Member3 transfer"
+            _expectedService.member3RecipientAmount,
+            "Member3 transfer matches expected"
         );
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(
                 bobGroup1.flow.userAddress
             ) - bobGroup1Bal,
-            expectedBob,
-            "Bob transfer"
+            _expectedService.bobOwnerAmount,
+            "Bob transfer matches expected"
         );
 
-        // Verify total
+        // Verify total matches expected
+        uint256 sumTransfers = _expectedService.member2RecipientAmount 
+            + _expectedService.member3RecipientAmount 
+            + _expectedService.bobOwnerAmount;
         assertEq(
-            expectedM2 + expectedM3 + expectedBob,
+            sumTransfers,
             claimed,
-            "Total = claimed"
+            "Sum of transfers equals claimed amount"
         );
+    }
+
+    /// @notice Calculate all expected action reward values at the start
+    /// @dev This function calculates expected values based on business rules, not contract view methods
+    function _calculateExpectedActionRewards(
+        uint256 verifyRound,
+        GroupUserParams memory /* m1 */
+    ) internal {
+        ExtensionGroupAction ga = ExtensionGroupAction(
+            bobGroup1.groupActionAddress
+        );
+
+        // Get total reward from contract (only external dependency)
+        _expectedAction.totalReward = ga.reward(verifyRound);
+        assertTrue(_expectedAction.totalReward > 0, "Action total reward should be > 0");
+
+        // Calculate expected values based on business rules
+        // Input parameters: m1: score=100, joinAmount=10e18
+        // Only m1 in this test, so m1 gets all group reward
+        
+        // AccountScore formula: accountScore = originScore * joinAmount
+        _expectedAction.member1AccountScore = 100 * 10e18; // 1000e18
+        
+        // GroupTotalScore = sum of all accountScores (only m1)
+        uint256 groupTotalScore = _expectedAction.member1AccountScore;
+        
+        // Member reward formula: memberReward = (totalReward * accountScore) / groupTotalScore
+        // Since only m1: memberReward = totalReward * accountScore / accountScore = totalReward
+        _expectedAction.member1Reward = (_expectedAction.totalReward * _expectedAction.member1AccountScore) / groupTotalScore;
+        
+        // Verify m1 gets all reward (since only member)
+        assertEq(_expectedAction.member1Reward, _expectedAction.totalReward, "M1 should get all action reward");
     }
 
     function _verifyActionRewardClaim(
@@ -344,50 +414,40 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             bobGroup1.groupActionAddress
         );
 
-        // Get total reward and verify > 0
-        uint256 totalReward = ga.reward(verifyRound);
-        assertTrue(totalReward > 0, "Action total reward should be > 0");
-
-        // Calculate expected reward for m1
-        // m1: score=100, joinAmount=10e18 => accountScore = 1000e18
-        // Only m1 in this test, so m1 gets all group reward
-        uint256 m1AccountScore = 100 * 10e18;
-        uint256 groupTotalScore = m1AccountScore;
-        uint256 expectedM1Reward = (totalReward * m1AccountScore) /
-            groupTotalScore;
-
-        // Verify expected reward before claiming
-        (uint256 m1Expected, ) = ga.rewardByAccount(
+        // Verify contract's view method matches expected (as additional check)
+        (uint256 m1ContractValue, ) = ga.rewardByAccount(
             verifyRound,
             m1.flow.userAddress
         );
-        assertEq(m1Expected, expectedM1Reward, "M1 expected reward mismatch");
-        assertEq(m1Expected, totalReward, "M1 should get all action reward");
+        assertEq(m1ContractValue, _expectedAction.member1Reward, "M1 contract view matches expected");
 
         // Claim and verify
         uint256 balBefore = IERC20(h.firstTokenAddress()).balanceOf(
             m1.flow.userAddress
         );
-        uint256 reward = h.group_action_claim_reward(
+        uint256 claimed = h.group_action_claim_reward(
             m1,
             bobGroup1,
             verifyRound
         );
 
+        // Verify claimed amount matches expected (calculated independently)
         assertEq(
-            reward,
-            expectedM1Reward,
-            "Claimed reward should match expected"
+            claimed,
+            _expectedAction.member1Reward,
+            "Claimed reward matches expected"
         );
+        
+        // Verify balance increased by exact expected amount
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(m1.flow.userAddress),
-            balBefore + reward,
-            "Member1 balance should increase by exact reward"
+            balBefore + _expectedAction.member1Reward,
+            "Member1 balance increased by expected amount"
         );
 
         // Verify claimed status
-        (, bool claimed) = ga.rewardByAccount(verifyRound, m1.flow.userAddress);
-        assertTrue(claimed, "Member1 action reward should be claimed");
+        (, bool isClaimed) = ga.rewardByAccount(verifyRound, m1.flow.userAddress);
+        assertTrue(isClaimed, "Member1 action reward should be claimed");
     }
 
     /// @notice Test multi-group scenario with different recipients per group
