@@ -51,10 +51,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
+        // Only bobGroup1 is activated, which stakes DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedJoinedVal = 1000e18; // DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
         uint256 joinedVal = gs.joinedAmount();
-        uint256 expectedJoinedVal = h.getGroupManager().staked(
-            bobGroup1.groupActionAddress
-        );
         assertEq(
             joinedVal,
             expectedJoinedVal,
@@ -62,11 +61,9 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
 
         // Verify joinedAmountByAccount for Bob
+        // Bob is the owner of bobGroup1, which stakes DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedBobJoinedVal = 1000e18; // DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
         uint256 bobJoinedVal = gs.joinedAmountByAccount(
-            bobGroup1.flow.userAddress
-        );
-        uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
-            bobGroup1.groupActionAddress,
             bobGroup1.flow.userAddress
         );
         assertEq(
@@ -443,12 +440,12 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         h.group_service_join(bobGroup1);
 
         // Verify joinedAmount after join (should include both groups)
+        // Both bobGroup1 and bobGroup2 are activated with the same groupActionAddress
+        // Each activation stakes DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedJoinedVal = 1000e18 * 2; // 2 * DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
         uint256 joinedVal = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         ).joinedAmount();
-        uint256 expectedJoinedVal = h.getGroupManager().staked(
-            bobGroup1.groupActionAddress
-        );
         assertEq(
             joinedVal,
             expectedJoinedVal,
@@ -456,13 +453,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
 
         // Verify joinedAmountByAccount for Bob (should include both groups)
+        // Bob is the owner of both bobGroup1 and bobGroup2
+        uint256 expectedBobJoinedVal = 1000e18 * 2; // 2 * DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
         uint256 bobJoinedVal = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         ).joinedAmountByAccount(bobGroup1.flow.userAddress);
-        uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
-            bobGroup1.groupActionAddress,
-            bobGroup1.flow.userAddress
-        );
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,
@@ -642,11 +637,11 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
+        // Both bobGroup1 and aliceGroup are activated, each stakes DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStake1 = 1000e18; // DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT for bobGroup1
+        uint256 expectedStake2 = 1000e18; // DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT for aliceGroup
+        uint256 expectedJoinedVal = expectedStake1 + expectedStake2;
         uint256 joinedVal = gs.joinedAmount();
-        // Use original actionIds for expected value calculation since groups were activated with those
-        uint256 expectedJoinedVal = h.getGroupManager().staked(
-            bobGroup1.groupActionAddress
-        ) + h.getGroupManager().staked(aliceGroup.groupActionAddress);
         assertEq(
             joinedVal,
             expectedJoinedVal,
@@ -713,18 +708,15 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         ExtensionGroupService gs = ExtensionGroupService(
             aliceGroup.groupServiceAddress
         );
+        // Bob has groups in both actions:
+        // - bobGroup1 in bobGroup1.groupActionAddress: DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
+        // - bobGroup2 in aliceGroup.groupActionAddress: DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStake1 = 1000e18; // DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT for bobGroup1
+        uint256 expectedStake2 = 1000e18; // DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT for bobGroup2
+        uint256 expectedBobJoinedVal = expectedStake1 + expectedStake2;
         uint256 bobJoinedVal = gs.joinedAmountByAccount(
             bobGroup1.flow.userAddress
         );
-        // Use original actionIds for expected value calculation since groups were activated with those
-        uint256 expectedBobJoinedVal = h.getGroupManager().stakedByOwner(
-            bobGroup1.groupActionAddress,
-            bobGroup1.flow.userAddress
-        ) +
-            h.getGroupManager().stakedByOwner(
-                aliceGroup.groupActionAddress,
-                bobGroup1.flow.userAddress
-            );
         assertEq(
             bobJoinedVal,
             expectedBobJoinedVal,

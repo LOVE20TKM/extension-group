@@ -589,8 +589,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 80);
 
         // joinedAmount should return totalStaked from groupManager
+        // Both groupId1 and groupId2 are activated in setUp, each stakes GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStaked = GROUP_ACTIVATION_STAKE_AMOUNT * 2;
         uint256 joinedVal = groupService.joinedAmount();
-        assertEq(joinedVal, newGroupManager.staked(address(groupAction)));
+        assertEq(joinedVal, expectedStaked);
     }
 
     function test_JoinedAmountByAccount() public {
@@ -652,9 +654,12 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
 
         // Verify joinedAmount includes both actions (not just voted one)
         // Note: action1 has 2 activated groups (groupId1, groupId2), action2 has 1 (groupId3)
+        // Each activation stakes GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStake1 = GROUP_ACTIVATION_STAKE_AMOUNT * 2; // 2 groups activated in setUp
+        uint256 expectedStake2 = GROUP_ACTIVATION_STAKE_AMOUNT; // 1 group activated in this test
+        uint256 expectedTotal = expectedStake1 + expectedStake2;
+
         uint256 joinedVal = groupService.joinedAmount();
-        uint256 expectedTotal = newGroupManager.staked(address(groupAction)) +
-            newGroupManager.staked(groupAction2Address);
         assertEq(
             joinedVal,
             expectedTotal,
@@ -713,11 +718,13 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         groupService.join(new string[](0));
 
         // Verify joinedAmountByAccount includes both actions
+        // groupOwner1 has groups in both actions:
+        // - groupId1 in ACTION_ID (activated in setUp): GROUP_ACTIVATION_STAKE_AMOUNT
+        // - groupId3 in actionId2 (activated in this test): GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStake1 = GROUP_ACTIVATION_STAKE_AMOUNT; // groupId1
+        uint256 expectedStake2 = GROUP_ACTIVATION_STAKE_AMOUNT; // groupId3
+        uint256 expectedTotal = expectedStake1 + expectedStake2;
         uint256 ownerValue = groupService.joinedAmountByAccount(groupOwner1);
-        uint256 expectedTotal = newGroupManager.stakedByOwner(
-            address(groupAction),
-            groupOwner1
-        ) + newGroupManager.stakedByOwner(groupAction2Address, groupOwner1);
         assertEq(
             ownerValue,
             expectedTotal,
@@ -1516,11 +1523,12 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         groupService.join(new string[](0));
 
         // Verify joinedAmount equals total staked (no conversion)
-        uint256 totalStaked = newGroupManager.staked(address(groupAction));
+        // Only groupId1 is activated in this test, which stakes GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStaked = GROUP_ACTIVATION_STAKE_AMOUNT;
         uint256 joinedVal = groupService.joinedAmount();
         assertEq(
             joinedVal,
-            totalStaked,
+            expectedStaked,
             "JoinedAmount should equal totalStaked"
         );
     }
@@ -1557,13 +1565,12 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
         // Since stakeToken is TOKEN_ADDRESS and targetTokenAddress is also TOKEN_ADDRESS,
         // no conversion is needed
-        uint256 staked = newGroupManager.staked(address(groupAction));
-        assertEq(staked, stakeAmount, "Token staked should be 100e18");
-
+        // Only groupId1 is activated, which stakes stakeAmount (set in _setupGroupActionAndService)
+        uint256 expectedStaked = stakeAmount; // 100e18
         uint256 joinedVal = groupService.joinedAmount();
         assertEq(
             joinedVal,
-            stakeAmount,
+            expectedStaked,
             "JoinedAmount should equal staked amount (no conversion needed)"
         );
     }
