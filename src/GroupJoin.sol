@@ -426,6 +426,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount
     ) internal view {
         address groupOwner = _group.ownerOf(groupId);
+        if (groupOwner == address(0)) {
+            revert InvalidGroupId();
+        }
         uint256 ownerTotalJoined = _totalJoinedAmountByOwner(
             extension,
             groupOwner

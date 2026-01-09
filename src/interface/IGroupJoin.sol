@@ -14,6 +14,7 @@ interface IGroupJoin {
     error CannotJoinDeactivatedGroup();
     error NotRegisteredExtensionInFactory();
     error ExtensionNotInitialized();
+    error InvalidGroupId();
 
     event Join(
         address indexed tokenAddress,
