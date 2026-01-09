@@ -601,11 +601,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
 
+        // groupOwner1 activated groupId1 in setUp, which staked GROUP_ACTIVATION_STAKE_AMOUNT
+        uint256 expectedStaked = GROUP_ACTIVATION_STAKE_AMOUNT;
         uint256 ownerValue = groupService.joinedAmountByAccount(groupOwner1);
-        assertEq(
-            ownerValue,
-            newGroupManager.stakedByOwner(address(groupAction), groupOwner1)
-        );
+        assertEq(ownerValue, expectedStaked);
 
         // Non-joined account
         uint256 user2Value = groupService.joinedAmountByAccount(user2);
