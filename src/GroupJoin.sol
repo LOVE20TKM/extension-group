@@ -20,6 +20,9 @@ import {
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {
+    EnumerableSet
+} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
 import {
     RoundHistoryAddressSet
@@ -27,6 +30,8 @@ import {
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
 using RoundHistoryAddressSet for RoundHistoryAddressSet.Storage;
+using EnumerableSet for EnumerableSet.UintSet;
+using EnumerableSet for EnumerableSet.AddressSet;
 using SafeERC20 for IERC20;
 
 contract GroupJoin is IGroupJoin, ReentrancyGuard {
@@ -57,6 +62,53 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     // extension => totalJoinedAmount
     mapping(address => RoundHistoryUint256.History)
         internal _totalJoinedAmountHistory;
+
+    // Global state variables
+    // groupId[]
+    EnumerableSet.UintSet internal _gGroupIds;
+    // account => groupId[]
+    mapping(address => EnumerableSet.UintSet) internal _gGroupIdsByAccount;
+    // tokenAddress => groupId[]
+    mapping(address => EnumerableSet.UintSet) internal _gGroupIdsByTokenAddress;
+    // tokenAddress => account => groupId[]
+    mapping(address => mapping(address => EnumerableSet.UintSet))
+        internal _gGroupIdsByTokenAddressByAccount;
+
+    // tokenAddress[]
+    EnumerableSet.AddressSet internal _gTokenAddresses;
+    // account => tokenAddress[]
+    mapping(address => EnumerableSet.AddressSet)
+        internal _gTokenAddressesByAccount;
+    // groupId => tokenAddress[]
+    mapping(uint256 => EnumerableSet.AddressSet)
+        internal _gTokenAddressesByGroupId;
+    // groupId => account => tokenAddress[]
+    mapping(uint256 => mapping(address => EnumerableSet.AddressSet))
+        internal _gTokenAddressesByGroupIdByAccount;
+
+    // tokenAddress => actionId[]
+    mapping(address => EnumerableSet.UintSet)
+        internal _gActionIdsByTokenAddress;
+    // tokenAddress => account => actionId[]
+    mapping(address => mapping(address => EnumerableSet.UintSet))
+        internal _gActionIdsByTokenAddressByAccount;
+    // tokenAddress => groupId => actionId[]
+    mapping(address => mapping(uint256 => EnumerableSet.UintSet))
+        internal _gActionIdsByTokenAddressByGroupId;
+    // tokenAddress => groupId => account => actionId[]
+    mapping(address => mapping(uint256 => mapping(address => EnumerableSet.UintSet)))
+        internal _gActionIdsByTokenAddressByGroupIdByAccount;
+
+    // account[]
+    EnumerableSet.AddressSet internal _gAccounts;
+    // groupId => account[]
+    mapping(uint256 => EnumerableSet.AddressSet) internal _gAccountsByGroupId;
+    // tokenAddress => account[]
+    mapping(address => EnumerableSet.AddressSet)
+        internal _gAccountsByTokenAddress;
+    // tokenAddress => groupId => account
+    mapping(address => mapping(uint256 => EnumerableSet.AddressSet))
+        internal _gAccountsByTokenAddressByGroupId;
 
     modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
@@ -119,6 +171,12 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 msg.sender,
                 verificationInfos
             );
+            _updateGlobalStateOnJoin(
+                tokenAddress,
+                actionId,
+                groupId,
+                msg.sender
+            );
         } else if (verificationInfos.length > 0) {
             _center.updateVerificationInfo(
                 tokenAddress,
@@ -165,6 +223,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         delete _joinedRoundByAccount[extension][msg.sender];
         _accountsHistory[extension][groupId].remove(currentRound, msg.sender);
         _center.removeAccount(tokenAddress, actionId, msg.sender);
+        _updateGlobalStateOnExit(tokenAddress, actionId, groupId, msg.sender);
 
         address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
         IERC20 joinToken = IERC20(joinTokenAddress);
@@ -457,5 +516,453 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             ].latestValue();
         }
         return total;
+    }
+
+    function _updateGlobalStateOnJoin(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId,
+        address account
+    ) internal {
+        _gGroupIds.add(groupId);
+        _gGroupIdsByAccount[account].add(groupId);
+        _gGroupIdsByTokenAddress[tokenAddress].add(groupId);
+        _gGroupIdsByTokenAddressByAccount[tokenAddress][account].add(groupId);
+
+        _gTokenAddresses.add(tokenAddress);
+        _gTokenAddressesByAccount[account].add(tokenAddress);
+        _gTokenAddressesByGroupId[groupId].add(tokenAddress);
+        _gTokenAddressesByGroupIdByAccount[groupId][account].add(tokenAddress);
+
+        _gActionIdsByTokenAddress[tokenAddress].add(actionId);
+        _gActionIdsByTokenAddressByAccount[tokenAddress][account].add(actionId);
+        _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].add(actionId);
+        _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
+            account
+        ].add(actionId);
+
+        _gAccounts.add(account);
+        _gAccountsByGroupId[groupId].add(account);
+        _gAccountsByTokenAddress[tokenAddress].add(account);
+        _gAccountsByTokenAddressByGroupId[tokenAddress][groupId].add(account);
+    }
+
+    function _updateGlobalStateOnExit(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId,
+        address account
+    ) internal {
+        _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
+            account
+        ].remove(actionId);
+
+        _gActionIdsByTokenAddressByAccount[tokenAddress][account].remove(
+            actionId
+        );
+
+        if (
+            _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
+                account
+            ].length() == 0
+        ) {
+            _gTokenAddressesByGroupIdByAccount[groupId][account].remove(
+                tokenAddress
+            );
+            if (
+                _gTokenAddressesByGroupIdByAccount[groupId][account].length() ==
+                0
+            ) {
+                _gGroupIdsByAccount[account].remove(groupId);
+                _gAccountsByGroupId[groupId].remove(account);
+
+                if (_gGroupIdsByAccount[account].length() == 0) {
+                    _gAccounts.remove(account);
+                }
+            }
+
+            _gAccountsByTokenAddressByGroupId[tokenAddress][groupId].remove(
+                account
+            );
+            if (
+                _gAccountsByTokenAddressByGroupId[tokenAddress][groupId]
+                    .length() == 0
+            ) {
+                _gGroupIdsByTokenAddress[tokenAddress].remove(groupId);
+                if (_gGroupIdsByTokenAddress[tokenAddress].length() == 0) {
+                    _gTokenAddresses.remove(tokenAddress);
+                }
+            }
+
+            _gGroupIdsByTokenAddressByAccount[tokenAddress][account].remove(
+                groupId
+            );
+            if (
+                _gGroupIdsByTokenAddressByAccount[tokenAddress][account]
+                    .length() == 0
+            ) {
+                _gAccountsByTokenAddress[tokenAddress].remove(account);
+                _gTokenAddressesByAccount[account].remove(tokenAddress);
+            }
+        }
+
+        if (_center.accountsCount(tokenAddress, actionId) == 0) {
+            _gActionIdsByTokenAddress[tokenAddress].remove(actionId);
+            _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].remove(
+                actionId
+            );
+            if (
+                _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId]
+                    .length() == 0
+            ) {
+                _gTokenAddressesByGroupId[groupId].remove(tokenAddress);
+                if (_gTokenAddressesByGroupId[groupId].length() == 0) {
+                    _gGroupIds.remove(groupId);
+                }
+            }
+        }
+    }
+
+    // gGroupIds functions
+    function gGroupIds() external view returns (uint256[] memory) {
+        return _gGroupIds.values();
+    }
+
+    function gGroupIdsCount() external view returns (uint256) {
+        return _gGroupIds.length();
+    }
+
+    function gGroupIdsAtIndex(uint256 index) external view returns (uint256) {
+        return _gGroupIds.at(index);
+    }
+
+    // gGroupIdsByAccount functions
+    function gGroupIdsByAccount(
+        address account
+    ) external view returns (uint256[] memory) {
+        return _gGroupIdsByAccount[account].values();
+    }
+
+    function gGroupIdsByAccountCount(
+        address account
+    ) external view returns (uint256) {
+        return _gGroupIdsByAccount[account].length();
+    }
+
+    function gGroupIdsByAccountAtIndex(
+        address account,
+        uint256 index
+    ) external view returns (uint256) {
+        return _gGroupIdsByAccount[account].at(index);
+    }
+
+    // gGroupIdsByTokenAddress functions
+    function gGroupIdsByTokenAddress(
+        address tokenAddress
+    ) external view returns (uint256[] memory) {
+        return _gGroupIdsByTokenAddress[tokenAddress].values();
+    }
+
+    function gGroupIdsByTokenAddressCount(
+        address tokenAddress
+    ) external view returns (uint256) {
+        return _gGroupIdsByTokenAddress[tokenAddress].length();
+    }
+
+    function gGroupIdsByTokenAddressAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view returns (uint256) {
+        return _gGroupIdsByTokenAddress[tokenAddress].at(index);
+    }
+
+    // gGroupIdsByTokenAddressByAccount functions
+    function gGroupIdsByTokenAddressByAccount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256[] memory) {
+        return
+            _gGroupIdsByTokenAddressByAccount[tokenAddress][account].values();
+    }
+
+    function gGroupIdsByTokenAddressByAccountCount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256) {
+        return
+            _gGroupIdsByTokenAddressByAccount[tokenAddress][account].length();
+    }
+
+    function gGroupIdsByTokenAddressByAccountAtIndex(
+        address tokenAddress,
+        address account,
+        uint256 index
+    ) external view returns (uint256) {
+        return
+            _gGroupIdsByTokenAddressByAccount[tokenAddress][account].at(index);
+    }
+
+    // gTokenAddresses functions
+    function gTokenAddresses() external view returns (address[] memory) {
+        return _gTokenAddresses.values();
+    }
+
+    function gTokenAddressesCount() external view returns (uint256) {
+        return _gTokenAddresses.length();
+    }
+
+    function gTokenAddressesAtIndex(
+        uint256 index
+    ) external view returns (address) {
+        return _gTokenAddresses.at(index);
+    }
+
+    // gTokenAddressesByAccount functions
+    function gTokenAddressesByAccount(
+        address account
+    ) external view returns (address[] memory) {
+        return _gTokenAddressesByAccount[account].values();
+    }
+
+    function gTokenAddressesByAccountCount(
+        address account
+    ) external view returns (uint256) {
+        return _gTokenAddressesByAccount[account].length();
+    }
+
+    function gTokenAddressesByAccountAtIndex(
+        address account,
+        uint256 index
+    ) external view returns (address) {
+        return _gTokenAddressesByAccount[account].at(index);
+    }
+
+    // gTokenAddressesByGroupId functions
+    function gTokenAddressesByGroupId(
+        uint256 groupId
+    ) external view returns (address[] memory) {
+        return _gTokenAddressesByGroupId[groupId].values();
+    }
+
+    function gTokenAddressesByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _gTokenAddressesByGroupId[groupId].length();
+    }
+
+    function gTokenAddressesByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address) {
+        return _gTokenAddressesByGroupId[groupId].at(index);
+    }
+
+    // gTokenAddressesByGroupIdByAccount functions
+    function gTokenAddressesByGroupIdByAccount(
+        uint256 groupId,
+        address account
+    ) external view returns (address[] memory) {
+        return _gTokenAddressesByGroupIdByAccount[groupId][account].values();
+    }
+
+    function gTokenAddressesByGroupIdByAccountCount(
+        uint256 groupId,
+        address account
+    ) external view returns (uint256) {
+        return _gTokenAddressesByGroupIdByAccount[groupId][account].length();
+    }
+
+    function gTokenAddressesByGroupIdByAccountAtIndex(
+        uint256 groupId,
+        address account,
+        uint256 index
+    ) external view returns (address) {
+        return _gTokenAddressesByGroupIdByAccount[groupId][account].at(index);
+    }
+
+    // gActionIdsByTokenAddress functions
+    function gActionIdsByTokenAddress(
+        address tokenAddress
+    ) external view returns (uint256[] memory) {
+        return _gActionIdsByTokenAddress[tokenAddress].values();
+    }
+
+    function gActionIdsByTokenAddressCount(
+        address tokenAddress
+    ) external view returns (uint256) {
+        return _gActionIdsByTokenAddress[tokenAddress].length();
+    }
+
+    function gActionIdsByTokenAddressAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view returns (uint256) {
+        return _gActionIdsByTokenAddress[tokenAddress].at(index);
+    }
+
+    // gActionIdsByTokenAddressByAccount functions
+    function gActionIdsByTokenAddressByAccount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256[] memory) {
+        return
+            _gActionIdsByTokenAddressByAccount[tokenAddress][account].values();
+    }
+
+    function gActionIdsByTokenAddressByAccountCount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256) {
+        return
+            _gActionIdsByTokenAddressByAccount[tokenAddress][account].length();
+    }
+
+    function gActionIdsByTokenAddressByAccountAtIndex(
+        address tokenAddress,
+        address account,
+        uint256 index
+    ) external view returns (uint256) {
+        return
+            _gActionIdsByTokenAddressByAccount[tokenAddress][account].at(index);
+    }
+
+    // gActionIdsByTokenAddressByGroupId functions
+    function gActionIdsByTokenAddressByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256[] memory) {
+        return
+            _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].values();
+    }
+
+    function gActionIdsByTokenAddressByGroupIdCount(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256) {
+        return
+            _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].length();
+    }
+
+    function gActionIdsByTokenAddressByGroupIdAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (uint256) {
+        return
+            _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].at(index);
+    }
+
+    // gActionIdsByTokenAddressByGroupIdByAccount functions
+    function gActionIdsByTokenAddressByGroupIdByAccount(
+        address tokenAddress,
+        uint256 groupId,
+        address account
+    ) external view returns (uint256[] memory) {
+        return
+            _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
+                account
+            ].values();
+    }
+
+    function gActionIdsByTokenAddressByGroupIdByAccountCount(
+        address tokenAddress,
+        uint256 groupId,
+        address account
+    ) external view returns (uint256) {
+        return
+            _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
+                account
+            ].length();
+    }
+
+    function gActionIdsByTokenAddressByGroupIdByAccountAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        address account,
+        uint256 index
+    ) external view returns (uint256) {
+        return
+            _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
+                account
+            ].at(index);
+    }
+
+    // gAccounts functions
+    function gAccounts() external view returns (address[] memory) {
+        return _gAccounts.values();
+    }
+
+    function gAccountsCount() external view returns (uint256) {
+        return _gAccounts.length();
+    }
+
+    function gAccountsAtIndex(uint256 index) external view returns (address) {
+        return _gAccounts.at(index);
+    }
+
+    // gAccountsByGroupId functions
+    function gAccountsByGroupId(
+        uint256 groupId
+    ) external view returns (address[] memory) {
+        return _gAccountsByGroupId[groupId].values();
+    }
+
+    function gAccountsByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _gAccountsByGroupId[groupId].length();
+    }
+
+    function gAccountsByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address) {
+        return _gAccountsByGroupId[groupId].at(index);
+    }
+
+    // gAccountsByTokenAddress functions
+    function gAccountsByTokenAddress(
+        address tokenAddress
+    ) external view returns (address[] memory) {
+        return _gAccountsByTokenAddress[tokenAddress].values();
+    }
+
+    function gAccountsByTokenAddressCount(
+        address tokenAddress
+    ) external view returns (uint256) {
+        return _gAccountsByTokenAddress[tokenAddress].length();
+    }
+
+    function gAccountsByTokenAddressAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view returns (address) {
+        return _gAccountsByTokenAddress[tokenAddress].at(index);
+    }
+
+    // gAccountsByTokenAddressByGroupId functions
+    function gAccountsByTokenAddressByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (address[] memory) {
+        return
+            _gAccountsByTokenAddressByGroupId[tokenAddress][groupId].values();
+    }
+
+    function gAccountsByTokenAddressByGroupIdCount(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256) {
+        return
+            _gAccountsByTokenAddressByGroupId[tokenAddress][groupId].length();
+    }
+
+    function gAccountsByTokenAddressByGroupIdAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address) {
+        return
+            _gAccountsByTokenAddressByGroupId[tokenAddress][groupId].at(index);
     }
 }

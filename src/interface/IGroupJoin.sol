@@ -118,4 +118,230 @@ interface IGroupJoin {
         uint256 round,
         address account
     ) external view returns (uint256);
+
+    // ------ global view functions (no extension parameter) ------
+
+    // gGroupIds functions
+    function gGroupIds() external view returns (uint256[] memory);
+    function gGroupIdsCount() external view returns (uint256);
+    function gGroupIdsAtIndex(uint256 index) external view returns (uint256);
+
+    // gGroupIdsByAccount functions
+    function gGroupIdsByAccount(
+        address account
+    ) external view returns (uint256[] memory);
+
+    function gGroupIdsByAccountCount(
+        address account
+    ) external view returns (uint256);
+
+    function gGroupIdsByAccountAtIndex(
+        address account,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gGroupIdsByTokenAddress functions
+    function gGroupIdsByTokenAddress(
+        address tokenAddress
+    ) external view returns (uint256[] memory);
+
+    function gGroupIdsByTokenAddressCount(
+        address tokenAddress
+    ) external view returns (uint256);
+
+    function gGroupIdsByTokenAddressAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gGroupIdsByTokenAddressByAccount functions
+    function gGroupIdsByTokenAddressByAccount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256[] memory);
+
+    function gGroupIdsByTokenAddressByAccountCount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256);
+
+    function gGroupIdsByTokenAddressByAccountAtIndex(
+        address tokenAddress,
+        address account,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gTokenAddresses functions
+    function gTokenAddresses() external view returns (address[] memory);
+
+    function gTokenAddressesCount() external view returns (uint256);
+
+    function gTokenAddressesAtIndex(
+        uint256 index
+    ) external view returns (address);
+
+    // gTokenAddressesByAccount functions
+    function gTokenAddressesByAccount(
+        address account
+    ) external view returns (address[] memory);
+
+    function gTokenAddressesByAccountCount(
+        address account
+    ) external view returns (uint256);
+
+    function gTokenAddressesByAccountAtIndex(
+        address account,
+        uint256 index
+    ) external view returns (address);
+
+    // gTokenAddressesByGroupId functions
+    function gTokenAddressesByGroupId(
+        uint256 groupId
+    ) external view returns (address[] memory);
+
+    function gTokenAddressesByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function gTokenAddressesByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address);
+
+    // gTokenAddressesByGroupIdByAccount functions
+    function gTokenAddressesByGroupIdByAccount(
+        uint256 groupId,
+        address account
+    ) external view returns (address[] memory);
+
+    function gTokenAddressesByGroupIdByAccountCount(
+        uint256 groupId,
+        address account
+    ) external view returns (uint256);
+
+    function gTokenAddressesByGroupIdByAccountAtIndex(
+        uint256 groupId,
+        address account,
+        uint256 index
+    ) external view returns (address);
+
+    // gActionIdsByTokenAddress functions
+    function gActionIdsByTokenAddress(
+        address tokenAddress
+    ) external view returns (uint256[] memory);
+
+    function gActionIdsByTokenAddressCount(
+        address tokenAddress
+    ) external view returns (uint256);
+
+    function gActionIdsByTokenAddressAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gActionIdsByTokenAddressByAccount functions
+    function gActionIdsByTokenAddressByAccount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256[] memory);
+
+    function gActionIdsByTokenAddressByAccountCount(
+        address tokenAddress,
+        address account
+    ) external view returns (uint256);
+
+    function gActionIdsByTokenAddressByAccountAtIndex(
+        address tokenAddress,
+        address account,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gActionIdsByTokenAddressByGroupId functions
+    function gActionIdsByTokenAddressByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256[] memory);
+
+    function gActionIdsByTokenAddressByGroupIdCount(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function gActionIdsByTokenAddressByGroupIdAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gActionIdsByTokenAddressByGroupIdByAccount functions
+    function gActionIdsByTokenAddressByGroupIdByAccount(
+        address tokenAddress,
+        uint256 groupId,
+        address account
+    ) external view returns (uint256[] memory);
+
+    function gActionIdsByTokenAddressByGroupIdByAccountCount(
+        address tokenAddress,
+        uint256 groupId,
+        address account
+    ) external view returns (uint256);
+
+    function gActionIdsByTokenAddressByGroupIdByAccountAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        address account,
+        uint256 index
+    ) external view returns (uint256);
+
+    // gAccounts functions
+    function gAccounts() external view returns (address[] memory);
+
+    function gAccountsCount() external view returns (uint256);
+
+    function gAccountsAtIndex(uint256 index) external view returns (address);
+
+    // gAccountsByGroupId functions
+    function gAccountsByGroupId(
+        uint256 groupId
+    ) external view returns (address[] memory);
+
+    function gAccountsByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function gAccountsByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address);
+
+    // gAccountsByTokenAddress functions
+    function gAccountsByTokenAddress(
+        address tokenAddress
+    ) external view returns (address[] memory);
+
+    function gAccountsByTokenAddressCount(
+        address tokenAddress
+    ) external view returns (uint256);
+
+    function gAccountsByTokenAddressAtIndex(
+        address tokenAddress,
+        uint256 index
+    ) external view returns (address);
+
+    // gAccountsByTokenAddressByGroupId functions
+    function gAccountsByTokenAddressByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (address[] memory);
+
+    function gAccountsByTokenAddressByGroupIdCount(
+        address tokenAddress,
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function gAccountsByTokenAddressByGroupIdAtIndex(
+        address tokenAddress,
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address);
 }
