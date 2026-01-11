@@ -749,6 +749,16 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) internal {
         address groupOwner = _group.ownerOf(groupId);
 
+        // Calculate group score
+        _capacityReductionByGroupId[extension][currentRound][
+            groupId
+        ] = _calculateCapacityReduction(
+            extension,
+            currentRound,
+            groupOwner,
+            groupId
+        );
+
         // Record verifier (NFT owner, not delegated verifier)
         _verifierByGroupId[extension][currentRound][groupId] = groupOwner;
 
@@ -781,16 +791,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
 
         _totalAccountScore[extension][currentRound][groupId] = totalScore;
-
-        // Calculate group score
-        _capacityReductionByGroupId[extension][currentRound][
-            groupId
-        ] = _calculateCapacityReduction(
-            extension,
-            currentRound,
-            groupOwner,
-            groupId
-        );
 
         uint256 calculatedGroupScore = _calculateGroupScore(
             extension,
