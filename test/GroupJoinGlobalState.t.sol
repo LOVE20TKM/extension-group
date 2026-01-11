@@ -1388,14 +1388,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
         assertEq(tokenAddresses.length, 2, "should have 2 tokenAddresses");
 
-        address tokenAddressAtIndex0 = groupJoin.gTokenAddressesByAccountAtIndex(
-            user1,
-            0
-        );
-        address tokenAddressAtIndex1 = groupJoin.gTokenAddressesByAccountAtIndex(
-            user1,
-            1
-        );
+        address tokenAddressAtIndex0 = groupJoin
+            .gTokenAddressesByAccountAtIndex(user1, 0);
+        address tokenAddressAtIndex1 = groupJoin
+            .gTokenAddressesByAccountAtIndex(user1, 1);
 
         assertTrue(
             (tokenAddressAtIndex0 == tokenAddress &&
@@ -1481,14 +1477,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
         assertEq(tokenAddresses.length, 2, "should have 2 tokenAddresses");
 
-        address tokenAddressAtIndex0 = groupJoin.gTokenAddressesByGroupIdAtIndex(
-            groupId1,
-            0
-        );
-        address tokenAddressAtIndex1 = groupJoin.gTokenAddressesByGroupIdAtIndex(
-            groupId1,
-            1
-        );
+        address tokenAddressAtIndex0 = groupJoin
+            .gTokenAddressesByGroupIdAtIndex(groupId1, 0);
+        address tokenAddressAtIndex1 = groupJoin
+            .gTokenAddressesByGroupIdAtIndex(groupId1, 1);
 
         assertTrue(
             (tokenAddressAtIndex0 == tokenAddress &&
@@ -1683,10 +1675,8 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
 
         // Verify gActionIdsByTokenAddressByAccountAtIndex
-        uint256[] memory actionIds = groupJoin.gActionIdsByTokenAddressByAccount(
-            tokenAddress,
-            user1
-        );
+        uint256[] memory actionIds = groupJoin
+            .gActionIdsByTokenAddressByAccount(tokenAddress, user1);
         assertEq(actionIds.length, 2, "should have 2 actionIds");
 
         uint256 actionIdAtIndex0 = groupJoin
@@ -1768,16 +1758,22 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
 
         // Verify gActionIdsByTokenAddressByGroupIdAtIndex
-        uint256[] memory actionIds = groupJoin.gActionIdsByTokenAddressByGroupId(
-            tokenAddress,
-            groupId1
-        );
+        uint256[] memory actionIds = groupJoin
+            .gActionIdsByTokenAddressByGroupId(tokenAddress, groupId1);
         assertEq(actionIds.length, 2, "should have 2 actionIds");
 
         uint256 actionIdAtIndex0 = groupJoin
-            .gActionIdsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 0);
+            .gActionIdsByTokenAddressByGroupIdAtIndex(
+                tokenAddress,
+                groupId1,
+                0
+            );
         uint256 actionIdAtIndex1 = groupJoin
-            .gActionIdsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 1);
+            .gActionIdsByTokenAddressByGroupIdAtIndex(
+                tokenAddress,
+                groupId1,
+                1
+            );
 
         assertTrue(
             (actionIdAtIndex0 == actionId && actionIdAtIndex1 == actionId2) ||
