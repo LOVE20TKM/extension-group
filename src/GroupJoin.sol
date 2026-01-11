@@ -577,6 +577,18 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _gGroupIdsByTokenAddressByActionId[tokenAddress][actionId].remove(
                 groupId
             );
+            _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].remove(
+                actionId
+            );
+            if (
+                _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId]
+                    .length() == 0
+            ) {
+                _gTokenAddressesByGroupId[groupId].remove(tokenAddress);
+                if (_gTokenAddressesByGroupId[groupId].length() == 0) {
+                    _gGroupIds.remove(groupId);
+                }
+            }
         }
 
         if (
@@ -626,18 +638,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         if (_center.accountsCount(tokenAddress, actionId) == 0) {
             _gActionIdsByTokenAddress[tokenAddress].remove(actionId);
-            _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId].remove(
-                actionId
-            );
-            if (
-                _gActionIdsByTokenAddressByGroupId[tokenAddress][groupId]
-                    .length() == 0
-            ) {
-                _gTokenAddressesByGroupId[groupId].remove(tokenAddress);
-                if (_gTokenAddressesByGroupId[groupId].length() == 0) {
-                    _gGroupIds.remove(groupId);
-                }
-            }
         }
     }
 
