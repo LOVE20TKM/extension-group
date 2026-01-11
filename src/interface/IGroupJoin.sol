@@ -171,6 +171,22 @@ interface IGroupJoin {
         uint256 index
     ) external view returns (uint256);
 
+    function gGroupIdsByTokenAddressByActionId(
+        address tokenAddress,
+        uint256 actionId
+    ) external view returns (uint256[] memory);
+
+    function gGroupIdsByTokenAddressByActionIdCount(
+        address tokenAddress,
+        uint256 actionId
+    ) external view returns (uint256);
+
+    function gGroupIdsByTokenAddressByActionIdAtIndex(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 index
+    ) external view returns (uint256);
+
     // gTokenAddresses functions
     function gTokenAddresses() external view returns (address[] memory);
 

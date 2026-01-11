@@ -73,6 +73,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     // tokenAddress => account => groupId[]
     mapping(address => mapping(address => EnumerableSet.UintSet))
         internal _gGroupIdsByTokenAddressByAccount;
+    // tokenAddress => actionId => groupId[]
+    mapping(address => mapping(uint256 => EnumerableSet.UintSet))
+        internal _gGroupIdsByTokenAddressByActionId;
 
     // tokenAddress[]
     EnumerableSet.AddressSet internal _gTokenAddresses;
@@ -223,7 +226,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         delete _joinedRoundByAccount[extension][msg.sender];
         _accountsHistory[extension][groupId].remove(currentRound, msg.sender);
         _center.removeAccount(tokenAddress, actionId, msg.sender);
-        _updateGlobalStateOnExit(tokenAddress, actionId, groupId, msg.sender);
+        _updateGlobalStateOnExit(
+            extension,
+            tokenAddress,
+            actionId,
+            groupId,
+            msg.sender
+        );
 
         address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
         IERC20 joinToken = IERC20(joinTokenAddress);
@@ -528,6 +537,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _gGroupIdsByAccount[account].add(groupId);
         _gGroupIdsByTokenAddress[tokenAddress].add(groupId);
         _gGroupIdsByTokenAddressByAccount[tokenAddress][account].add(groupId);
+        _gGroupIdsByTokenAddressByActionId[tokenAddress][actionId].add(groupId);
 
         _gTokenAddresses.add(tokenAddress);
         _gTokenAddressesByAccount[account].add(tokenAddress);
@@ -548,6 +558,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     }
 
     function _updateGlobalStateOnExit(
+        address extension,
         address tokenAddress,
         uint256 actionId,
         uint256 groupId,
@@ -560,6 +571,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _gActionIdsByTokenAddressByAccount[tokenAddress][account].remove(
             actionId
         );
+
+        // check accountsByGroupIdCount if it is 0, then remove the groupId from the tokenAddress
+        if (_accountsHistory[extension][groupId].count() == 0) {
+            _gGroupIdsByTokenAddressByActionId[tokenAddress][actionId].remove(
+                groupId
+            );
+        }
 
         if (
             _gActionIdsByTokenAddressByGroupIdByAccount[tokenAddress][groupId][
@@ -700,6 +718,33 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) external view returns (uint256) {
         return
             _gGroupIdsByTokenAddressByAccount[tokenAddress][account].at(index);
+    }
+
+    function gGroupIdsByTokenAddressByActionId(
+        address tokenAddress,
+        uint256 actionId
+    ) external view returns (uint256[] memory) {
+        return
+            _gGroupIdsByTokenAddressByActionId[tokenAddress][actionId].values();
+    }
+
+    function gGroupIdsByTokenAddressByActionIdCount(
+        address tokenAddress,
+        uint256 actionId
+    ) external view returns (uint256) {
+        return
+            _gGroupIdsByTokenAddressByActionId[tokenAddress][actionId].length();
+    }
+
+    function gGroupIdsByTokenAddressByActionIdAtIndex(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 index
+    ) external view returns (uint256) {
+        return
+            _gGroupIdsByTokenAddressByActionId[tokenAddress][actionId].at(
+                index
+            );
     }
 
     // gTokenAddresses functions

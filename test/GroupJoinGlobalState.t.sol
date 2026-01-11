@@ -351,8 +351,9 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
 
         // Verify gActionIdsByTokenAddress (should have both actionIds)
-        uint256[] memory actionIdsByToken = groupJoin
-            .gActionIdsByTokenAddress(tokenAddress);
+        uint256[] memory actionIdsByToken = groupJoin.gActionIdsByTokenAddress(
+            tokenAddress
+        );
         assertEq(
             actionIdsByToken.length,
             2,
@@ -715,8 +716,9 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
 
         // Verify actionId is still tracked (user2 still in group1)
-        uint256[] memory actionIdsByToken = groupJoin
-            .gActionIdsByTokenAddress(tokenAddress);
+        uint256[] memory actionIdsByToken = groupJoin.gActionIdsByTokenAddress(
+            tokenAddress
+        );
         assertEq(
             actionIdsByToken.length,
             2,
@@ -729,6 +731,358 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         assertTrue(
             _containsUint256(actionIdsByToken, actionId2),
             "gActionIdsByTokenAddress should still contain actionId2"
+        );
+    }
+
+    // ============ gGroupIdsByTokenAddressByActionId Tests ============
+
+    /// @notice Test gGroupIdsByTokenAddressByActionId with single groupId
+    function test_gGroupIdsByTokenAddressByActionId_SingleGroupId() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        // Join
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Expected values
+        uint256[] memory expectedGroupIds = new uint256[](1);
+        expectedGroupIds[0] = groupId1;
+
+        // Verify gGroupIdsByTokenAddressByActionId
+        uint256[] memory groupIds = groupJoin.gGroupIdsByTokenAddressByActionId(
+            tokenAddress,
+            actionId
+        );
+        assertArrayEq(
+            groupIds,
+            expectedGroupIds,
+            "gGroupIdsByTokenAddressByActionId should return groupId1"
+        );
+
+        // Verify gGroupIdsByTokenAddressByActionIdCount
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            1,
+            "gGroupIdsByTokenAddressByActionIdCount should be 1"
+        );
+
+        // Verify gGroupIdsByTokenAddressByActionIdAtIndex
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdAtIndex(
+                tokenAddress,
+                actionId,
+                0
+            ),
+            groupId1,
+            "gGroupIdsByTokenAddressByActionIdAtIndex should return groupId1"
+        );
+    }
+
+    /// @notice Test gGroupIdsByTokenAddressByActionId with multiple groupIds
+    function test_gGroupIdsByTokenAddressByActionId_MultipleGroupIds() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+
+        // User1 joins groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User2 joins groupId2
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Expected values - both groupIds should be present
+        uint256[] memory groupIds = groupJoin.gGroupIdsByTokenAddressByActionId(
+            tokenAddress,
+            actionId
+        );
+        assertEq(
+            groupIds.length,
+            2,
+            "gGroupIdsByTokenAddressByActionId should have 2 groupIds"
+        );
+        assertTrue(
+            _containsUint256(groupIds, groupId1),
+            "gGroupIdsByTokenAddressByActionId should contain groupId1"
+        );
+        assertTrue(
+            _containsUint256(groupIds, groupId2),
+            "gGroupIdsByTokenAddressByActionId should contain groupId2"
+        );
+
+        // Verify count
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            2,
+            "gGroupIdsByTokenAddressByActionIdCount should be 2"
+        );
+
+        // Verify atIndex - check both indices
+        uint256 groupIdAtIndex0 = groupJoin.gGroupIdsByTokenAddressByActionIdAtIndex(
+            tokenAddress,
+            actionId,
+            0
+        );
+        uint256 groupIdAtIndex1 = groupJoin.gGroupIdsByTokenAddressByActionIdAtIndex(
+            tokenAddress,
+            actionId,
+            1
+        );
+        assertTrue(
+            (groupIdAtIndex0 == groupId1 && groupIdAtIndex1 == groupId2) ||
+                (groupIdAtIndex0 == groupId2 && groupIdAtIndex1 == groupId1),
+            "gGroupIdsByTokenAddressByActionIdAtIndex should return correct groupIds"
+        );
+    }
+
+    /// @notice Test gGroupIdsByTokenAddressByActionId with empty set
+    function test_gGroupIdsByTokenAddressByActionId_EmptySet() public {
+        // Before any join, should return empty array
+        uint256[] memory groupIds = groupJoin.gGroupIdsByTokenAddressByActionId(
+            tokenAddress,
+            actionId
+        );
+        assertEq(
+            groupIds.length,
+            0,
+            "gGroupIdsByTokenAddressByActionId should return empty array"
+        );
+
+        // Verify count is 0
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            0,
+            "gGroupIdsByTokenAddressByActionIdCount should be 0"
+        );
+    }
+
+    /// @notice Test gGroupIdsByTokenAddressByActionId after exit
+    function test_gGroupIdsByTokenAddressByActionId_AfterExit() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+
+        // Both users join groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify groupId1 is present
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            1,
+            "gGroupIdsByTokenAddressByActionIdCount should be 1 before exit"
+        );
+        assertTrue(
+            _containsUint256(
+                groupJoin.gGroupIdsByTokenAddressByActionId(
+                    tokenAddress,
+                    actionId
+                ),
+                groupId1
+            ),
+            "gGroupIdsByTokenAddressByActionId should contain groupId1 before exit"
+        );
+
+        // User1 exits
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        // Verify groupId1 is still present (user2 still in it)
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            1,
+            "gGroupIdsByTokenAddressByActionIdCount should still be 1 after user1 exit"
+        );
+        assertTrue(
+            _containsUint256(
+                groupJoin.gGroupIdsByTokenAddressByActionId(
+                    tokenAddress,
+                    actionId
+                ),
+                groupId1
+            ),
+            "gGroupIdsByTokenAddressByActionId should still contain groupId1 after user1 exit"
+        );
+
+        // User2 exits
+        vm.prank(user2);
+        groupJoin.exit(address(groupAction));
+
+        // Verify groupId1 is removed (no users left)
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            0,
+            "gGroupIdsByTokenAddressByActionIdCount should be 0 after all users exit"
+        );
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionId(
+                tokenAddress,
+                actionId
+            ).length,
+            0,
+            "gGroupIdsByTokenAddressByActionId should return empty array after all users exit"
+        );
+    }
+
+    /// @notice Test gGroupIdsByTokenAddressByActionId with different actionIds
+    function test_gGroupIdsByTokenAddressByActionId_DifferentActionIds() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension with different actionId
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        // Setup groupOwner2 with more tokens for second activation
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        // Activate group2
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins groupId1 with actionId
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 needs more tokens for second join
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        // User1 joins groupId2 with actionId2
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify actionId has groupId1
+        uint256[] memory groupIdsForActionId = groupJoin
+            .gGroupIdsByTokenAddressByActionId(tokenAddress, actionId);
+        assertEq(
+            groupIdsForActionId.length,
+            1,
+            "gGroupIdsByTokenAddressByActionId for actionId should have 1 groupId"
+        );
+        assertEq(
+            groupIdsForActionId[0],
+            groupId1,
+            "gGroupIdsByTokenAddressByActionId for actionId should contain groupId1"
+        );
+
+        // Verify actionId2 has groupId2
+        uint256[] memory groupIdsForActionId2 = groupJoin
+            .gGroupIdsByTokenAddressByActionId(tokenAddress, actionId2);
+        assertEq(
+            groupIdsForActionId2.length,
+            1,
+            "gGroupIdsByTokenAddressByActionId for actionId2 should have 1 groupId"
+        );
+        assertEq(
+            groupIdsForActionId2[0],
+            groupId2,
+            "gGroupIdsByTokenAddressByActionId for actionId2 should contain groupId2"
+        );
+
+        // Verify counts
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId
+            ),
+            1,
+            "gGroupIdsByTokenAddressByActionIdCount for actionId should be 1"
+        );
+        assertEq(
+            groupJoin.gGroupIdsByTokenAddressByActionIdCount(
+                tokenAddress,
+                actionId2
+            ),
+            1,
+            "gGroupIdsByTokenAddressByActionIdCount for actionId2 should be 1"
         );
     }
 
@@ -864,7 +1218,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             "gActionIdsByTokenAddressByAccount mismatch"
         );
         assertEq(
-            groupJoin.gActionIdsByTokenAddressByAccountCount(tokenAddr, account),
+            groupJoin.gActionIdsByTokenAddressByAccountCount(
+                tokenAddr,
+                account
+            ),
             1,
             "gActionIdsByTokenAddressByAccountCount should be 1"
         );
@@ -876,7 +1233,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             "gActionIdsByTokenAddressByGroupId mismatch"
         );
         assertEq(
-            groupJoin.gActionIdsByTokenAddressByGroupIdCount(tokenAddr, groupId),
+            groupJoin.gActionIdsByTokenAddressByGroupIdCount(
+                tokenAddr,
+                groupId
+            ),
             1,
             "gActionIdsByTokenAddressByGroupIdCount should be 1"
         );
