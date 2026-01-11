@@ -841,16 +841,18 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
 
         // Verify atIndex - check both indices
-        uint256 groupIdAtIndex0 = groupJoin.gGroupIdsByTokenAddressByActionIdAtIndex(
-            tokenAddress,
-            actionId,
-            0
-        );
-        uint256 groupIdAtIndex1 = groupJoin.gGroupIdsByTokenAddressByActionIdAtIndex(
-            tokenAddress,
-            actionId,
-            1
-        );
+        uint256 groupIdAtIndex0 = groupJoin
+            .gGroupIdsByTokenAddressByActionIdAtIndex(
+                tokenAddress,
+                actionId,
+                0
+            );
+        uint256 groupIdAtIndex1 = groupJoin
+            .gGroupIdsByTokenAddressByActionIdAtIndex(
+                tokenAddress,
+                actionId,
+                1
+            );
         assertTrue(
             (groupIdAtIndex0 == groupId1 && groupIdAtIndex1 == groupId2) ||
                 (groupIdAtIndex0 == groupId2 && groupIdAtIndex1 == groupId1),
@@ -963,17 +965,18 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             "gGroupIdsByTokenAddressByActionIdCount should be 0 after all users exit"
         );
         assertEq(
-            groupJoin.gGroupIdsByTokenAddressByActionId(
-                tokenAddress,
-                actionId
-            ).length,
+            groupJoin
+                .gGroupIdsByTokenAddressByActionId(tokenAddress, actionId)
+                .length,
             0,
             "gGroupIdsByTokenAddressByActionId should return empty array after all users exit"
         );
     }
 
     /// @notice Test gGroupIdsByTokenAddressByActionId with different actionIds
-    function test_gGroupIdsByTokenAddressByActionId_DifferentActionIds() public {
+    function test_gGroupIdsByTokenAddressByActionId_DifferentActionIds()
+        public
+    {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount * 2, address(groupJoin));
 
