@@ -5,6 +5,7 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {MockExtensionGroupAction} from "./mocks/MockExtensionGroupAction.sol";
+import {MockERC20} from "@extension/test/mocks/MockERC20.sol";
 
 /**
  * @title GroupJoinGlobalStateTest
@@ -861,7 +862,7 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
     }
 
     /// @notice Test gGroupIdsByTokenAddressByActionId with empty set
-    function test_gGroupIdsByTokenAddressByActionId_EmptySet() public {
+    function test_gGroupIdsByTokenAddressByActionId_EmptySet() public view {
         // Before any join, should return empty array
         uint256[] memory groupIds = groupJoin.gGroupIdsByTokenAddressByActionId(
             tokenAddress,
@@ -1086,6 +1087,1051 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             ),
             1,
             "gGroupIdsByTokenAddressByActionIdCount for actionId2 should be 1"
+        );
+    }
+
+    // ============ AtIndex Functions Tests ============
+
+    /// @notice Test gGroupIdsByAccountAtIndex with multiple groupIds
+    function test_gGroupIdsByAccountAtIndex_MultipleGroupIds() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension for groupId2
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins groupId2
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gGroupIdsByAccountAtIndex
+        uint256[] memory groupIds = groupJoin.gGroupIdsByAccount(user1);
+        assertEq(groupIds.length, 2, "user1 should have 2 groupIds");
+
+        uint256 groupIdAtIndex0 = groupJoin.gGroupIdsByAccountAtIndex(user1, 0);
+        uint256 groupIdAtIndex1 = groupJoin.gGroupIdsByAccountAtIndex(user1, 1);
+
+        assertTrue(
+            (groupIdAtIndex0 == groupId1 && groupIdAtIndex1 == groupId2) ||
+                (groupIdAtIndex0 == groupId2 && groupIdAtIndex1 == groupId1),
+            "gGroupIdsByAccountAtIndex should return correct groupIds"
+        );
+
+        // Verify consistency with values()
+        assertTrue(
+            _containsUint256(groupIds, groupIdAtIndex0),
+            "gGroupIdsByAccountAtIndex[0] should be in values"
+        );
+        assertTrue(
+            _containsUint256(groupIds, groupIdAtIndex1),
+            "gGroupIdsByAccountAtIndex[1] should be in values"
+        );
+    }
+
+    /// @notice Test gGroupIdsByTokenAddressAtIndex with multiple groupIds
+    function test_gGroupIdsByTokenAddressAtIndex_MultipleGroupIds() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+
+        // User1 joins groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User2 joins groupId2
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gGroupIdsByTokenAddressAtIndex
+        uint256[] memory groupIds = groupJoin.gGroupIdsByTokenAddress(
+            tokenAddress
+        );
+        assertEq(groupIds.length, 2, "should have 2 groupIds");
+
+        uint256 groupIdAtIndex0 = groupJoin.gGroupIdsByTokenAddressAtIndex(
+            tokenAddress,
+            0
+        );
+        uint256 groupIdAtIndex1 = groupJoin.gGroupIdsByTokenAddressAtIndex(
+            tokenAddress,
+            1
+        );
+
+        assertTrue(
+            (groupIdAtIndex0 == groupId1 && groupIdAtIndex1 == groupId2) ||
+                (groupIdAtIndex0 == groupId2 && groupIdAtIndex1 == groupId1),
+            "gGroupIdsByTokenAddressAtIndex should return correct groupIds"
+        );
+    }
+
+    /// @notice Test gGroupIdsByTokenAddressByAccountAtIndex with multiple groupIds
+    function test_gGroupIdsByTokenAddressByAccountAtIndex_MultipleGroupIds()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension for groupId2
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins groupId2
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gGroupIdsByTokenAddressByAccountAtIndex
+        uint256[] memory groupIds = groupJoin.gGroupIdsByTokenAddressByAccount(
+            tokenAddress,
+            user1
+        );
+        assertEq(groupIds.length, 2, "should have 2 groupIds");
+
+        uint256 groupIdAtIndex0 = groupJoin
+            .gGroupIdsByTokenAddressByAccountAtIndex(tokenAddress, user1, 0);
+        uint256 groupIdAtIndex1 = groupJoin
+            .gGroupIdsByTokenAddressByAccountAtIndex(tokenAddress, user1, 1);
+
+        assertTrue(
+            (groupIdAtIndex0 == groupId1 && groupIdAtIndex1 == groupId2) ||
+                (groupIdAtIndex0 == groupId2 && groupIdAtIndex1 == groupId1),
+            "gGroupIdsByTokenAddressByAccountAtIndex should return correct groupIds"
+        );
+    }
+
+    /// @notice Test gTokenAddressesByAccountAtIndex with multiple tokenAddresses
+    function test_gTokenAddressesByAccountAtIndex_MultipleTokenAddresses()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second token and extension
+        MockERC20 token2 = new MockERC20();
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token2),
+            address(token2),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token2.mint(address(this), 1e18);
+        token2.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token2)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token2), actionId2);
+
+        // Setup governance votes for token2
+        stake.setGovVotesNum(address(token2), 10000e18);
+        stake.setValidGovVotes(address(token2), groupOwner2, 10000e18);
+
+        // Create new groupId for groupAction2
+        uint256 groupId3 = setupGroupOwner(groupOwner2, 10000e18, "Group3");
+        token2.mint(groupOwner2, GROUP_ACTIVATION_STAKE_AMOUNT);
+        vm.prank(groupOwner2);
+        token2.approve(address(groupManager), type(uint256).max);
+
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins with tokenAddress
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins with token2
+        token2.mint(user1, joinAmount);
+        vm.prank(user1);
+        token2.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId3,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gTokenAddressesByAccountAtIndex
+        address[] memory tokenAddresses = groupJoin.gTokenAddressesByAccount(
+            user1
+        );
+        assertEq(tokenAddresses.length, 2, "should have 2 tokenAddresses");
+
+        address tokenAddressAtIndex0 = groupJoin.gTokenAddressesByAccountAtIndex(
+            user1,
+            0
+        );
+        address tokenAddressAtIndex1 = groupJoin.gTokenAddressesByAccountAtIndex(
+            user1,
+            1
+        );
+
+        assertTrue(
+            (tokenAddressAtIndex0 == tokenAddress &&
+                tokenAddressAtIndex1 == address(token2)) ||
+                (tokenAddressAtIndex0 == address(token2) &&
+                    tokenAddressAtIndex1 == tokenAddress),
+            "gTokenAddressesByAccountAtIndex should return correct tokenAddresses"
+        );
+    }
+
+    /// @notice Test gTokenAddressesByGroupIdAtIndex with multiple tokenAddresses
+    function test_gTokenAddressesByGroupIdAtIndex_MultipleTokenAddresses()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+
+        // Create second token and extension
+        MockERC20 token2 = new MockERC20();
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token2),
+            address(token2),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token2.mint(address(this), 1e18);
+        token2.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token2)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token2), actionId2);
+
+        // Setup governance votes for token2
+        stake.setGovVotesNum(address(token2), 10000e18);
+        stake.setValidGovVotes(address(token2), groupOwner1, 10000e18);
+        token2.mint(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT);
+        vm.prank(groupOwner1);
+        token2.approve(address(groupManager), type(uint256).max);
+
+        vm.prank(groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins groupId1 with tokenAddress
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User2 joins groupId1 with token2
+        token2.mint(user2, joinAmount);
+        vm.prank(user2);
+        token2.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction2),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gTokenAddressesByGroupIdAtIndex
+        address[] memory tokenAddresses = groupJoin.gTokenAddressesByGroupId(
+            groupId1
+        );
+        assertEq(tokenAddresses.length, 2, "should have 2 tokenAddresses");
+
+        address tokenAddressAtIndex0 = groupJoin.gTokenAddressesByGroupIdAtIndex(
+            groupId1,
+            0
+        );
+        address tokenAddressAtIndex1 = groupJoin.gTokenAddressesByGroupIdAtIndex(
+            groupId1,
+            1
+        );
+
+        assertTrue(
+            (tokenAddressAtIndex0 == tokenAddress &&
+                tokenAddressAtIndex1 == address(token2)) ||
+                (tokenAddressAtIndex0 == address(token2) &&
+                    tokenAddressAtIndex1 == tokenAddress),
+            "gTokenAddressesByGroupIdAtIndex should return correct tokenAddresses"
+        );
+    }
+
+    /// @notice Test gTokenAddressesByGroupIdByAccountAtIndex with single tokenAddress
+    function test_gTokenAddressesByGroupIdByAccountAtIndex_SingleTokenAddress()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        // User1 joins groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gTokenAddressesByGroupIdByAccountAtIndex
+        address[] memory tokenAddresses = groupJoin
+            .gTokenAddressesByGroupIdByAccount(groupId1, user1);
+        assertEq(tokenAddresses.length, 1, "should have 1 tokenAddress");
+
+        address tokenAddressAtIndex0 = groupJoin
+            .gTokenAddressesByGroupIdByAccountAtIndex(groupId1, user1, 0);
+
+        assertEq(
+            tokenAddressAtIndex0,
+            tokenAddress,
+            "gTokenAddressesByGroupIdByAccountAtIndex should return correct tokenAddress"
+        );
+    }
+
+    /// @notice Test gActionIdsByTokenAddressAtIndex with multiple actionIds
+    function test_gActionIdsByTokenAddressAtIndex_MultipleActionIds() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension with different actionId
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins with actionId
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins with actionId2
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gActionIdsByTokenAddressAtIndex
+        uint256[] memory actionIds = groupJoin.gActionIdsByTokenAddress(
+            tokenAddress
+        );
+        assertEq(actionIds.length, 2, "should have 2 actionIds");
+
+        uint256 actionIdAtIndex0 = groupJoin.gActionIdsByTokenAddressAtIndex(
+            tokenAddress,
+            0
+        );
+        uint256 actionIdAtIndex1 = groupJoin.gActionIdsByTokenAddressAtIndex(
+            tokenAddress,
+            1
+        );
+
+        assertTrue(
+            (actionIdAtIndex0 == actionId && actionIdAtIndex1 == actionId2) ||
+                (actionIdAtIndex0 == actionId2 && actionIdAtIndex1 == actionId),
+            "gActionIdsByTokenAddressAtIndex should return correct actionIds"
+        );
+    }
+
+    /// @notice Test gActionIdsByTokenAddressByAccountAtIndex with multiple actionIds
+    function test_gActionIdsByTokenAddressByAccountAtIndex_MultipleActionIds()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension with different actionId
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins with actionId
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins with actionId2
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId2,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gActionIdsByTokenAddressByAccountAtIndex
+        uint256[] memory actionIds = groupJoin.gActionIdsByTokenAddressByAccount(
+            tokenAddress,
+            user1
+        );
+        assertEq(actionIds.length, 2, "should have 2 actionIds");
+
+        uint256 actionIdAtIndex0 = groupJoin
+            .gActionIdsByTokenAddressByAccountAtIndex(tokenAddress, user1, 0);
+        uint256 actionIdAtIndex1 = groupJoin
+            .gActionIdsByTokenAddressByAccountAtIndex(tokenAddress, user1, 1);
+
+        assertTrue(
+            (actionIdAtIndex0 == actionId && actionIdAtIndex1 == actionId2) ||
+                (actionIdAtIndex0 == actionId2 && actionIdAtIndex1 == actionId),
+            "gActionIdsByTokenAddressByAccountAtIndex should return correct actionIds"
+        );
+    }
+
+    /// @notice Test gActionIdsByTokenAddressByGroupIdAtIndex with multiple actionIds
+    function test_gActionIdsByTokenAddressByGroupIdAtIndex_MultipleActionIds()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension with different actionId
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins groupId1 with actionId
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins groupId1 with actionId2
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gActionIdsByTokenAddressByGroupIdAtIndex
+        uint256[] memory actionIds = groupJoin.gActionIdsByTokenAddressByGroupId(
+            tokenAddress,
+            groupId1
+        );
+        assertEq(actionIds.length, 2, "should have 2 actionIds");
+
+        uint256 actionIdAtIndex0 = groupJoin
+            .gActionIdsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 0);
+        uint256 actionIdAtIndex1 = groupJoin
+            .gActionIdsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 1);
+
+        assertTrue(
+            (actionIdAtIndex0 == actionId && actionIdAtIndex1 == actionId2) ||
+                (actionIdAtIndex0 == actionId2 && actionIdAtIndex1 == actionId),
+            "gActionIdsByTokenAddressByGroupIdAtIndex should return correct actionIds"
+        );
+    }
+
+    /// @notice Test gActionIdsByTokenAddressByGroupIdByAccountAtIndex with multiple actionIds
+    function test_gActionIdsByTokenAddressByGroupIdByAccountAtIndex_MultipleActionIds()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount * 2, address(groupJoin));
+
+        // Create second extension with different actionId
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+
+        uint256 actionId2 = 1;
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        // User1 joins groupId1 with actionId
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // User1 joins groupId1 with actionId2
+        token.mint(user1, joinAmount);
+        vm.prank(user1);
+        token.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gActionIdsByTokenAddressByGroupIdByAccountAtIndex
+        uint256[] memory actionIds = groupJoin
+            .gActionIdsByTokenAddressByGroupIdByAccount(
+                tokenAddress,
+                groupId1,
+                user1
+            );
+        assertEq(actionIds.length, 2, "should have 2 actionIds");
+
+        uint256 actionIdAtIndex0 = groupJoin
+            .gActionIdsByTokenAddressByGroupIdByAccountAtIndex(
+                tokenAddress,
+                groupId1,
+                user1,
+                0
+            );
+        uint256 actionIdAtIndex1 = groupJoin
+            .gActionIdsByTokenAddressByGroupIdByAccountAtIndex(
+                tokenAddress,
+                groupId1,
+                user1,
+                1
+            );
+
+        assertTrue(
+            (actionIdAtIndex0 == actionId && actionIdAtIndex1 == actionId2) ||
+                (actionIdAtIndex0 == actionId2 && actionIdAtIndex1 == actionId),
+            "gActionIdsByTokenAddressByGroupIdByAccountAtIndex should return correct actionIds"
+        );
+    }
+
+    /// @notice Test gAccountsAtIndex with multiple accounts
+    function test_gAccountsAtIndex_MultipleAccounts() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+        setupUser(user3, joinAmount, address(groupJoin));
+
+        // All users join
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user3);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gAccountsAtIndex
+        address[] memory accounts = groupJoin.gAccounts();
+        assertEq(accounts.length, 3, "should have 3 accounts");
+
+        address accountAtIndex0 = groupJoin.gAccountsAtIndex(0);
+        address accountAtIndex1 = groupJoin.gAccountsAtIndex(1);
+        address accountAtIndex2 = groupJoin.gAccountsAtIndex(2);
+
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex0),
+            "gAccountsAtIndex[0] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex1),
+            "gAccountsAtIndex[1] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex2),
+            "gAccountsAtIndex[2] should be in values"
+        );
+
+        // Verify all three accounts are present
+        assertTrue(
+            _containsAddress(accounts, user1) &&
+                _containsAddress(accounts, user2) &&
+                _containsAddress(accounts, user3),
+            "gAccounts should contain all three users"
+        );
+    }
+
+    /// @notice Test gAccountsByGroupIdAtIndex with multiple accounts
+    function test_gAccountsByGroupIdAtIndex_MultipleAccounts() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+        setupUser(user3, joinAmount, address(groupJoin));
+
+        // All users join groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user3);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gAccountsByGroupIdAtIndex
+        address[] memory accounts = groupJoin.gAccountsByGroupId(groupId1);
+        assertEq(accounts.length, 3, "should have 3 accounts");
+
+        address accountAtIndex0 = groupJoin.gAccountsByGroupIdAtIndex(
+            groupId1,
+            0
+        );
+        address accountAtIndex1 = groupJoin.gAccountsByGroupIdAtIndex(
+            groupId1,
+            1
+        );
+        address accountAtIndex2 = groupJoin.gAccountsByGroupIdAtIndex(
+            groupId1,
+            2
+        );
+
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex0),
+            "gAccountsByGroupIdAtIndex[0] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex1),
+            "gAccountsByGroupIdAtIndex[1] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex2),
+            "gAccountsByGroupIdAtIndex[2] should be in values"
+        );
+    }
+
+    /// @notice Test gAccountsByTokenAddressAtIndex with multiple accounts
+    function test_gAccountsByTokenAddressAtIndex_MultipleAccounts() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+        setupUser(user3, joinAmount, address(groupJoin));
+
+        // All users join
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user3);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gAccountsByTokenAddressAtIndex
+        address[] memory accounts = groupJoin.gAccountsByTokenAddress(
+            tokenAddress
+        );
+        assertEq(accounts.length, 3, "should have 3 accounts");
+
+        address accountAtIndex0 = groupJoin.gAccountsByTokenAddressAtIndex(
+            tokenAddress,
+            0
+        );
+        address accountAtIndex1 = groupJoin.gAccountsByTokenAddressAtIndex(
+            tokenAddress,
+            1
+        );
+        address accountAtIndex2 = groupJoin.gAccountsByTokenAddressAtIndex(
+            tokenAddress,
+            2
+        );
+
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex0),
+            "gAccountsByTokenAddressAtIndex[0] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex1),
+            "gAccountsByTokenAddressAtIndex[1] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex2),
+            "gAccountsByTokenAddressAtIndex[2] should be in values"
+        );
+    }
+
+    /// @notice Test gAccountsByTokenAddressByGroupIdAtIndex with multiple accounts
+    function test_gAccountsByTokenAddressByGroupIdAtIndex_MultipleAccounts()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+        setupUser(user3, joinAmount, address(groupJoin));
+
+        // All users join groupId1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user3);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify gAccountsByTokenAddressByGroupIdAtIndex
+        address[] memory accounts = groupJoin.gAccountsByTokenAddressByGroupId(
+            tokenAddress,
+            groupId1
+        );
+        assertEq(accounts.length, 3, "should have 3 accounts");
+
+        address accountAtIndex0 = groupJoin
+            .gAccountsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 0);
+        address accountAtIndex1 = groupJoin
+            .gAccountsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 1);
+        address accountAtIndex2 = groupJoin
+            .gAccountsByTokenAddressByGroupIdAtIndex(tokenAddress, groupId1, 2);
+
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex0),
+            "gAccountsByTokenAddressByGroupIdAtIndex[0] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex1),
+            "gAccountsByTokenAddressByGroupIdAtIndex[1] should be in values"
+        );
+        assertTrue(
+            _containsAddress(accounts, accountAtIndex2),
+            "gAccountsByTokenAddressByGroupIdAtIndex[2] should be in values"
         );
     }
 
