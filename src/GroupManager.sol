@@ -147,8 +147,8 @@ contract GroupManager is IGroupManager {
             _extensionsWithGroupActivation[tokenAddress].remove(extension);
         }
 
-        IGroupAction extConfig = IGroupAction(extension);
-        uint256 stakedAmount = extConfig.ACTIVATION_STAKE_AMOUNT();
+        IGroupAction ext = IGroupAction(extension);
+        uint256 stakedAmount = ext.ACTIVATION_STAKE_AMOUNT();
         _staked[extension] -= stakedAmount;
         _totalStaked[tokenAddress] -= stakedAmount;
         IERC20(IExtension(extension).TOKEN_ADDRESS()).safeTransfer(
@@ -366,8 +366,8 @@ contract GroupManager is IGroupManager {
     function maxJoinAmount(
         address extension
     ) public view override returns (uint256) {
-        IGroupAction extConfig = IGroupAction(extension);
-        address joinTokenAddress = extConfig.JOIN_TOKEN_ADDRESS();
+        IGroupAction ext = IGroupAction(extension);
+        address joinTokenAddress = ext.JOIN_TOKEN_ADDRESS();
         if (joinTokenAddress == address(0)) return 0;
 
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
@@ -387,7 +387,7 @@ contract GroupManager is IGroupManager {
         uint256 voteRate = (actionVotes * PRECISION) / totalVotes;
 
         uint256 totalMinted = IERC20(joinTokenAddress).totalSupply();
-        uint256 baseAmount = (totalMinted * extConfig.MAX_JOIN_AMOUNT_RATIO()) /
+        uint256 baseAmount = (totalMinted * ext.MAX_JOIN_AMOUNT_RATIO()) /
             PRECISION;
         return (baseAmount * voteRate) / PRECISION;
     }
