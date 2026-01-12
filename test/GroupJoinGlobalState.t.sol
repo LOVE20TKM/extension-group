@@ -765,7 +765,11 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             address(groupAction),
             groupOwner1
         );
-        assertEq(owner1Total, joinAmount, "Owner1 total should equal joinAmount");
+        assertEq(
+            owner1Total,
+            joinAmount,
+            "Owner1 total should equal joinAmount"
+        );
 
         // Verify groupOwner2's total joined amount is still 0
         uint256 owner2Total = groupJoin.totalJoinedAmountByGroupOwner(
@@ -776,7 +780,9 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
     }
 
     /// @notice Test totalJoinedAmountByGroupOwner with single group and multiple users
-    function test_totalJoinedAmountByGroupOwner_SingleGroupMultipleUsers() public {
+    function test_totalJoinedAmountByGroupOwner_SingleGroupMultipleUsers()
+        public
+    {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 20e18;
         uint256 joinAmount3 = 15e18;
@@ -824,14 +830,20 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
     }
 
     /// @notice Test totalJoinedAmountByGroupOwner with multiple groups owned by same owner
-    function test_totalJoinedAmountByGroupOwner_MultipleGroupsSameOwner() public {
+    function test_totalJoinedAmountByGroupOwner_MultipleGroupsSameOwner()
+        public
+    {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 20e18;
         uint256 expectedTotal = joinAmount1 + joinAmount2;
 
         // Create third group owned by groupOwner1
         uint256 groupId3 = setupGroupOwner(groupOwner1, 10000e18, "Group3");
-        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
 
         vm.prank(groupOwner1);
         groupManager.activateGroup(
@@ -878,7 +890,9 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
     }
 
     /// @notice Test totalJoinedAmountByGroupOwner with multiple groups owned by different owners
-    function test_totalJoinedAmountByGroupOwner_MultipleGroupsDifferentOwners() public {
+    function test_totalJoinedAmountByGroupOwner_MultipleGroupsDifferentOwners()
+        public
+    {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 20e18;
 
@@ -908,13 +922,21 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             address(groupAction),
             groupOwner1
         );
-        assertEq(owner1Total, joinAmount1, "Owner1 total should equal joinAmount1");
+        assertEq(
+            owner1Total,
+            joinAmount1,
+            "Owner1 total should equal joinAmount1"
+        );
 
         uint256 owner2Total = groupJoin.totalJoinedAmountByGroupOwner(
             address(groupAction),
             groupOwner2
         );
-        assertEq(owner2Total, joinAmount2, "Owner2 total should equal joinAmount2");
+        assertEq(
+            owner2Total,
+            joinAmount2,
+            "Owner2 total should equal joinAmount2"
+        );
     }
 
     /// @notice Test totalJoinedAmountByGroupOwner decreases after exit
@@ -990,7 +1012,11 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             address(groupAction),
             groupOwner1
         );
-        assertEq(owner1TotalBefore, joinAmount, "Owner1 total should equal joinAmount");
+        assertEq(
+            owner1TotalBefore,
+            joinAmount,
+            "Owner1 total should equal joinAmount"
+        );
 
         // User1 exits
         vm.prank(user1);
@@ -1001,7 +1027,11 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             address(groupAction),
             groupOwner1
         );
-        assertEq(owner1TotalAfter, 0, "Owner1 total should be 0 after all exit");
+        assertEq(
+            owner1TotalAfter,
+            0,
+            "Owner1 total should be 0 after all exit"
+        );
     }
 
     /// @notice Test totalJoinedAmountByGroupOwner excludes deactivated group
@@ -1023,7 +1053,11 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             address(groupAction),
             groupOwner1
         );
-        assertEq(owner1TotalBefore, joinAmount, "Owner1 total should equal joinAmount");
+        assertEq(
+            owner1TotalBefore,
+            joinAmount,
+            "Owner1 total should equal joinAmount"
+        );
 
         // Advance to next round (required for deactivation)
         advanceRound();
