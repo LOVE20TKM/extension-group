@@ -492,6 +492,9 @@ contract GroupManager is IGroupManager {
         uint256 maxAccounts_,
         uint256 currentRound
     ) internal {
+        if (minJoinAmount == 0) {
+            revert InvalidMinMaxJoinAmount();
+        }
         if (maxJoinAmount_ != 0 && maxJoinAmount_ < minJoinAmount) {
             revert InvalidMinMaxJoinAmount();
         }
