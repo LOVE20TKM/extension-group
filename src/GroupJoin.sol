@@ -497,7 +497,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (groupOwner == address(0)) {
             revert InvalidGroupId();
         }
-        uint256 ownerTotalJoined = _totalJoinedAmountByOwner(
+        uint256 ownerTotalJoined = _totalJoinedAmountByGroupOwner(
             extension,
             groupOwner
         );
@@ -511,7 +511,14 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         }
     }
 
-    function _totalJoinedAmountByOwner(
+    function totalJoinedAmountByGroupOwner(
+        address extension,
+        address owner
+    ) external view override returns (uint256) {
+        return _totalJoinedAmountByGroupOwner(extension, owner);
+    }
+
+    function _totalJoinedAmountByGroupOwner(
         address extension,
         address owner
     ) internal view returns (uint256 total) {

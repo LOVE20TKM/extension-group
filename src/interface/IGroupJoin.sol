@@ -119,6 +119,11 @@ interface IGroupJoin {
         address account
     ) external view returns (uint256);
 
+    function totalJoinedAmountByGroupOwner(
+        address extension,
+        address owner
+    ) external view returns (uint256);
+
     // ------ global view functions (no extension parameter) ------
 
     // gGroupIds functions

@@ -735,6 +735,319 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         );
     }
 
+    // ============ totalJoinedAmountByGroupOwner Tests ============
+
+    /// @notice Test totalJoinedAmountByGroupOwner returns 0 when no joins
+    function test_totalJoinedAmountByGroupOwner_NoJoins() public view {
+        uint256 amount = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(amount, 0, "Should return 0 when no joins");
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner with single group and single user
+    function test_totalJoinedAmountByGroupOwner_SingleGroupSingleUser() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        // User1 joins group1 (owned by groupOwner1)
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify groupOwner1's total joined amount
+        uint256 owner1Total = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(owner1Total, joinAmount, "Owner1 total should equal joinAmount");
+
+        // Verify groupOwner2's total joined amount is still 0
+        uint256 owner2Total = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner2
+        );
+        assertEq(owner2Total, 0, "Owner2 total should be 0");
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner with single group and multiple users
+    function test_totalJoinedAmountByGroupOwner_SingleGroupMultipleUsers() public {
+        uint256 joinAmount1 = 10e18;
+        uint256 joinAmount2 = 20e18;
+        uint256 joinAmount3 = 15e18;
+        uint256 expectedTotal = joinAmount1 + joinAmount2 + joinAmount3;
+
+        setupUser(user1, joinAmount1, address(groupJoin));
+        setupUser(user2, joinAmount2, address(groupJoin));
+        setupUser(user3, joinAmount3, address(groupJoin));
+
+        // All users join group1 (owned by groupOwner1)
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount2,
+            new string[](0)
+        );
+
+        vm.prank(user3);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount3,
+            new string[](0)
+        );
+
+        // Verify groupOwner1's total joined amount
+        uint256 owner1Total = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(
+            owner1Total,
+            expectedTotal,
+            "Owner1 total should equal sum of all join amounts"
+        );
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner with multiple groups owned by same owner
+    function test_totalJoinedAmountByGroupOwner_MultipleGroupsSameOwner() public {
+        uint256 joinAmount1 = 10e18;
+        uint256 joinAmount2 = 20e18;
+        uint256 expectedTotal = joinAmount1 + joinAmount2;
+
+        // Create third group owned by groupOwner1
+        uint256 groupId3 = setupGroupOwner(groupOwner1, 10000e18, "Group3");
+        setupUser(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+
+        vm.prank(groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction),
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        setupUser(user1, joinAmount1, address(groupJoin));
+        setupUser(user2, joinAmount2, address(groupJoin));
+
+        // User1 joins group1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
+
+        // User2 joins group3 (also owned by groupOwner1)
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId3,
+            joinAmount2,
+            new string[](0)
+        );
+
+        // Verify groupOwner1's total joined amount (sum of group1 and group3)
+        uint256 owner1Total = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(
+            owner1Total,
+            expectedTotal,
+            "Owner1 total should equal sum of all groups"
+        );
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner with multiple groups owned by different owners
+    function test_totalJoinedAmountByGroupOwner_MultipleGroupsDifferentOwners() public {
+        uint256 joinAmount1 = 10e18;
+        uint256 joinAmount2 = 20e18;
+
+        setupUser(user1, joinAmount1, address(groupJoin));
+        setupUser(user2, joinAmount2, address(groupJoin));
+
+        // User1 joins group1 (owned by groupOwner1)
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
+
+        // User2 joins group2 (owned by groupOwner2)
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId2,
+            joinAmount2,
+            new string[](0)
+        );
+
+        // Verify each owner's total
+        uint256 owner1Total = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(owner1Total, joinAmount1, "Owner1 total should equal joinAmount1");
+
+        uint256 owner2Total = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner2
+        );
+        assertEq(owner2Total, joinAmount2, "Owner2 total should equal joinAmount2");
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner decreases after exit
+    function test_totalJoinedAmountByGroupOwner_AfterExit() public {
+        uint256 joinAmount1 = 10e18;
+        uint256 joinAmount2 = 20e18;
+        uint256 expectedTotalBefore = joinAmount1 + joinAmount2;
+        uint256 expectedTotalAfter = joinAmount2;
+
+        setupUser(user1, joinAmount1, address(groupJoin));
+        setupUser(user2, joinAmount2, address(groupJoin));
+
+        // Both users join group1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
+
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount2,
+            new string[](0)
+        );
+
+        // Verify total before exit
+        uint256 owner1TotalBefore = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(
+            owner1TotalBefore,
+            expectedTotalBefore,
+            "Owner1 total before exit should equal sum"
+        );
+
+        // User1 exits
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        // Verify total after exit
+        uint256 owner1TotalAfter = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(
+            owner1TotalAfter,
+            expectedTotalAfter,
+            "Owner1 total after exit should decrease"
+        );
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner returns 0 after all users exit
+    function test_totalJoinedAmountByGroupOwner_AllUsersExit() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        // User1 joins group1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify total before exit
+        uint256 owner1TotalBefore = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(owner1TotalBefore, joinAmount, "Owner1 total should equal joinAmount");
+
+        // User1 exits
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        // Verify total after exit
+        uint256 owner1TotalAfter = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(owner1TotalAfter, 0, "Owner1 total should be 0 after all exit");
+    }
+
+    /// @notice Test totalJoinedAmountByGroupOwner excludes deactivated group
+    function test_totalJoinedAmountByGroupOwner_DeactivatedGroup() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        // User1 joins group1
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify total before deactivation
+        uint256 owner1TotalBefore = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(owner1TotalBefore, joinAmount, "Owner1 total should equal joinAmount");
+
+        // Advance to next round (required for deactivation)
+        advanceRound();
+        uint256 newRound = verify.currentRound();
+        vote.setVotedActionIds(tokenAddress, newRound, actionId);
+        vote.setVotesNum(tokenAddress, newRound, 10000e18);
+        vote.setVotesNumByActionId(tokenAddress, newRound, actionId, 10000e18);
+
+        // Deactivate group1
+        vm.prank(groupOwner1);
+        groupManager.deactivateGroup(address(groupAction), groupId1);
+
+        // Verify total after deactivation (should exclude deactivated group)
+        uint256 owner1TotalAfter = groupJoin.totalJoinedAmountByGroupOwner(
+            address(groupAction),
+            groupOwner1
+        );
+        assertEq(
+            owner1TotalAfter,
+            0,
+            "Owner1 total should exclude deactivated group"
+        );
+    }
+
     // ============ gGroupIdsByTokenAddressByActionId Tests ============
 
     /// @notice Test gGroupIdsByTokenAddressByActionId with single groupId
