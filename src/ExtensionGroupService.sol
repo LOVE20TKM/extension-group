@@ -37,7 +37,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using SafeERC20 for IERC20;
 
     uint256 public constant PRECISION = 1e18;
-    uint256 public constant DEFAULT_MAX_RECIPIENTS = 100;
+    uint256 public constant DEFAULT_MAX_RECIPIENTS = 10;
 
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
