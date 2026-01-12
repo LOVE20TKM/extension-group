@@ -7,7 +7,6 @@ interface IGroupManager {
     error GroupAlreadyActivated();
     error GroupNotActive();
     error InvalidMinMaxJoinAmount();
-    error InvalidMaxAccounts();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
     error NotRegisteredExtensionInFactory();

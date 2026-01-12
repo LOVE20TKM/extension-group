@@ -26,7 +26,7 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
     ExtensionGroupServiceFactory public factory;
     ExtensionGroupActionFactory public actionFactory;
 
-    uint256 constant MAX_RECIPIENTS = 100;
+    uint256 constant MAX_RECIPIENTS = 10;
 
     // Event declaration for testing
     event CreateExtension(

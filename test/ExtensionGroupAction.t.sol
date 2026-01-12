@@ -718,6 +718,128 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             90
         );
     }
+
+    function test_MaxAccounts_ZeroMeansNoLimit() public {
+        // Setup: Create a new group with maxAccounts = 0 (no limit)
+        uint256 groupId3 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup3");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction),
+            groupId3,
+            "Group3",
+            0, // maxCapacity
+            1e18, // minJoinAmount
+            0, // maxJoinAmount (no limit)
+            0 // maxAccounts (0 = no limit)
+        );
+
+        // Verify maxAccounts is 0
+        (, , , , , uint256 maxAccounts, , , ) = groupManager.groupInfo(
+            address(groupAction),
+            groupId3
+        );
+        assertEq(maxAccounts, 0, "maxAccounts should be 0");
+
+        // Join multiple users (more than would normally be allowed if there was a limit)
+        // Test with 10 users to ensure no limit is enforced
+        address[] memory users = new address[](10);
+        for (uint256 i = 0; i < 10; i++) {
+            users[i] = address(uint160(0x1000 + i));
+            setupUser(users[i], 10e18, address(groupJoin));
+
+            vm.prank(users[i]);
+            groupJoin.join(
+                address(groupAction),
+                groupId3,
+                10e18,
+                new string[](0)
+            );
+        }
+
+        // Verify all users joined successfully
+        uint256 accountCount = groupJoin.accountsByGroupIdByRoundCount(
+            address(groupAction),
+            verify.currentRound(),
+            groupId3
+        );
+        assertEq(accountCount, 10, "All 10 users should have joined");
+
+        // Verify no GroupAccountsFull error occurred
+        assertTrue(
+            groupManager.isGroupActive(address(groupAction), groupId3),
+            "Group should still be active"
+        );
+    }
+
+    function test_MaxAccounts_NonZeroEnforcesLimit() public {
+        // Setup: Create a new group with maxAccounts = 3
+        uint256 groupId4 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup4");
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction),
+            groupId4,
+            "Group4",
+            0, // maxCapacity
+            1e18, // minJoinAmount
+            0, // maxJoinAmount (no limit)
+            3 // maxAccounts = 3
+        );
+
+        // Verify maxAccounts is 3
+        (, , , , , uint256 maxAccounts, , , ) = groupManager.groupInfo(
+            address(groupAction),
+            groupId4
+        );
+        assertEq(maxAccounts, 3, "maxAccounts should be 3");
+
+        // Join 3 users (should succeed)
+        address[] memory users = new address[](3);
+        for (uint256 i = 0; i < 3; i++) {
+            users[i] = address(uint160(0x2000 + i));
+            setupUser(users[i], 10e18, address(groupJoin));
+
+            vm.prank(users[i]);
+            groupJoin.join(
+                address(groupAction),
+                groupId4,
+                10e18,
+                new string[](0)
+            );
+        }
+
+        // Verify 3 users joined
+        uint256 accountCount = groupJoin.accountsByGroupIdByRoundCount(
+            address(groupAction),
+            verify.currentRound(),
+            groupId4
+        );
+        assertEq(accountCount, 3, "3 users should have joined");
+
+        // Try to join a 4th user (should fail)
+        address user4 = address(0x2003);
+        setupUser(user4, 10e18, address(groupJoin));
+
+        vm.prank(user4);
+        vm.expectRevert(IGroupJoin.GroupAccountsFull.selector);
+        groupJoin.join(
+            address(groupAction),
+            groupId4,
+            10e18,
+            new string[](0)
+        );
+    }
 }
 
 /**

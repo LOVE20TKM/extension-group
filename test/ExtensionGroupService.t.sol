@@ -53,7 +53,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
     uint256 public groupId1;
     uint256 public groupId2;
 
-    uint256 constant MAX_RECIPIENTS = 100;
+    uint256 constant MAX_RECIPIENTS = 10;
     uint256 constant SERVICE_ACTION_ID = 2;
 
     function setUp() public {
