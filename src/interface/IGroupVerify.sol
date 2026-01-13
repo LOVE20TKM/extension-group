@@ -88,12 +88,6 @@ interface IGroupVerify {
         uint256 groupId
     ) external view returns (uint256);
 
-    function capacityReductionByGroupId(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256);
-
     function groupScore(
         address extension,
         uint256 round,
@@ -268,7 +262,7 @@ interface IGroupVerify {
         uint256 index
     ) external view returns (address);
 
-    function capacityReduction(
+    function capacityReductionRate(
         address extension,
         uint256 round,
         uint256 groupId

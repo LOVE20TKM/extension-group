@@ -79,7 +79,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     // extension => round => groupId => capacity reduction factor
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _capacityReductionByGroupId;
+        internal _capacityReductionRate;
 
     // extension => round => groupOwner => total distrust votes
     mapping(address => mapping(uint256 => mapping(address => uint256)))
@@ -423,20 +423,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupScore[extension][round][groupId];
     }
 
-    function capacityReductionByGroupId(
+    function capacityReductionRate(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        return _capacityReductionByGroupId[extension][round][groupId];
-    }
-
-    function capacityReduction(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view override returns (uint256) {
-        return _capacityReductionByGroupId[extension][round][groupId];
+        return _capacityReductionRate[extension][round][groupId];
     }
 
     function distrustReduction(
@@ -750,7 +742,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address groupOwner = _group.ownerOf(groupId);
 
         // Calculate group score
-        _capacityReductionByGroupId[extension][currentRound][
+        _capacityReductionRate[extension][currentRound][
             groupId
         ] = _calculateCapacityReduction(
             extension,
@@ -881,9 +873,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round,
             actionId
         );
-        uint256 capacityReduction_ = _capacityReductionByGroupId[extension][
-            round
-        ][groupId];
+        uint256 capacityReduction_ = _capacityReductionRate[extension][round][
+            groupId
+        ];
 
         return
             _computeGroupScore(
@@ -917,9 +909,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round
         ];
         mapping(uint256 => uint256)
-            storage capacityReductionMap = _capacityReductionByGroupId[
-                extension
-            ][round];
+            storage capacityReductionMap = _capacityReductionRate[extension][
+                round
+            ];
         uint256 totalGroupScore_ = _totalGroupScore[extension][round];
 
         for (uint256 i = 0; i < groupIds.length; i++) {

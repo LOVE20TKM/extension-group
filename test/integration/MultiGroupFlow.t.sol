@@ -621,12 +621,12 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         IGroupVerify groupVerifyContract2 = IGroupVerify(
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
-        uint256 reduction1 = groupVerifyContract2.capacityReductionByGroupId(
+        uint256 reduction1 = groupVerifyContract2.capacityReductionRate(
             bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup1.groupId
         );
-        uint256 reduction2 = groupVerifyContract2.capacityReductionByGroupId(
+        uint256 reduction2 = groupVerifyContract2.capacityReductionRate(
             bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup2.groupId

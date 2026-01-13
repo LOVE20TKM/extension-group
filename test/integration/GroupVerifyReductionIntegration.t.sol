@@ -7,7 +7,7 @@ import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {PRECISION} from "../../src/interface/IGroupVerify.sol";
 
 /// @title GroupVerifyReductionIntegrationTest
-/// @notice Integration tests for capacityReduction and distrustReduction functions
+/// @notice Integration tests for capacityReductionRate and distrustReduction functions
 contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
     IGroupVerify public groupVerify;
 
@@ -131,7 +131,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
     }
 
-    /// @notice Test capacityReduction and distrustReduction work together
+    /// @notice Test capacityReductionRate and distrustReduction work together
     function test_capacityAndDistrustReduction_Integration() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
@@ -201,7 +201,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
 
         // Get both reductions
-        uint256 capacityReduction = groupVerify.capacityReduction(
+        uint256 capacityReductionRate = groupVerify.capacityReductionRate(
             extensionAddr,
             round,
             bobGroup1.groupId
@@ -214,8 +214,8 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
 
         // Verify both are set correctly
         assertTrue(
-            capacityReduction > 0,
-            "capacityReduction should be greater than 0"
+            capacityReductionRate > 0,
+            "capacityReductionRate should be greater than 0"
         );
         assertTrue(
             distrustReduction > 0 && distrustReduction <= PRECISION,
@@ -229,15 +229,15 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
             bobGroup1.groupId
         );
 
-        // Group score should be: groupAmount * distrustReduction * capacityReduction / PRECISION
+        // Group score should be: groupAmount * distrustReduction * capacityReductionRate / PRECISION
         uint256 groupAmount = 10e18;
 
         // Verify group score is calculated correctly
-        // Group score = groupAmount * distrustReduction * capacityReduction / PRECISION^2
+        // Group score = groupAmount * distrustReduction * capacityReductionRate / PRECISION^2
         // Note: There may be small rounding differences due to division order
         uint256 calculatedScore = (groupAmount *
             distrustReduction *
-            capacityReduction) / (PRECISION * PRECISION);
+            capacityReductionRate) / (PRECISION * PRECISION);
 
         // Allow small rounding difference (up to 10 wei)
         uint256 diff = groupScore > calculatedScore

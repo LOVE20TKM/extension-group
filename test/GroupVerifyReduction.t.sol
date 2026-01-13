@@ -7,7 +7,7 @@ import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {PRECISION} from "../src/interface/IGroupVerify.sol";
 
 /// @title GroupVerifyReductionTest
-/// @notice Unit tests for capacityReduction and distrustReduction functions
+/// @notice Unit tests for capacityReductionRate and distrustReduction functions
 /// @dev Integration tests are in test/integration/GroupVerifyReductionIntegration.t.sol
 contract GroupVerifyReductionTest is BaseGroupFlowTest {
     IGroupVerify public groupVerify;
@@ -16,56 +16,6 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         super.setUp();
         groupVerify = IGroupVerify(
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
-        );
-    }
-
-    /// @notice Test capacityReduction returns same value as capacityReductionByGroupId
-    function test_capacityReduction_MatchesCapacityReductionByGroupId() public {
-        // Setup: Create extension and action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.vote(aliceGroup.flow); // Alice also votes so she can verify later
-        h.next_phase();
-        h.group_activate(bobGroup1);
-
-        // Member joins
-        GroupUserParams memory m1;
-        m1.flow = member1();
-        m1.joinAmount = 10e18;
-        m1.groupActionAddress = extensionAddr;
-        h.group_join(m1, bobGroup1);
-
-        // Verify phase
-        h.next_phase();
-        uint256 round = h.verifyContract().currentRound();
-
-        // Submit scores
-        uint256[] memory scores = new uint256[](1);
-        scores[0] = 100;
-        h.group_submit_score(bobGroup1, scores);
-
-        // Test capacityReduction matches capacityReductionByGroupId
-        uint256 capacityReduction = groupVerify.capacityReduction(
-            extensionAddr,
-            round,
-            bobGroup1.groupId
-        );
-        uint256 capacityReductionByGroupId = groupVerify
-            .capacityReductionByGroupId(
-                extensionAddr,
-                round,
-                bobGroup1.groupId
-            );
-
-        assertEq(
-            capacityReduction,
-            capacityReductionByGroupId,
-            "capacityReduction should match capacityReductionByGroupId"
         );
     }
 
