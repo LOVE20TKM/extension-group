@@ -34,7 +34,9 @@ import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {GroupJoin} from "../../src/GroupJoin.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
-import {MockExtensionGroupActionFactory} from "../mocks/MockExtensionGroupActionFactory.sol";
+import {
+    MockExtensionGroupActionFactory
+} from "../mocks/MockExtensionGroupActionFactory.sol";
 
 /**
  * @title BaseGroupTest
@@ -122,7 +124,6 @@ abstract contract BaseGroupTest is Test {
         // Deploy GroupManager singleton (no parameters, will be initialized by factory)
         groupManager = new GroupManager();
 
-
         // Deploy GroupJoin and GroupVerify singletons
         groupJoin = new GroupJoin();
         groupVerify = new GroupVerify();
@@ -138,9 +139,15 @@ abstract contract BaseGroupTest is Test {
 
         // Initialize GroupManager, GroupJoin and GroupVerify with the factory
         // Must be called after factory is fully deployed
-        IGroupManager(address(groupManager)).initialize(address(mockGroupActionFactory));
-        IGroupJoin(address(groupJoin)).initialize(address(mockGroupActionFactory));
-        IGroupVerify(address(groupVerify)).initialize(address(mockGroupActionFactory));
+        IGroupManager(address(groupManager)).initialize(
+            address(mockGroupActionFactory)
+        );
+        IGroupJoin(address(groupJoin)).initialize(
+            address(mockGroupActionFactory)
+        );
+        IGroupVerify(address(groupVerify)).initialize(
+            address(mockGroupActionFactory)
+        );
 
         // Setup initial token supply
         token.mint(address(this), 1_000_000e18);
