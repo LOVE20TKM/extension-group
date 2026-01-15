@@ -436,20 +436,38 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _claimReward(
         uint256 round
     ) internal override returns (uint256 amount) {
-        bool isMinted;
-        (amount, isMinted) = rewardByAccount(round, msg.sender);
-        if (isMinted) revert AlreadyClaimed();
+        bool claimed;
+        (amount, claimed) = rewardByAccount(round, msg.sender);
+        if (claimed) revert AlreadyClaimed();
 
         _claimed[round][msg.sender] = true;
         _claimedReward[round][msg.sender] = amount;
 
+        uint256 distributed;
+        uint256 remaining;
         if (amount > 0) {
-            uint256 remaining = amount - _distributeToRecipients(round);
+            distributed = _distributeToRecipients(round);
+            remaining = amount - distributed;
             if (remaining > 0)
                 IERC20(TOKEN_ADDRESS).safeTransfer(msg.sender, remaining);
         }
 
-        emit ClaimReward(TOKEN_ADDRESS, round, actionId, msg.sender, amount);
+        emit ClaimReward({
+            tokenAddress: TOKEN_ADDRESS,
+            round: round,
+            actionId: actionId,
+            account: msg.sender,
+            amount: amount
+        });
+        emit ClaimRewardDistribution({
+            tokenAddress: TOKEN_ADDRESS,
+            round: round,
+            actionId: actionId,
+            account: msg.sender,
+            amount: amount,
+            distributed: distributed,
+            remaining: remaining
+        });
     }
 
     function _distributeToRecipients(
@@ -503,6 +521,15 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             if (amounts[i] > 0) {
                 token.safeTransfer(addrs[i], amounts[i]);
                 distributed += amounts[i];
+                emit DistributeRecipient({
+                    tokenAddress: TOKEN_ADDRESS,
+                    round: round,
+                    actionId: actionId_,
+                    groupId: groupId,
+                    account: msg.sender,
+                    recipient: addrs[i],
+                    amount: amounts[i]
+                });
             }
             unchecked {
                 ++i;

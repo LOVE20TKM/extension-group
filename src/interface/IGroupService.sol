@@ -23,6 +23,24 @@ interface IGroupService {
         address[] recipients,
         uint256[] ratios
     );
+    event DistributeRecipient(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        uint256 indexed groupId,
+        address account,
+        address recipient,
+        uint256 amount
+    );
+    event ClaimRewardDistribution(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        address indexed account,
+        uint256 amount,
+        uint256 distributed,
+        uint256 remaining
+    );
 
     function PRECISION() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
