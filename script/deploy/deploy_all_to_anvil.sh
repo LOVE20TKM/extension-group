@@ -167,8 +167,7 @@ echo "[Step 4/4] Deploying Group Extension..."
 # But to be sure, dependencies in main project can be checked
 echo "  Verifying dependencies in main project..."
 cd "$PROJECT_ROOT/script/deploy"
-source 00_init.sh anvil
-bash one_click_deploy.sh anvil
+source one_click_deploy.sh anvil
 cd "$PROJECT_ROOT"
 # Step 4 writes address files directly to main project, no sync needed
 

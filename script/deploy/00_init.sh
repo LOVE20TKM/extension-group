@@ -12,11 +12,11 @@ fi
 # ------ dont change below ------
 network_dir="../network/$network"
 
-source $network_dir/.account && \
-source $network_dir/network.params && \
-source $network_dir/address.params && \
-source $network_dir/address.extension.center.params && \
-source $network_dir/address.group.params && \
+source $network_dir/.account 
+source $network_dir/network.params 
+source $network_dir/address.params 
+source $network_dir/address.extension.center.params 
+source $network_dir/address.group.params 
 source $network_dir/address.extension.group.params
 
 # ------ Request keystore password ------

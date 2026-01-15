@@ -9,27 +9,6 @@ source "$base_dir/address.extension.center.params"
 source "$base_dir/address.group.params"
 source "$base_dir/address.extension.group.params"
 
-check_equal(){
-    local msg="$1"
-    local expected="$2"
-    local actual="$3"
-
-    # check params
-    if [ -z "$msg" ] || [ -z "$expected" ] || [ -z "$actual" ]; then
-        echo "Error: 3 params needed: msg, expected, actual"
-        return 1
-    fi
-
-    # remove double quotes
-    actual_clean=$(echo "$actual" | sed 's/^"//;s/"$//')
-
-    if [ "$expected" != "$actual_clean" ]; then
-        echo "(failed) $msg: $expected != $actual_clean"
-    else
-        echo "  (passed) $msg: $expected == $actual_clean"
-    fi
-}
-
 echo "-------------------- expected addresses --------------------"
 echo "  centerAddress: $centerAddress"
 echo "  groupAddress: $groupAddress"
