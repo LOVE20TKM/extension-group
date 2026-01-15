@@ -440,6 +440,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         (amount, isMinted) = rewardByAccount(round, msg.sender);
         if (isMinted) revert AlreadyClaimed();
 
+        _claimed[round][msg.sender] = true;
         _claimedReward[round][msg.sender] = amount;
 
         if (amount > 0) {

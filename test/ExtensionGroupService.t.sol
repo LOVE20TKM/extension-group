@@ -12,6 +12,7 @@ import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {IJoin} from "@extension/src/interface/IJoin.sol";
+import {IReward} from "@extension/src/interface/IReward.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
@@ -580,6 +581,34 @@ contract ExtensionGroupServiceTest is BaseGroupTest {
         assertEq(amounts[0], 0);
         assertEq(amounts[1], 0);
         assertEq(ownerAmount, 0);
+    }
+
+    // ============ claimReward Tests ============
+
+    function test_ClaimReward_MarksClaimedAndRevertsOnSecondClaim() public {
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 targetRound = 0;
+        uint256 expectedReward = 0;
+        verify.setCurrentRound(1);
+
+        (uint256 rewardBefore, bool isMintedBefore) = groupService
+            .rewardByAccount(targetRound, groupOwner1);
+        assertEq(rewardBefore, expectedReward);
+        assertFalse(isMintedBefore);
+
+        vm.prank(groupOwner1);
+        groupService.claimReward(targetRound);
+
+        (uint256 rewardAfter, bool isMintedAfter) = groupService
+            .rewardByAccount(targetRound, groupOwner1);
+        assertEq(rewardAfter, expectedReward);
+        assertTrue(isMintedAfter);
+
+        vm.prank(groupOwner1);
+        vm.expectRevert(IReward.AlreadyClaimed.selector);
+        groupService.claimReward(targetRound);
     }
 
     // ============ IExtensionJoinedAmount Tests ============
