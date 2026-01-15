@@ -754,5 +754,4 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             "Total score should match expected"
         );
     }
-
 }
