@@ -112,6 +112,7 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         _verifyGlobalStateAfterJoin(user1, groupId1, tokenAddress, actionId);
     }
 
+
     /// @notice Test _updateGlobalStateOnJoin with multiple accounts
     function test_updateGlobalStateOnJoin_MultipleAccounts() public {
         uint256 joinAmount = 10e18;

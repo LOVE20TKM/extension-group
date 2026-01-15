@@ -27,9 +27,11 @@ import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
 import {
     RoundHistoryAddressSet
 } from "@extension/src/lib/RoundHistoryAddressSet.sol";
+import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
 using RoundHistoryAddressSet for RoundHistoryAddressSet.Storage;
+using RoundHistoryAddress for RoundHistoryAddress.History;
 using EnumerableSet for EnumerableSet.UintSet;
 using EnumerableSet for EnumerableSet.AddressSet;
 using SafeERC20 for IERC20;
@@ -358,6 +360,26 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address account
     ) external view override returns (uint256) {
         return _amountHistoryByAccount[extension][account].value(round);
+    }
+
+    function isAccountInRangeByRound(
+        address extension,
+        uint256 round,
+        uint256 groupId,
+        address account,
+        uint256 startIndex,
+        uint256 endIndex
+    ) external view override returns (bool) {
+        RoundHistoryAddressSet.Storage storage accounts = _accountsHistory[
+            extension
+        ][groupId];
+        uint256 index = accounts.accountsIndexHistory[account].value(round);
+        address accountAtIndex = accounts.accountsAtIndexHistory[index].value(
+            round
+        );
+        if (accountAtIndex != account) return false;
+        if (index < startIndex) return false;
+        return index <= endIndex;
     }
 
     function _transferJoinToken(

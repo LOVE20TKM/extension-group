@@ -91,8 +91,18 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         // Batch 1: scores [80, 90] with amounts [10e18, 20e18]
         // Batch 2: scores [85, 95] with amounts [30e18, 40e18]
         // Batch 3: scores [75, 88] with amounts [50e18, 60e18]
-        uint256 expectedTotalScore = 80 * 10e18 + 90 * 20e18 + 85 * 30e18 +
-            95 * 40e18 + 75 * 50e18 + 88 * 60e18;
+        uint256 expectedTotalScore = 80 *
+            10e18 +
+            90 *
+            20e18 +
+            85 *
+            30e18 +
+            95 *
+            40e18 +
+            75 *
+            50e18 +
+            88 *
+            60e18;
 
         // Batch 1: Submit first 2 accounts (startIndex = 0)
         uint256[] memory batch1 = new uint256[](2);
@@ -138,6 +148,66 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             ),
             90,
             "User 1 score should be 90"
+        );
+        uint256 expectedUnverifiedScore = 0;
+        assertEq(
+            groupVerify.originScoreByAccount(
+                address(groupAction),
+                round,
+                users[2]
+            ),
+            expectedUnverifiedScore,
+            "User 2 score should be 0 before verified"
+        );
+        bool expectedInRange = true;
+        bool expectedOutOfRange = false;
+        assertEq(
+            groupJoin.isAccountInRangeByRound(
+                address(groupAction),
+                round,
+                groupId1,
+                users[1],
+                0,
+                1
+            ),
+            expectedInRange,
+            "User 1 should be in range [0,1]"
+        );
+        assertEq(
+            groupJoin.isAccountInRangeByRound(
+                address(groupAction),
+                round,
+                groupId1,
+                users[2],
+                0,
+                1
+            ),
+            expectedOutOfRange,
+            "User 2 should be out of range [0,1]"
+        );
+        assertEq(
+            groupJoin.isAccountInRangeByRound(
+                address(groupAction),
+                round,
+                groupId1,
+                users[1],
+                1,
+                1
+            ),
+            expectedInRange,
+            "User 1 should be in range [1,1]"
+        );
+        assertEq(
+            groupJoin.isAccountInRangeByRound(
+                address(groupAction),
+                round,
+                groupId1,
+                users[0],
+                1,
+                1
+            ),
+            expectedOutOfRange,
+            "User 0 should be out of range [1,1]"
         );
 
         // Batch 2: Submit next 2 accounts (startIndex = 2)
@@ -611,8 +681,14 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         uint256 round = verify.currentRound();
 
         // Calculate expected total score (some scores are MAX_ORIGIN_SCORE = 100)
-        uint256 expectedTotalScore = 80 * 10e18 + MAX_ORIGIN_SCORE * 20e18 +
-            85 * 30e18 + MAX_ORIGIN_SCORE * 40e18;
+        uint256 expectedTotalScore = 80 *
+            10e18 +
+            MAX_ORIGIN_SCORE *
+            20e18 +
+            85 *
+            30e18 +
+            MAX_ORIGIN_SCORE *
+            40e18;
 
         // Batch 1: Submit first 2 accounts
         uint256[] memory batch1 = new uint256[](2);
@@ -678,4 +754,5 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             "Total score should match expected"
         );
     }
+
 }

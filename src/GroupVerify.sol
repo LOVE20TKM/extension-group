@@ -368,24 +368,23 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             return 0;
         }
 
-        // Check if account is in the verified range
-        // Accounts are verified in order from index 0 to verifiedCount - 1
-        for (uint256 i = 0; i < verifiedCount; i++) {
-            address verifiedAccount = _groupJoin
-                .accountsByGroupIdByRoundAtIndex(extension, round, groupId, i);
-            if (verifiedAccount == account) {
-                // Account is verified, get deduction value
-                uint256 deduction = _originScoreDeductionByAccount[extension][
-                    round
-                ][account];
-                // If deduction is 0, score is 100 (full score)
-                // Otherwise, score is MAX_ORIGIN_SCORE - deduction
-                return MAX_ORIGIN_SCORE - deduction;
-            }
+        if (
+            !_groupJoin.isAccountInRangeByRound(
+                extension,
+                round,
+                groupId,
+                account,
+                0,
+                verifiedCount - 1
+            )
+        ) {
+            return 0;
         }
 
-        // Account is not in verified range, return 0
-        return 0;
+        uint256 deduction = _originScoreDeductionByAccount[extension][round][
+            account
+        ];
+        return MAX_ORIGIN_SCORE - deduction;
     }
 
     function totalAccountScore(
