@@ -185,7 +185,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.CannotJoinDeactivatedGroup.selector);
+        vm.expectRevert(IGroupJoin.CannotJoinInactiveGroup.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -405,11 +405,16 @@ contract GroupJoinTest is BaseGroupTest {
             new string[](0)
         );
 
-        (uint256 joinedRound, uint256 amount, uint256 groupId) = groupJoin
-            .joinInfo(address(groupAction), user1);
+        (
+            uint256 joinedRound,
+            uint256 amount,
+            uint256 groupId,
+            address provider
+        ) = groupJoin.joinInfo(address(groupAction), user1);
         assertEq(joinedRound, expectedRound, "joinedRound should match");
         assertEq(amount, expectedAmount, "amount should match");
         assertEq(groupId, expectedGroupId, "groupId should match");
+        assertEq(provider, address(0), "provider should be zero");
     }
 
     function test_RoundHistory_JoinAndIncreaseAmount() public {
@@ -662,5 +667,170 @@ contract GroupJoinTest is BaseGroupTest {
             0,
             "accounts count should be 0 in round3"
         );
+    }
+
+    function test_TrialJoin_UsesProviderEscrowAndExitRefundsProvider() public {
+        uint256 providerFunds = 20e18;
+        uint256 trialAmount = 10e18;
+        address provider = user2;
+
+        setupUser(provider, providerFunds, address(groupJoin));
+
+        uint256 providerBalanceBeforeSet = token.balanceOf(provider);
+
+        _setTrialAccounts(provider, trialAmount, user1);
+
+        uint256 expectedProviderBalanceAfterSet = providerBalanceBeforeSet -
+            trialAmount;
+
+        assertEq(
+            token.balanceOf(provider),
+            expectedProviderBalanceAfterSet,
+            "provider balance should decrease by trialAmount"
+        );
+        uint256 expectedRound = join.currentRound();
+
+        vm.prank(user1);
+        groupJoin.trialJoin(
+            address(groupAction),
+            groupId1,
+            provider,
+            new string[](0)
+        );
+
+        _assertJoinInfo(user1, expectedRound, trialAmount, groupId1, provider);
+
+        (address inUseAccount, uint256 inUseAmount) = groupJoin
+            .trialAccountsInUseByProviderAtIndex(
+                address(groupAction),
+                groupId1,
+                provider,
+                0
+            );
+        assertEq(inUseAccount, user1, "in-use account should be user1");
+        assertEq(inUseAmount, trialAmount, "in-use amount should match");
+
+        uint256 providerBalanceBeforeExit = token.balanceOf(provider);
+        uint256 userBalanceBeforeExit = token.balanceOf(user1);
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        assertEq(
+            token.balanceOf(provider),
+            providerBalanceBeforeExit + trialAmount,
+            "provider balance should be refunded"
+        );
+        assertEq(
+            token.balanceOf(user1),
+            userBalanceBeforeExit,
+            "trial user should not receive refund"
+        );
+        (, , , address clearedProvider) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
+        assertEq(
+            clearedProvider,
+            address(0),
+            "trial provider should be cleared"
+        );
+    }
+
+    function test_TrialJoin_RevertOnJoinAfterTrial() public {
+        uint256 poolAmount = 20e18;
+        uint256 trialAmount = 10e18;
+        address provider = user2;
+
+        setupUser(provider, poolAmount, address(groupJoin));
+
+        _setTrialAccounts(provider, trialAmount, user1);
+
+        vm.prank(user1);
+        groupJoin.trialJoin(
+            address(groupAction),
+            groupId1,
+            provider,
+            new string[](0)
+        );
+
+        vm.prank(user1);
+        vm.expectRevert(IGroupJoin.TrialJoinLocked.selector);
+        groupJoin.join(address(groupAction), groupId1, 1e18, new string[](0));
+    }
+
+    function test_ExitOnBehalf_ByProvider() public {
+        uint256 poolAmount = 20e18;
+        uint256 trialAmount = 10e18;
+        address provider = user2;
+
+        setupUser(provider, poolAmount, address(groupJoin));
+
+        _setTrialAccounts(provider, trialAmount, user1);
+
+        vm.prank(user1);
+        groupJoin.trialJoin(
+            address(groupAction),
+            groupId1,
+            provider,
+            new string[](0)
+        );
+
+        uint256 providerBalanceBeforeExit = token.balanceOf(provider);
+        vm.prank(provider);
+        groupJoin.trialExit(address(groupAction), user1);
+
+        assertEq(
+            token.balanceOf(provider),
+            providerBalanceBeforeExit + trialAmount,
+            "provider balance should be refunded"
+        );
+        (, , , address exitProvider) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
+        assertEq(exitProvider, address(0), "trial provider should be cleared");
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            0,
+            "accounts should be removed after exit"
+        );
+    }
+
+    function _setTrialAccounts(
+        address provider,
+        uint256 trialAmount,
+        address account
+    ) internal {
+        address[] memory trialAccounts = new address[](1);
+        uint256[] memory trialAmounts = new uint256[](1);
+        trialAccounts[0] = account;
+        trialAmounts[0] = trialAmount;
+
+        vm.prank(provider);
+        groupJoin.trialWaitingListAdd(
+            address(groupAction),
+            groupId1,
+            trialAccounts,
+            trialAmounts
+        );
+    }
+
+    function _assertJoinInfo(
+        address account,
+        uint256 expectedRound,
+        uint256 expectedAmount,
+        uint256 expectedGroupId,
+        address expectedProvider
+    ) internal view {
+        (
+            uint256 joinedRound,
+            uint256 amount,
+            uint256 groupId,
+            address provider
+        ) = groupJoin.joinInfo(address(groupAction), account);
+        assertEq(joinedRound, expectedRound, "joinedRound should match");
+        assertEq(amount, expectedAmount, "amount should match");
+        assertEq(groupId, expectedGroupId, "groupId should match");
+        assertEq(provider, expectedProvider, "provider should match");
     }
 }

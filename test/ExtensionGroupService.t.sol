@@ -1398,7 +1398,7 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
 
     uint256 public groupId1;
 
-    uint256 constant MAX_RECIPIENTS = 100;
+    uint256 constant MAX_RECIPIENTS = 10;
 
     function setUp() public {
         setUpBase();

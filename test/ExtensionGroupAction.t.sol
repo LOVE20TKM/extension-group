@@ -259,7 +259,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.CannotJoinDeactivatedGroup.selector);
+        vm.expectRevert(IGroupJoin.CannotJoinInactiveGroup.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -494,7 +494,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
 
         assertEq(groupJoin.joinedAmount(address(groupAction)), joinAmount);
-        (, , uint256 groupId) = groupJoin.joinInfo(address(groupAction), user1);
+        (, , uint256 groupId, ) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
         assertEq(groupId, groupId2);
     }
 
@@ -833,12 +836,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         vm.prank(user4);
         vm.expectRevert(IGroupJoin.GroupAccountsFull.selector);
-        groupJoin.join(
-            address(groupAction),
-            groupId4,
-            10e18,
-            new string[](0)
-        );
+        groupJoin.join(address(groupAction), groupId4, 10e18, new string[](0));
     }
 }
 

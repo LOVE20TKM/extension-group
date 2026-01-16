@@ -130,7 +130,7 @@ contract TestGroupFlowHelper is Test {
     uint256 constant DEFAULT_GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
     uint256 constant DEFAULT_MAX_JOIN_AMOUNT_RATIO = 1e16; // 1% (1e16 / 1e18 = 0.01)
     uint256 constant DEFAULT_CAPACITY_FACTOR = 1e18; // 100%
-    uint256 constant DEFAULT_MAX_RECIPIENTS = 100;
+    uint256 constant DEFAULT_MAX_RECIPIENTS = 10;
     uint256 constant DEFAULT_JOIN_AMOUNT = 1e18;
     uint256 constant DEFAULT_GROUP_MIN_JOIN_AMOUNT = 1e18;
 

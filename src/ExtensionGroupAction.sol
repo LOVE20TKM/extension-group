@@ -43,7 +43,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;
         MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
-
         _validateJoinToken(joinTokenAddress_);
     }
 
@@ -107,7 +106,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     function joinedAmountByAccount(
         address account
     ) external view override(ExtensionBase) returns (uint256) {
-        (, uint256 amount, ) = _groupJoin.joinInfo(address(this), account);
+        (, uint256 amount, , ) = _groupJoin.joinInfo(address(this), account);
         return amount;
     }
 

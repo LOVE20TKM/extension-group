@@ -141,7 +141,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        (uint256 joinedRound, , ) = groupJoin.joinInfo(
+        (uint256 joinedRound, , , ) = groupJoin.joinInfo(
             bobGroup1.groupActionAddress,
             member1().userAddress
         );
@@ -151,7 +151,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.group_exit(m1, bobGroup1);
 
         // Verify exited
-        (joinedRound, , ) = groupJoin.joinInfo(
+        (joinedRound, , , ) = groupJoin.joinInfo(
             bobGroup1.groupActionAddress,
             member1().userAddress
         );
@@ -163,7 +163,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // Verify rejoined
         uint256 amount;
-        (joinedRound, amount, ) = groupJoin.joinInfo(
+        (joinedRound, amount, , ) = groupJoin.joinInfo(
             bobGroup1.groupActionAddress,
             member1().userAddress
         );

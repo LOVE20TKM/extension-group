@@ -11,10 +11,16 @@ interface IGroupJoin {
     error OwnerCapacityExceeded();
     error GroupCapacityExceeded();
     error GroupAccountsFull();
-    error CannotJoinDeactivatedGroup();
+    error CannotJoinInactiveGroup();
     error NotRegisteredExtensionInFactory();
     error ExtensionNotInitialized();
     error InvalidGroupId();
+    error TrialJoinLocked();
+    error TrialAccountNotAllowed();
+    error TrialAccountZero();
+    error TrialAmountZero();
+    error TrialAccountAlreadyAdded();
+    error TrialProviderMismatch();
 
     event Join(
         address indexed tokenAddress,
@@ -22,6 +28,7 @@ interface IGroupJoin {
         uint256 indexed actionId,
         uint256 indexed groupId,
         address account,
+        address provider,
         uint256 amount
     );
     event Exit(
@@ -30,7 +37,17 @@ interface IGroupJoin {
         uint256 indexed actionId,
         uint256 indexed groupId,
         address account,
+        address provider,
         uint256 amount
+    );
+    event TrialWaitingListUpdated(
+        address indexed tokenAddress,
+        uint256 indexed groupId,
+        uint256 actionId,
+        address indexed provider,
+        address account,
+        uint256 trialAmount,
+        bool enabled
     );
 
     function initialize(address factory_) external;
@@ -44,7 +61,16 @@ interface IGroupJoin {
         string[] memory verificationInfos
     ) external;
 
+    function trialJoin(
+        address extension,
+        uint256 groupId,
+        address provider,
+        string[] memory verificationInfos
+    ) external;
+
     function exit(address extension) external;
+
+    function trialExit(address extension, address account) external;
 
     function joinInfo(
         address extension,
@@ -52,7 +78,12 @@ interface IGroupJoin {
     )
         external
         view
-        returns (uint256 joinedRound, uint256 amount, uint256 groupId);
+        returns (
+            uint256 joinedRound,
+            uint256 amount,
+            uint256 groupId,
+            address provider
+        );
 
     function accountsByGroupId(
         address extension,
@@ -132,6 +163,62 @@ interface IGroupJoin {
         uint256 startIndex,
         uint256 endIndex
     ) external view returns (bool);
+
+    function trialWaitingListAdd(
+        address extension,
+        uint256 groupId,
+        address[] memory trialAccounts,
+        uint256[] memory trialAmounts
+    ) external;
+
+    function trialWaitingListRemove(
+        address extension,
+        uint256 groupId,
+        address[] memory trialAccounts
+    ) external;
+
+    function trialWaitingListRemoveAll(
+        address extension,
+        uint256 groupId
+    ) external;
+
+    function trialWaitingListByProvider(
+        address extension,
+        uint256 groupId,
+        address provider
+    ) external view returns (address[] memory, uint256[] memory);
+
+    function trialWaitingListByProviderCount(
+        address extension,
+        uint256 groupId,
+        address provider
+    ) external view returns (uint256);
+
+    function trialWaitingListByProviderAtIndex(
+        address extension,
+        uint256 groupId,
+        address provider,
+        uint256 index
+    ) external view returns (address, uint256);
+
+    function trialAccountsInUseByProvider(
+        address extension,
+        uint256 groupId,
+        address provider
+    ) external view returns (address[] memory, uint256[] memory);
+
+    function trialAccountsInUseByProviderCount(
+        address extension,
+        uint256 groupId,
+        address provider
+    ) external view returns (uint256);
+
+    function trialAccountsInUseByProviderAtIndex(
+        address extension,
+        uint256 groupId,
+        address provider,
+        uint256 index
+    ) external view returns (address, uint256);
 
     // ------ global view functions (no extension parameter) ------
 
