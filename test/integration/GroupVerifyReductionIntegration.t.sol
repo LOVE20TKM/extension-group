@@ -68,10 +68,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
                 extensionAddr
             );
 
-        // Skip test if alice has no verify votes
-        if (aliceVerifyVotes == 0) {
-            return;
-        }
+        assertTrue(aliceVerifyVotes > 0, "Alice should have verify votes");
 
         // Get total votes for calculation
         uint256 totalVotes = h.voteContract().votesNumByActionId(

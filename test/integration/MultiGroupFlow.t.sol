@@ -127,7 +127,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         h.next_phase();
 
         // Calculate all expected values before verification
-        _calculateExpectedRewards(ga, verifyRound);
+        _calculateExpectedRewards(verifyRound);
 
         // Verify rewards for each group
         _verifyGroup1Rewards(ga, g1Members, verifyRound);
@@ -293,10 +293,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
 
     /// @notice Calculate all expected reward values at the start
     /// @dev This function calculates expected values based on business rules, not contract view methods
-    function _calculateExpectedRewards(
-        ExtensionGroupAction ga,
-        uint256 verifyRound
-    ) internal {
+    function _calculateExpectedRewards(uint256 verifyRound) internal {
         // Get total reward from mint contract (only external dependency)
         (_expected.totalReward, ) = h
             .mintContract()
@@ -308,24 +305,25 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             );
         assertTrue(_expected.totalReward > 0, "Total reward should be > 0");
 
-        // Get group rewards from contract (needed to calculate member rewards)
-        // Note: We get these once and use them for all calculations
-        _expected.group1Reward = ga.generatedRewardByGroupId(
-            verifyRound,
-            bobGroup1.groupId
-        );
-        _expected.group2Reward = ga.generatedRewardByGroupId(
-            verifyRound,
-            bobGroup2.groupId
-        );
-        _expected.group3Reward = ga.generatedRewardByGroupId(
-            verifyRound,
-            aliceGroup.groupId
-        );
+        // Calculate group rewards based on business rules (no contract view methods)
+        // Assumptions for this test:
+        // - No distrust votes
+        // - Capacity reduction rate = 1e18 (within capacity)
+        // So groupScore == groupAmount, and totalGroupScore == sum(groupAmount)
+        uint256 g1TotalJoin = 10e18 + 20e18 + 15e18;
+        uint256 g2TotalJoin = 25e18 + 30e18 + 12e18;
+        uint256 g3TotalJoin = 18e18 + 22e18 + 16e18;
+        uint256 totalGroupAmount = g1TotalJoin + g2TotalJoin + g3TotalJoin;
 
-        assertTrue(_expected.group1Reward > 0, "Group1 should have reward");
-        assertTrue(_expected.group2Reward > 0, "Group2 should have reward");
-        assertTrue(_expected.group3Reward > 0, "Group3 should have reward");
+        _expected.group1Reward =
+            (_expected.totalReward * g1TotalJoin) /
+            totalGroupAmount;
+        _expected.group2Reward =
+            (_expected.totalReward * g2TotalJoin) /
+            totalGroupAmount;
+        _expected.group3Reward =
+            (_expected.totalReward * g3TotalJoin) /
+            totalGroupAmount;
 
         // Calculate expected member rewards based on business rules
         // Group1: scores=[80,90,85], joinAmounts=[10,20,15]e18

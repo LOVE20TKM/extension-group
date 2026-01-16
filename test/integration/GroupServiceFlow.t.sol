@@ -380,13 +380,19 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 verifyRound,
         GroupUserParams memory /* m1 */
     ) internal {
-        ExtensionGroupAction ga = ExtensionGroupAction(
-            bobGroup1.groupActionAddress
+        // Get total reward from mint contract (only external dependency)
+        (_expectedAction.totalReward, ) = h
+            .mintContract()
+            .actionRewardByActionIdByAccount(
+                h.firstTokenAddress(),
+                verifyRound,
+                bobGroup1.groupActionId,
+                bobGroup1.groupActionAddress
+            );
+        assertTrue(
+            _expectedAction.totalReward > 0,
+            "Action total reward should be > 0"
         );
-
-        // Get total reward from contract (only external dependency)
-        _expectedAction.totalReward = ga.reward(verifyRound);
-        assertTrue(_expectedAction.totalReward > 0, "Action total reward should be > 0");
 
         // Calculate expected values based on business rules
         // Input parameters: m1: score=100, joinAmount=10e18
