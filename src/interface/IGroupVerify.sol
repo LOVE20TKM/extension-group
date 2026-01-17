@@ -170,16 +170,19 @@ interface IGroupVerify {
     ) external view returns (uint256);
 
     function actionIdsByVerifier(
+        address tokenAddress,
         uint256 round,
         address verifier
     ) external view returns (uint256[] memory);
 
     function actionIdsByVerifierCount(
+        address tokenAddress,
         uint256 round,
         address verifier
     ) external view returns (uint256);
 
     function actionIdsByVerifierAtIndex(
+        address tokenAddress,
         uint256 round,
         address verifier,
         uint256 index

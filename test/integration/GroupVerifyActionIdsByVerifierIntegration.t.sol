@@ -22,6 +22,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_SingleExtension() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
+        address tokenAddress = IExtension(extensionAddr).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr;
         uint256 actionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId;
@@ -49,6 +50,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test actionIdsByVerifier
         uint256[] memory actionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress,
             round,
             bobGroup1.flow.userAddress
         );
@@ -58,6 +60,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
         // Test actionIdsByVerifierCount
         assertEq(
             groupVerify.actionIdsByVerifierCount(
+                tokenAddress,
                 round,
                 bobGroup1.flow.userAddress
             ),
@@ -68,6 +71,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
         // Test actionIdsByVerifierAtIndex
         assertEq(
             groupVerify.actionIdsByVerifierAtIndex(
+                tokenAddress,
                 round,
                 bobGroup1.flow.userAddress,
                 0
@@ -81,6 +85,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_MultipleExtensions() public {
         // Setup: Create first extension and action
         address extensionAddr1 = h.group_action_create(bobGroup1);
+        address tokenAddress1 = IExtension(extensionAddr1).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr1;
         uint256 actionId1 = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId1;
@@ -130,6 +135,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test actionIdsByVerifier - should have both actionIds
         uint256[] memory actionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress1,
             round,
             bobGroup1.flow.userAddress
         );
@@ -143,6 +149,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
         // Test actionIdsByVerifierCount
         assertEq(
             groupVerify.actionIdsByVerifierCount(
+                tokenAddress1,
                 round,
                 bobGroup1.flow.userAddress
             ),
@@ -152,11 +159,13 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test actionIdsByVerifierAtIndex - verify both can be accessed
         uint256 retrievedActionId1 = groupVerify.actionIdsByVerifierAtIndex(
+            tokenAddress1,
             round,
             bobGroup1.flow.userAddress,
             0
         );
         uint256 retrievedActionId2 = groupVerify.actionIdsByVerifierAtIndex(
+            tokenAddress1,
             round,
             bobGroup1.flow.userAddress,
             1
@@ -176,6 +185,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_Deduplication() public {
         // Setup: Create extension and action for bobGroup1
         address extensionAddr = h.group_action_create(bobGroup1);
+        address tokenAddress = IExtension(extensionAddr).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr;
         uint256 actionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId;
@@ -217,6 +227,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Verify actionId is recorded after first verification
         uint256[] memory actionIds1 = groupVerify.actionIdsByVerifier(
+            tokenAddress,
             round,
             bobGroup1.flow.userAddress
         );
@@ -234,6 +245,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Verify actionId is still only recorded once (deduplication)
         uint256[] memory actionIds2 = groupVerify.actionIdsByVerifier(
+            tokenAddress,
             round,
             bobGroup1.flow.userAddress
         );
@@ -247,6 +259,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
         // Verify count is still 1
         assertEq(
             groupVerify.actionIdsByVerifierCount(
+                tokenAddress,
                 round,
                 bobGroup1.flow.userAddress
             ),
@@ -259,6 +272,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_MultipleVerifiers() public {
         // Setup: Create extension and action for bobGroup1
         address extensionAddr1 = h.group_action_create(bobGroup1);
+        address tokenAddress1 = IExtension(extensionAddr1).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr1;
         uint256 actionId1 = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId1;
@@ -278,6 +292,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Setup: Create extension and action for aliceGroup
         address extensionAddr2 = h.group_action_create(aliceGroup);
+        address tokenAddress2 = IExtension(extensionAddr2).TOKEN_ADDRESS();
         aliceGroup.groupActionAddress = extensionAddr2;
         uint256 actionId2 = h.submit_group_action(aliceGroup);
         aliceGroup.flow.actionId = actionId2;
@@ -309,6 +324,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test bobGroup1's verifier
         uint256[] memory bobActionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress1,
             round,
             bobGroup1.flow.userAddress
         );
@@ -317,6 +333,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test aliceGroup's verifier
         uint256[] memory aliceActionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress2,
             round,
             aliceGroup.flow.userAddress
         );
@@ -328,6 +345,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_Consistency() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
+        address tokenAddress = IExtension(extensionAddr).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr;
         uint256 actionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId;
@@ -355,10 +373,12 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test consistency between actionIdsByVerifier and actionIdsByVerifierCount
         uint256[] memory actionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress,
             round,
             bobGroup1.flow.userAddress
         );
         uint256 count = groupVerify.actionIdsByVerifierCount(
+            tokenAddress,
             round,
             bobGroup1.flow.userAddress
         );
@@ -368,6 +388,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
         // Test consistency with actionIdsByVerifierAtIndex
         for (uint256 i = 0; i < count; i++) {
             uint256 actionIdAtIndex = groupVerify.actionIdsByVerifierAtIndex(
+                tokenAddress,
                 round,
                 bobGroup1.flow.userAddress,
                 i
@@ -384,6 +405,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_NonVerifier() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
+        address tokenAddress = IExtension(extensionAddr).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr;
         uint256 actionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId;
@@ -411,6 +433,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test non-verifier (aliceGroup hasn't verified anything)
         uint256[] memory actionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress,
             round,
             aliceGroup.flow.userAddress
         );
@@ -418,6 +441,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         assertEq(
             groupVerify.actionIdsByVerifierCount(
+                tokenAddress,
                 round,
                 aliceGroup.flow.userAddress
             ),
@@ -430,6 +454,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
     function test_actionIdsByVerifier_UnverifiedGroup() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
+        address tokenAddress = IExtension(extensionAddr).TOKEN_ADDRESS();
         bobGroup1.groupActionAddress = extensionAddr;
         uint256 actionId = h.submit_group_action(bobGroup1);
         bobGroup1.flow.actionId = actionId;
@@ -452,6 +477,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         // Test actionIdsByVerifier before verification
         uint256[] memory actionIds = groupVerify.actionIdsByVerifier(
+            tokenAddress,
             round,
             bobGroup1.flow.userAddress
         );
@@ -463,6 +489,7 @@ contract GroupVerifyActionIdsByVerifierIntegrationTest is BaseGroupFlowTest {
 
         assertEq(
             groupVerify.actionIdsByVerifierCount(
+                tokenAddress,
                 round,
                 bobGroup1.flow.userAddress
             ),

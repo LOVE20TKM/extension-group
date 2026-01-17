@@ -73,8 +73,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         internal _groupIdsByVerifier;
     // extension => round => list of verifiers
     mapping(address => mapping(uint256 => address[])) internal _verifiers;
-    // round => verifier => list of actionIds
-    mapping(uint256 => mapping(address => uint256[]))
+    // tokenAddress => round => verifier => list of actionIds
+    mapping(address => mapping(uint256 => mapping(address => uint256[])))
         internal _actionIdsByVerifier;
 
     // extension => round => groupId => capacity reduction factor
@@ -570,25 +570,28 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     }
 
     function actionIdsByVerifier(
+        address tokenAddress,
         uint256 round,
         address verifier
     ) external view override returns (uint256[] memory) {
-        return _actionIdsByVerifier[round][verifier];
+        return _actionIdsByVerifier[tokenAddress][round][verifier];
     }
 
     function actionIdsByVerifierCount(
+        address tokenAddress,
         uint256 round,
         address verifier
     ) external view override returns (uint256) {
-        return _actionIdsByVerifier[round][verifier].length;
+        return _actionIdsByVerifier[tokenAddress][round][verifier].length;
     }
 
     function actionIdsByVerifierAtIndex(
+        address tokenAddress,
         uint256 round,
         address verifier,
         uint256 index
     ) external view override returns (uint256) {
-        return _actionIdsByVerifier[round][verifier][index];
+        return _actionIdsByVerifier[tokenAddress][round][verifier][index];
     }
 
     function verifiedGroupIds(
@@ -769,10 +772,11 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _verifiedGroupIds[extension][currentRound].push(groupId);
 
         // Record actionId for verifier (with deduplication)
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
-        uint256[] storage actionIds = _actionIdsByVerifier[currentRound][
-            groupOwner
-        ];
+        uint256[] storage actionIds = _actionIdsByVerifier[tokenAddress][
+            currentRound
+        ][groupOwner];
         bool exists = false;
         for (uint256 i = 0; i < actionIds.length; i++) {
             if (actionIds[i] == actionId) {
