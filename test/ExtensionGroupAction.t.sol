@@ -268,6 +268,40 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
     }
 
+    function test_SubmitOriginScores_RevertGroupNotActive() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        advanceRound();
+        uint256 round = verify.currentRound();
+        vote.setVotedActionIds(address(token), round, ACTION_ID);
+        vote.setVotesNum(address(token), round, 10000e18);
+        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
+
+        vm.prank(groupOwner1, groupOwner1);
+        groupManager.deactivateGroup(address(groupAction), groupId1);
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+
+        vm.prank(groupOwner1);
+        vm.expectRevert(IGroupManager.GroupNotActive.selector);
+        groupVerify.submitOriginScores(
+            address(groupAction),
+            groupId1,
+            0,
+            scores
+        );
+    }
+
     function test_DelegatedVerification() public {
         address delegate = address(0x123);
 

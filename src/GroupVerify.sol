@@ -160,6 +160,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         if (!canVerify(extension, msg.sender, groupId)) {
             revert NotVerifier();
         }
+        if (!_groupManager.isGroupActive(extension, groupId)) {
+            revert IGroupManager.GroupNotActive();
+        }
 
         if (originScores.length == 0) {
             revert OriginScoresEmpty();
