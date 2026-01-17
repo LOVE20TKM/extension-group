@@ -42,8 +42,8 @@ interface IGroupJoin {
     );
     event TrialWaitingListUpdated(
         address indexed tokenAddress,
-        uint256 indexed groupId,
         uint256 actionId,
+        uint256 indexed groupId,
         address indexed provider,
         address account,
         uint256 trialAmount,

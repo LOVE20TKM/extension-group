@@ -2,7 +2,10 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupFlowTest} from "./base/BaseGroupFlowTest.sol";
-import {GroupUserParams, FlowUserParams} from "./helper/TestGroupFlowHelper.sol";
+import {
+    GroupUserParams,
+    FlowUserParams
+} from "./helper/TestGroupFlowHelper.sol";
 import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
 import {ExtensionGroupService} from "../../src/ExtensionGroupService.sol";
 import {IGroupJoin} from "../../src/interface/IGroupJoin.sol";
@@ -72,7 +75,8 @@ contract GroupServiceMultiChildIntegrationTest is BaseGroupFlowTest {
     }
 
     function _prepareLaunchEligibility(address launcher) internal {
-        uint256 minGovMints = h.launchContract()
+        uint256 minGovMints = h
+            .launchContract()
             .MIN_GOV_REWARD_MINTS_TO_LAUNCH();
         uint256 requiredMints = CHILD_TOKEN_COUNT * minGovMints;
         _setMintGovRewardCount(h.firstTokenAddress(), launcher, requiredMints);
@@ -397,7 +401,7 @@ contract GroupServiceMultiChildIntegrationTest is BaseGroupFlowTest {
 
     function _assertGroupJoins(
         ChildCommunity[CHILD_TOKEN_COUNT] memory children
-    ) internal {
+    ) internal view {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
@@ -423,7 +427,7 @@ contract GroupServiceMultiChildIntegrationTest is BaseGroupFlowTest {
 
     function _assertServiceJoins(
         ChildCommunity[CHILD_TOKEN_COUNT] memory children
-    ) internal {
+    ) internal view {
         for (uint256 i; i < CHILD_TOKEN_COUNT; i++) {
             ExtensionGroupAction anyAction = ExtensionGroupAction(
                 children[i].actionExtensions[0]
@@ -456,7 +460,7 @@ contract GroupServiceMultiChildIntegrationTest is BaseGroupFlowTest {
     function _assertVerifierCounts(
         ChildCommunity[CHILD_TOKEN_COUNT] memory children,
         uint256 verifyRound
-    ) internal {
+    ) internal view {
         IGroupVerify groupVerify = IGroupVerify(
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
