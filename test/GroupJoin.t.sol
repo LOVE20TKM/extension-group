@@ -701,7 +701,7 @@ contract GroupJoinTest is BaseGroupTest {
         _assertJoinInfo(user1, expectedRound, trialAmount, groupId1, provider);
 
         (address inUseAccount, uint256 inUseAmount) = groupJoin
-            .trialAccountsJoinedByProviderAtIndex(
+            .trialJoinedListByProviderAtIndex(
                 address(groupAction),
                 groupId1,
                 provider,
@@ -754,7 +754,7 @@ contract GroupJoinTest is BaseGroupTest {
         );
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.TrialJoinLocked.selector);
+        vm.expectRevert(IGroupJoin.TrialAlreadyJoined.selector);
         groupJoin.join(address(groupAction), groupId1, 1e18, new string[](0));
     }
 

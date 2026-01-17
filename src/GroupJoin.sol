@@ -73,7 +73,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         internal _trialWaitingListByProvider;
     // extension => groupId => provider => trial accounts in use
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.AddressSet)))
-        internal _trialAccountsJoinedByProvider;
+        internal _trialJoinedListByProvider;
     // extension => account => provider
     mapping(address => mapping(address => address))
         internal _trialProviderByAccount;
@@ -160,7 +160,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         string[] memory verificationInfos
     ) external override nonReentrant onlyValidExtension(extension) {
         if (_trialProviderByAccount[extension][msg.sender] != address(0)) {
-            revert TrialJoinLocked();
+            revert TrialAlreadyJoined();
         }
         uint256 currentRound = _joinInternal(
             extension,
@@ -188,7 +188,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 trialAmount = _validateTrialJoin(extension, groupId, provider);
         uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
             .latestValue();
-        if (joinedGroupId != 0) revert TrialJoinLocked();
+        if (joinedGroupId != 0) revert AlreadyJoined();
         uint256 currentRound = _joinInternal(
             extension,
             groupId,
@@ -196,7 +196,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             verificationInfos
         );
         _trialProviderByAccount[extension][msg.sender] = provider;
-        _trialAccountsJoinedByProvider[extension][groupId][provider].add(
+        _trialJoinedListByProvider[extension][groupId][provider].add(
             msg.sender
         );
         if (
@@ -564,12 +564,12 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function trialAccountsJoinedByProvider(
+    function trialJoinedListByProvider(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (address[] memory, uint256[] memory) {
-        address[] memory accounts = _trialAccountsJoinedByProvider[extension][
+        address[] memory accounts = _trialJoinedListByProvider[extension][
             groupId
         ][provider].values();
         uint256[] memory amounts = new uint256[](accounts.length);
@@ -583,23 +583,22 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return (accounts, amounts);
     }
 
-    function trialAccountsJoinedByProviderCount(
+    function trialJoinedListByProviderCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (uint256) {
         return
-            _trialAccountsJoinedByProvider[extension][groupId][provider]
-                .length();
+            _trialJoinedListByProvider[extension][groupId][provider].length();
     }
 
-    function trialAccountsJoinedByProviderAtIndex(
+    function trialJoinedListByProviderAtIndex(
         address extension,
         uint256 groupId,
         address provider,
         uint256 index
     ) external view override returns (address, uint256) {
-        address account = _trialAccountsJoinedByProvider[extension][groupId][
+        address account = _trialJoinedListByProvider[extension][groupId][
             provider
         ].at(index);
         return (
@@ -642,7 +641,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address provider = _trialProviderByAccount[extension][account];
         if (provider != address(0)) {
             _trialProviderByAccount[extension][account] = address(0);
-            _trialAccountsJoinedByProvider[extension][groupId][provider].remove(
+            _trialJoinedListByProvider[extension][groupId][provider].remove(
                 account
             );
         }
@@ -750,7 +749,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) internal view returns (uint256 trialAmount) {
         if (provider == address(0)) revert TrialProviderMismatch();
         if (_trialProviderByAccount[extension][msg.sender] != address(0)) {
-            revert TrialJoinLocked();
+            revert TrialAlreadyJoined();
         }
 
         if (
