@@ -73,7 +73,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         internal _trialWaitingListByProvider;
     // extension => groupId => provider => trial accounts in use
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.AddressSet)))
-        internal _trialAccountsInUseByProvider;
+        internal _trialAccountsJoinedByProvider;
     // extension => account => provider
     mapping(address => mapping(address => address))
         internal _trialProviderByAccount;
@@ -196,7 +196,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             verificationInfos
         );
         _trialProviderByAccount[extension][msg.sender] = provider;
-        _trialAccountsInUseByProvider[extension][groupId][provider].add(
+        _trialAccountsJoinedByProvider[extension][groupId][provider].add(
             msg.sender
         );
         if (
@@ -386,7 +386,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) external override nonReentrant onlyValidExtension(extension) {
         _requireValidGroupId(extension, groupId);
         if (trialAccounts.length != trialAmounts.length) {
-            revert TrialAccountNotAllowed();
+            revert TrialArrayLengthMismatch();
         }
 
         uint256 totalAmount;
@@ -394,6 +394,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             address account = trialAccounts[i];
             uint256 trialAmount = trialAmounts[i];
             if (account == address(0)) revert TrialAccountZero();
+            if (account == msg.sender) revert TrialAccountIsProvider();
             if (trialAmount == 0) revert TrialAmountZero();
             if (
                 _trialWaitingListByProvider[extension][groupId][msg.sender]
@@ -563,12 +564,12 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function trialAccountsInUseByProvider(
+    function trialAccountsJoinedByProvider(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (address[] memory, uint256[] memory) {
-        address[] memory accounts = _trialAccountsInUseByProvider[extension][
+        address[] memory accounts = _trialAccountsJoinedByProvider[extension][
             groupId
         ][provider].values();
         uint256[] memory amounts = new uint256[](accounts.length);
@@ -582,23 +583,23 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return (accounts, amounts);
     }
 
-    function trialAccountsInUseByProviderCount(
+    function trialAccountsJoinedByProviderCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (uint256) {
         return
-            _trialAccountsInUseByProvider[extension][groupId][provider]
+            _trialAccountsJoinedByProvider[extension][groupId][provider]
                 .length();
     }
 
-    function trialAccountsInUseByProviderAtIndex(
+    function trialAccountsJoinedByProviderAtIndex(
         address extension,
         uint256 groupId,
         address provider,
         uint256 index
     ) external view override returns (address, uint256) {
-        address account = _trialAccountsInUseByProvider[extension][groupId][
+        address account = _trialAccountsJoinedByProvider[extension][groupId][
             provider
         ].at(index);
         return (
@@ -641,7 +642,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address provider = _trialProviderByAccount[extension][account];
         if (provider != address(0)) {
             _trialProviderByAccount[extension][account] = address(0);
-            _trialAccountsInUseByProvider[extension][groupId][provider].remove(
+            _trialAccountsJoinedByProvider[extension][groupId][provider].remove(
                 account
             );
         }
@@ -757,13 +758,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 msg.sender
             )
         ) {
-            revert TrialAccountNotAllowed();
+            revert TrialAccountNotInWaitingList();
         }
 
         trialAmount = _trialWaitingListAmountByProvider[extension][groupId][
             provider
         ][msg.sender];
-        if (trialAmount == 0) revert TrialAccountNotAllowed();
+        if (trialAmount == 0) revert TrialAmountZero();
     }
 
     function _emitJoin(

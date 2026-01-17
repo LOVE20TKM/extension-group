@@ -701,7 +701,7 @@ contract GroupJoinTest is BaseGroupTest {
         _assertJoinInfo(user1, expectedRound, trialAmount, groupId1, provider);
 
         (address inUseAccount, uint256 inUseAmount) = groupJoin
-            .trialAccountsInUseByProviderAtIndex(
+            .trialAccountsJoinedByProviderAtIndex(
                 address(groupAction),
                 groupId1,
                 provider,
@@ -756,6 +756,28 @@ contract GroupJoinTest is BaseGroupTest {
         vm.prank(user1);
         vm.expectRevert(IGroupJoin.TrialJoinLocked.selector);
         groupJoin.join(address(groupAction), groupId1, 1e18, new string[](0));
+    }
+
+    function test_TrialWaitingListAdd_RevertOnSelf() public {
+        uint256 poolAmount = 20e18;
+        uint256 trialAmount = 10e18;
+        address provider = user2;
+
+        setupUser(provider, poolAmount, address(groupJoin));
+
+        address[] memory trialAccounts = new address[](1);
+        uint256[] memory trialAmounts = new uint256[](1);
+        trialAccounts[0] = provider;
+        trialAmounts[0] = trialAmount;
+
+        vm.prank(provider);
+        vm.expectRevert(IGroupJoin.TrialAccountIsProvider.selector);
+        groupJoin.trialWaitingListAdd(
+            address(groupAction),
+            groupId1,
+            trialAccounts,
+            trialAmounts
+        );
     }
 
     function test_ExitOnBehalf_ByProvider() public {

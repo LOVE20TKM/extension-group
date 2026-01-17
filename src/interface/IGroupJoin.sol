@@ -16,7 +16,9 @@ interface IGroupJoin {
     error ExtensionNotInitialized();
     error InvalidGroupId();
     error TrialJoinLocked();
-    error TrialAccountNotAllowed();
+    error TrialArrayLengthMismatch();
+    error TrialAccountNotInWaitingList();
+    error TrialAccountIsProvider();
     error TrialAccountZero();
     error TrialAmountZero();
     error TrialAccountAlreadyAdded();
@@ -201,19 +203,19 @@ interface IGroupJoin {
         uint256 index
     ) external view returns (address, uint256);
 
-    function trialAccountsInUseByProvider(
+    function trialAccountsJoinedByProvider(
         address extension,
         uint256 groupId,
         address provider
     ) external view returns (address[] memory, uint256[] memory);
 
-    function trialAccountsInUseByProviderCount(
+    function trialAccountsJoinedByProviderCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view returns (uint256);
 
-    function trialAccountsInUseByProviderAtIndex(
+    function trialAccountsJoinedByProviderAtIndex(
         address extension,
         uint256 groupId,
         address provider,
