@@ -209,7 +209,7 @@ interface IGroupJoin {
         address extension,
         uint256 groupId,
         address provider
-    ) external view returns (address[] memory, uint256[] memory);
+    ) external view returns (address[] memory);
 
     function trialJoinedListByProviderCount(
         address extension,
@@ -222,7 +222,7 @@ interface IGroupJoin {
         uint256 groupId,
         address provider,
         uint256 index
-    ) external view returns (address, uint256);
+    ) external view returns (address);
 
     // ------ global view functions (no extension parameter) ------
 

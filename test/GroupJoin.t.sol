@@ -700,15 +700,13 @@ contract GroupJoinTest is BaseGroupTest {
 
         _assertJoinInfo(user1, expectedRound, trialAmount, groupId1, provider);
 
-        (address inUseAccount, uint256 inUseAmount) = groupJoin
-            .trialJoinedListByProviderAtIndex(
-                address(groupAction),
-                groupId1,
-                provider,
-                0
-            );
+        address inUseAccount = groupJoin.trialJoinedListByProviderAtIndex(
+            address(groupAction),
+            groupId1,
+            provider,
+            0
+        );
         assertEq(inUseAccount, user1, "in-use account should be user1");
-        assertEq(inUseAmount, trialAmount, "in-use amount should match");
 
         uint256 providerBalanceBeforeExit = token.balanceOf(provider);
         uint256 userBalanceBeforeExit = token.balanceOf(user1);
