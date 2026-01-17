@@ -7,7 +7,8 @@ interface IGroupJoin {
     error AlreadyInOtherGroup();
     error NotJoinedAction();
     error AmountBelowMinimum();
-    error AmountExceedsAccountCap();
+    error ExceedsActionMaxJoinAmount();
+    error ExceedsGroupMaxJoinAmount();
     error OwnerCapacityExceeded();
     error GroupCapacityExceeded();
     error GroupAccountsFull();

@@ -239,7 +239,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.AmountExceedsAccountCap.selector);
+        vm.expectRevert(IGroupJoin.ExceedsGroupMaxJoinAmount.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -374,7 +374,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.AmountExceedsAccountCap.selector);
+        vm.expectRevert(IGroupJoin.ExceedsActionMaxJoinAmount.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,

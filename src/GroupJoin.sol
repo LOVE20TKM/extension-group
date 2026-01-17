@@ -199,23 +199,20 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _trialJoinedListByProvider[extension][groupId][provider].add(
             msg.sender
         );
-        if (
-            _trialWaitingListByProvider[extension][groupId][provider].remove(
-                msg.sender
-            )
-        ) {
-            delete _trialWaitingListAmountByProvider[extension][groupId][
-                provider
-            ][msg.sender];
-            _emitTrialWaitingListUpdated(
-                extension,
-                groupId,
-                provider,
-                msg.sender,
-                false,
-                trialAmount
-            );
-        }
+        _trialWaitingListByProvider[extension][groupId][provider].remove(
+            msg.sender
+        );
+        delete _trialWaitingListAmountByProvider[extension][groupId][provider][
+            msg.sender
+        ];
+        _emitTrialWaitingListUpdated(
+            extension,
+            groupId,
+            provider,
+            msg.sender,
+            false,
+            trialAmount
+        );
         _emitJoin(
             extension,
             groupId,
@@ -838,7 +835,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         // Check extension-wide account limit
         uint256 extensionMaxJoinAmount = _groupManager.maxJoinAmount(extension);
         if (newTotal > extensionMaxJoinAmount) {
-            revert AmountExceedsAccountCap();
+            revert ExceedsActionMaxJoinAmount();
         }
 
         // Owner-level constraints (not based on GroupInfo)
@@ -873,7 +870,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         // Check group-specific account limit
         if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
-            revert AmountExceedsAccountCap();
+            revert ExceedsGroupMaxJoinAmount();
         }
 
         // Validate first join specific rules
