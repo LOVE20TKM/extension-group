@@ -3,7 +3,6 @@ pragma solidity =0.8.17;
 
 interface IGroupManager {
     error NotRegisteredExtension();
-    error GroupNotFound();
     error GroupAlreadyActivated();
     error GroupNotActive();
     error InvalidMinMaxJoinAmount();
