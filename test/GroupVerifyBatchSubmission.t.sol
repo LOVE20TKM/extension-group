@@ -5,13 +5,15 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
-import {MAX_ORIGIN_SCORE} from "../src/interface/IGroupVerify.sol";
+import {GroupVerify} from "../src/GroupVerify.sol";
 
 /**
  * @title GroupVerifyBatchSubmissionTest
  * @notice Unit tests for batch submission of submitOriginScores
  */
 contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
+    uint256 constant MAX_ORIGIN_SCORE = 100;
+
     ExtensionGroupAction public groupAction;
     uint256 public groupId1;
 

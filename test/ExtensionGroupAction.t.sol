@@ -7,7 +7,7 @@ import {GroupManager} from "../src/GroupManager.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
-import {MAX_ORIGIN_SCORE} from "../src/interface/IGroupVerify.sol";
+import {GroupVerify} from "../src/GroupVerify.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
 
 /**
@@ -15,6 +15,8 @@ import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
  * @notice End-to-end test suite for ExtensionGroupAction
  */
 contract ExtensionGroupActionTest is BaseGroupTest {
+    uint256 constant MAX_ORIGIN_SCORE = 100;
+
     ExtensionGroupAction public groupAction;
 
     uint256 public groupId1;

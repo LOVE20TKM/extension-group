@@ -26,6 +26,8 @@ interface IGroupJoin {
     error TrialAccountAlreadyAdded();
     error TrialProviderMismatch();
 
+    /// @notice Emitted when an account joins a group
+    /// @param provider If non-zero, indicates this is a trial join sponsored by the provider
     event Join(
         address indexed tokenAddress,
         uint256 round,
@@ -35,6 +37,9 @@ interface IGroupJoin {
         address provider,
         uint256 amount
     );
+
+    /// @notice Emitted when an account exits from a group
+    /// @param provider If non-zero, indicates this was a trial user; funds are refunded to provider
     event Exit(
         address indexed tokenAddress,
         uint256 round,

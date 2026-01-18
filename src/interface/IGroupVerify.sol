@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-uint256 constant MAX_ORIGIN_SCORE = 100;
-uint256 constant PRECISION = 1e18;
-
 interface IGroupVerify {
+    /// @notice Maximum origin score for verification (100 = full score)
+    function MAX_ORIGIN_SCORE() external pure returns (uint256);
+
+    /// @notice Precision constant for ratio calculations (1e18)
+    function PRECISION() external pure returns (uint256);
     error OriginScoresEmpty();
     error NotVerifier();
     error ScoreExceedsMax();

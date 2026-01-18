@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {
-    IGroupVerify,
-    MAX_ORIGIN_SCORE,
-    PRECISION
-} from "./interface/IGroupVerify.sol";
+import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
@@ -23,6 +19,9 @@ import {
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract GroupVerify is IGroupVerify, ReentrancyGuard {
+    uint256 public constant MAX_ORIGIN_SCORE = 100;
+    uint256 public constant PRECISION = 1e18;
+
     IExtensionGroupActionFactory internal _factory;
     IExtensionCenter internal _center;
     IGroupManager internal _groupManager;
@@ -134,7 +133,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address delegate
-    ) external override onlyGroupOwner(groupId) {
+    ) external override onlyValidExtension(extension) onlyGroupOwner(groupId) {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         _delegateByGroupId[extension][groupId] = delegate;
@@ -455,7 +454,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
 
         if (totalVotes == 0) {
-            return 0;
+            return PRECISION; // No votes means no reduction
         }
 
         return ((totalVotes - distrustVotes) * PRECISION) / totalVotes;
@@ -629,7 +628,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        address groupOwner = _group.ownerOf(groupId);
+        // Prefer verifier (recorded at verification time)
+        address groupOwner = _verifierByGroupId[extension][round][groupId];
+        // Only fallback to current owner for current round (not yet verified)
+        if (groupOwner == address(0) && round == _verify.currentRound()) {
+            groupOwner = _group.ownerOf(groupId);
+        }
         return _distrustVotesByGroupOwner[extension][round][groupOwner];
     }
 
@@ -799,6 +803,15 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _totalGroupScore[extension][currentRound] += calculatedGroupScore;
     }
 
+    /// @notice Calculates capacity reduction rate for a group based on owner's verification capacity
+    /// @dev Returns PRECISION (100%) if remaining capacity >= group capacity
+    ///      Returns (remainingCapacity / groupCapacity) * PRECISION if partial
+    ///      Reverts if no remaining capacity
+    /// @param extension The extension address
+    /// @param round The round number
+    /// @param groupOwner The owner of the group (verifier)
+    /// @param currentGroupId The group ID to calculate reduction for
+    /// @return Capacity reduction rate (PRECISION = 100%, 0 = 0%)
     function _calculateCapacityReduction(
         address extension,
         uint256 round,
@@ -892,6 +905,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             );
     }
 
+    /// @notice Updates group scores for all groups owned by a verifier when distrust votes change
+    /// @dev Recalculates each group's score with the new distrust votes and updates totalGroupScore
+    /// @param extension The extension address
+    /// @param tokenAddress The token address
+    /// @param actionId The action ID
+    /// @param round The round number
+    /// @param groupOwner The owner whose groups need score updates
     function _updateDistrustForOwnerGroups(
         address extension,
         address tokenAddress,

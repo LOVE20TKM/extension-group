@@ -12,6 +12,7 @@ interface IGroupService {
     error InvalidGroupActionTokenAddress();
     error InvalidExtension();
     error NotGroupOwner();
+    error GroupNotActive();
     error RecipientCannotBeSelf();
 
     event UpdateRecipients(

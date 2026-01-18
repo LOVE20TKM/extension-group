@@ -4,12 +4,14 @@ pragma solidity =0.8.17;
 import {BaseGroupFlowTest} from "./integration/base/BaseGroupFlowTest.sol";
 import {GroupUserParams} from "./integration/helper/TestGroupFlowHelper.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
-import {PRECISION} from "../src/interface/IGroupVerify.sol";
+import {GroupVerify} from "../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionTest
 /// @notice Unit tests for capacityReductionRate and distrustReduction functions
 /// @dev Integration tests are in test/integration/GroupVerifyReductionIntegration.t.sol
 contract GroupVerifyReductionTest is BaseGroupFlowTest {
+    uint256 constant PRECISION = 1e18;
+
     IGroupVerify public groupVerify;
 
     function setUp() public override {

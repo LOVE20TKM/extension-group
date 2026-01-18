@@ -48,6 +48,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
 
     function burnUnclaimedReward(uint256 round) external override {
         if (round >= _verify.currentRound()) revert RoundNotFinished();
+        if (_burnedReward[round] > 0) return; // Check early to avoid unnecessary mint
 
         uint256[] memory verifiedGroupIds = _groupVerify.verifiedGroupIds(
             address(this),
@@ -60,7 +61,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         _prepareRewardIfNeeded(round);
 
         uint256 rewardAmount = _reward[round];
-        if (rewardAmount == 0 || _burnedReward[round] > 0) return;
+        if (rewardAmount == 0) return;
 
         _burnedReward[round] = rewardAmount;
         ILOVE20Token(TOKEN_ADDRESS).burn(rewardAmount);
