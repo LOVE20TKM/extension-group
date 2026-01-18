@@ -33,6 +33,10 @@ contract DeployGroupActionFactory is BaseScript {
             "address.extension.group.params",
             "groupVerifyAddress"
         );
+        address groupAddress = readAddressParamsFile(
+            "address.group.params",
+            "groupAddress"
+        );
 
         // Validate addresses are not zero
         require(
@@ -50,6 +54,10 @@ contract DeployGroupActionFactory is BaseScript {
         require(
             groupVerifyAddress != address(0),
             "groupVerifyAddress not found in params"
+        );
+        require(
+            groupAddress != address(0),
+            "groupAddress not found in params"
         );
 
         // Validate contracts are deployed (have code)
@@ -69,14 +77,10 @@ contract DeployGroupActionFactory is BaseScript {
             groupVerifyAddress.code.length > 0,
             "GroupVerify contract not deployed"
         );
-
-        // Read group address
-        address groupAddress = readAddressParamsFile(
-            "address.group.params",
-            "groupAddress"
+        require(
+            groupAddress.code.length > 0,
+            "Group contract not deployed"
         );
-        require(groupAddress != address(0), "groupAddress not found in params");
-        require(groupAddress.code.length > 0, "group contract not deployed");
 
         vm.startBroadcast();
         groupActionFactoryAddress = address(
@@ -100,6 +104,7 @@ contract DeployGroupActionFactory is BaseScript {
             console.log("  groupManagerAddress:", groupManagerAddress);
             console.log("  groupJoinAddress:", groupJoinAddress);
             console.log("  groupVerifyAddress:", groupVerifyAddress);
+            console.log("  groupAddress:", groupAddress);
         }
 
         updateParamsFile(
