@@ -7,7 +7,7 @@ import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionTest
-/// @notice Unit tests for capacityReductionRate and distrustReduction functions
+/// @notice Unit tests for capacityDecayRate and distrustRate functions
 /// @dev Integration tests are in test/integration/GroupVerifyReductionIntegration.t.sol
 contract GroupVerifyReductionTest is BaseGroupFlowTest {
     uint256 constant PRECISION = 1e18;
@@ -21,8 +21,8 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         );
     }
 
-    /// @notice Test distrustReduction returns PRECISION when group not verified
-    function test_distrustReduction_ReturnsPrecisionWhenNotVerified() public {
+    /// @notice Test distrustRate returns 0 when group not verified
+    function test_distrustRate_ReturnsZeroWhenNotVerified() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -37,22 +37,22 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
 
         uint256 round = h.verifyContract().currentRound();
 
-        // Test distrustReduction for unverified group
-        uint256 distrustReduction = groupVerify.distrustReduction(
+        // Test distrustRate for unverified group
+        uint256 distrustRate = groupVerify.distrustRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
         assertEq(
-            distrustReduction,
-            PRECISION,
-            "distrustReduction should return PRECISION for unverified group"
+            distrustRate,
+            0,
+            "distrustRate should return 0 for unverified group"
         );
     }
 
-    /// @notice Test distrustReduction returns correct value with no distrust votes
-    function test_distrustReduction_NoDistrustVotes() public {
+    /// @notice Test distrustRate returns correct value with no distrust votes
+    function test_distrustRate_NoDistrustVotes() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -81,22 +81,22 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         scores[0] = 100;
         h.group_submit_score(bobGroup1, scores);
 
-        // Test distrustReduction with no distrust votes
-        uint256 distrustReduction = groupVerify.distrustReduction(
+        // Test distrustRate with no distrust votes
+        uint256 distrustRate = groupVerify.distrustRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
         assertEq(
-            distrustReduction,
-            PRECISION,
-            "distrustReduction should return PRECISION with no distrust votes"
+            distrustRate,
+            0,
+            "distrustRate should return 0 with no distrust votes"
         );
     }
 
-    /// @notice Test distrustReduction returns correct value with distrust votes
-    function test_distrustReduction_WithDistrustVotes() public {
+    /// @notice Test distrustRate returns correct value with distrust votes
+    function test_distrustRate_WithDistrustVotes() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -177,26 +177,25 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
             "Test reason"
         );
 
-        // Test distrustReduction
-        uint256 distrustReduction = groupVerify.distrustReduction(
+        // Test distrustRate
+        uint256 distrustRate = groupVerify.distrustRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
-        // Expected: (totalVotes - distrustVotes) / totalVotes * PRECISION
-        uint256 expected = ((totalVotes - distrustVotes) * PRECISION) /
-            totalVotes;
+        // Expected: distrustVotes / totalVotes * PRECISION
+        uint256 expected = (distrustVotes * PRECISION) / totalVotes;
 
         assertEq(
-            distrustReduction,
+            distrustRate,
             expected,
-            "distrustReduction should calculate correctly with distrust votes"
+            "distrustRate should calculate correctly with distrust votes"
         );
     }
 
-    /// @notice Test distrustReduction returns 0 when totalVotes is 0
-    function test_distrustReduction_ZeroTotalVotes() public {
+    /// @notice Test distrustRate returns 0 when totalVotes is 0
+    function test_distrustRate_ZeroTotalVotes() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -226,21 +225,22 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         h.group_submit_score(bobGroup1, scores);
 
         // Note: In normal flow, totalVotes would be set by vote contract
-        // But if somehow totalVotes is 0, distrustReduction should return 0
+        // But if somehow totalVotes is 0, distrustRate should return 0
         // This test verifies the edge case handling
-        uint256 distrustReduction = groupVerify.distrustReduction(
+        uint256 distrustRate = groupVerify.distrustRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
         // If totalVotes is 0, should return 0
-        // Otherwise, should return PRECISION (no distrust votes)
-        // In normal test flow, totalVotes should be set, so this should be PRECISION
+        // Otherwise, should return 0 (no distrust votes)
+        // In normal test flow, totalVotes should be set, so this should be 0
         // But the function should handle totalVotes == 0 correctly
-        assertTrue(
-            distrustReduction == PRECISION || distrustReduction == 0,
-            "distrustReduction should handle edge cases correctly"
+        assertEq(
+            distrustRate,
+            0,
+            "distrustRate should return 0 when no distrust votes or totalVotes is 0"
         );
     }
 }

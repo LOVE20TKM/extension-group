@@ -76,9 +76,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     mapping(address => mapping(uint256 => mapping(address => uint256[])))
         internal _actionIdsByVerifier;
 
-    // extension => round => groupId => capacity reduction factor
+    // extension => round => groupId => capacity decay rate
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _capacityReductionRate;
+        internal _capacityDecayRate;
 
     // extension => round => groupOwner => total distrust votes
     mapping(address => mapping(uint256 => mapping(address => uint256)))
@@ -256,30 +256,32 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 amount,
         string calldata reason
     ) external override onlyValidExtension(extension) {
-        if (amount == 0) revert DistrustVoteZeroAmount();
-        if (bytes(reason).length == 0) revert InvalidReason();
-
         address voter = msg.sender;
         uint256 currentRound = _verify.currentRound();
 
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
-
-        _distrustReason[extension][currentRound][voter][groupOwner] = reason;
-        _processDistrustVote(
+        _validateDistrustVote(
             extension,
-            tokenAddress,
-            actionId,
             currentRound,
             voter,
             groupOwner,
-            amount
+            amount,
+            reason
+        );
+        _updateDistrustVoteState(
+            extension,
+            currentRound,
+            voter,
+            groupOwner,
+            amount,
+            reason
         );
 
+        _updateGroupScoresForVerifier(extension, currentRound, groupOwner);
+
         emit DistrustVote({
-            tokenAddress: tokenAddress,
+            tokenAddress: IExtension(extension).TOKEN_ADDRESS(),
             round: currentRound,
-            actionId: actionId,
+            actionId: IExtension(extension).actionId(),
             groupOwner: groupOwner,
             voter: voter,
             amount: amount,
@@ -287,15 +289,19 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         });
     }
 
-    function _processDistrustVote(
+    function _validateDistrustVote(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 currentRound,
         address voter,
         address groupOwner,
-        uint256 amount
-    ) internal {
+        uint256 amount,
+        string calldata reason
+    ) internal view {
+        if (amount == 0) revert DistrustVoteZeroAmount();
+        if (bytes(reason).length == 0) revert InvalidReason();
+
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
         uint256 verifyVotes = _verify.scoreByVerifierByActionIdByAccount(
             tokenAddress,
             currentRound,
@@ -310,7 +316,21 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         ][voter][groupOwner];
         if (preVotes + amount > verifyVotes)
             revert DistrustVoteExceedsVerifyVotes();
+    }
 
+    function _updateDistrustVoteState(
+        address extension,
+        uint256 currentRound,
+        address voter,
+        address groupOwner,
+        uint256 amount,
+        string calldata reason
+    ) internal {
+        _distrustReason[extension][currentRound][voter][groupOwner] = reason;
+
+        uint256 preVotes = _distrustVotesByVoterByGroupOwner[extension][
+            currentRound
+        ][voter][groupOwner];
         if (preVotes == 0) {
             _distrustVotersByGroupOwner[extension][currentRound][groupOwner]
                 .push(voter);
@@ -328,14 +348,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _distrustVotesByGroupOwner[extension][currentRound][
             groupOwner
         ] += amount;
-
-        _updateDistrustForOwnerGroups(
-            extension,
-            tokenAddress,
-            actionId,
-            currentRound,
-            groupOwner
-        );
     }
 
     function originScoreByAccount(
@@ -424,22 +436,43 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupScore[extension][round][groupId];
     }
 
-    function capacityReductionRate(
+    function capacityDecayRate(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
-        return _capacityReductionRate[extension][round][groupId];
+        return _capacityDecayRate[extension][round][groupId];
     }
 
-    function distrustReduction(
+    function distrustRateByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view override returns (uint256) {
+        return _distrustRateByGroupId(extension, round, groupId);
+    }
+
+    function _distrustRateByGroupId(
+        address extension,
+        uint256 round,
+        uint256 groupId
+    ) internal view returns (uint256) {
+        // Prefer verifier (recorded at verification time)
         address groupOwner = _verifierByGroupId[extension][round][groupId];
+        // Only fallback to current owner for current round (not yet verified)
+        if (groupOwner == address(0) && round == _verify.currentRound()) {
+            groupOwner = _group.ownerOf(groupId);
+        }
+        return _calculateDistrustRate(extension, round, groupOwner);
+    }
+
+    function _calculateDistrustRate(
+        address extension,
+        uint256 round,
+        address groupOwner
+    ) internal view returns (uint256) {
         if (groupOwner == address(0)) {
-            return PRECISION;
+            return 0; // No group owner means no distrust
         }
 
         uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
@@ -454,10 +487,10 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
 
         if (totalVotes == 0) {
-            return PRECISION; // No votes means no reduction
+            return 0; // No votes means no distrust
         }
 
-        return ((totalVotes - distrustVotes) * PRECISION) / totalVotes;
+        return (distrustVotes * PRECISION) / totalVotes;
     }
 
     function totalGroupScore(
@@ -623,20 +656,6 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _distrustVotesByGroupOwner[extension][round][groupOwner];
     }
 
-    function distrustVotesByGroupId(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view override returns (uint256) {
-        // Prefer verifier (recorded at verification time)
-        address groupOwner = _verifierByGroupId[extension][round][groupId];
-        // Only fallback to current owner for current round (not yet verified)
-        if (groupOwner == address(0) && round == _verify.currentRound()) {
-            groupOwner = _group.ownerOf(groupId);
-        }
-        return _distrustVotesByGroupOwner[extension][round][groupOwner];
-    }
-
     function distrustVotesByVoterByGroupOwner(
         address extension,
         uint256 round,
@@ -751,9 +770,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         address groupOwner = _group.ownerOf(groupId);
 
         // Calculate group score
-        _capacityReductionRate[extension][currentRound][
+        _capacityDecayRate[extension][currentRound][
             groupId
-        ] = _calculateCapacityReduction(
+        ] = _calculateCapacityDecay(
             extension,
             currentRound,
             groupOwner,
@@ -803,16 +822,16 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         _totalGroupScore[extension][currentRound] += calculatedGroupScore;
     }
 
-    /// @notice Calculates capacity reduction rate for a group based on owner's verification capacity
-    /// @dev Returns PRECISION (100%) if remaining capacity >= group capacity
-    ///      Returns (remainingCapacity / groupCapacity) * PRECISION if partial
+    /// @notice Calculates capacity decay rate for a group based on owner's verification capacity
+    /// @dev Returns 0 (no decay) if remaining capacity >= group capacity
+    ///      Returns (1 - remainingCapacity / groupCapacity) * PRECISION if partial
     ///      Reverts if no remaining capacity
     /// @param extension The extension address
     /// @param round The round number
     /// @param groupOwner The owner of the group (verifier)
-    /// @param currentGroupId The group ID to calculate reduction for
-    /// @return Capacity reduction rate (PRECISION = 100%, 0 = 0%)
-    function _calculateCapacityReduction(
+    /// @param currentGroupId The group ID to calculate decay for
+    /// @return Capacity decay rate (0 = no decay, PRECISION = 100% decay)
+    function _calculateCapacityDecay(
         address extension,
         uint256 round,
         address groupOwner,
@@ -851,24 +870,24 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             );
 
         if (remainingCapacity >= currentGroupCapacity) {
-            return PRECISION;
+            return 0;
         }
 
-        return (remainingCapacity * PRECISION) / currentGroupCapacity;
+        return
+            ((currentGroupCapacity - remainingCapacity) * PRECISION) /
+            currentGroupCapacity;
     }
 
     function _computeGroupScore(
         uint256 groupAmount,
-        uint256 totalVotes,
-        uint256 distrustVotes,
-        uint256 capacityReduction_
+        uint256 distrustRate_,
+        uint256 capacityDecayRate_
     ) internal pure returns (uint256) {
-        if (totalVotes == 0) {
-            return 0;
-        }
+        uint256 oneMinusDistrust = PRECISION - distrustRate_;
+        uint256 oneMinusDecay = PRECISION - capacityDecayRate_;
         return
-            (((groupAmount * (totalVotes - distrustVotes)) / totalVotes) *
-                capacityReduction_) / PRECISION;
+            ((groupAmount * oneMinusDistrust * oneMinusDecay) / PRECISION) /
+            PRECISION;
     }
 
     function _calculateGroupScore(
@@ -876,117 +895,54 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         uint256 groupId
     ) internal view returns (uint256) {
-        address groupOwner = _group.ownerOf(groupId);
         uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
             extension,
             round,
             groupId
         );
-        uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
-            groupOwner
-        ];
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
-        uint256 totalVotes = _vote.votesNumByActionId(
-            tokenAddress,
+        uint256 distrustRate_ = _distrustRateByGroupId(
+            extension,
             round,
-            actionId
+            groupId
         );
-        uint256 capacityReduction_ = _capacityReductionRate[extension][round][
+        uint256 capacityDecayRate_ = _capacityDecayRate[extension][round][
             groupId
         ];
 
         return
-            _computeGroupScore(
-                groupAmount,
-                totalVotes,
-                distrustVotes,
-                capacityReduction_
-            );
+            _computeGroupScore(groupAmount, distrustRate_, capacityDecayRate_);
     }
 
     /// @notice Updates group scores for all groups owned by a verifier when distrust votes change
-    /// @dev Recalculates each group's score with the new distrust votes and updates totalGroupScore
+    /// @dev Recalculates each group's score with the new distrust rate and updates totalGroupScore
     /// @param extension The extension address
-    /// @param tokenAddress The token address
-    /// @param actionId The action ID
     /// @param round The round number
-    /// @param groupOwner The owner whose groups need score updates
-    function _updateDistrustForOwnerGroups(
+    /// @param verifier The verifier whose groups need score updates
+    function _updateGroupScoresForVerifier(
         address extension,
-        address tokenAddress,
-        uint256 actionId,
         uint256 round,
-        address groupOwner
+        address verifier
     ) internal {
-        uint256 distrustVotes = _distrustVotesByGroupOwner[extension][round][
-            groupOwner
-        ];
-        uint256 totalVotes = _vote.votesNumByActionId(
-            tokenAddress,
-            round,
-            actionId
-        );
-
         uint256[] storage groupIds = _groupIdsByVerifier[extension][round][
-            groupOwner
+            verifier
         ];
+        uint256 totalGroupScore_ = _totalGroupScore[extension][round];
         mapping(uint256 => uint256) storage scoreMap = _groupScore[extension][
             round
         ];
-        mapping(uint256 => uint256)
-            storage capacityReductionMap = _capacityReductionRate[extension][
-                round
-            ];
-        uint256 totalGroupScore_ = _totalGroupScore[extension][round];
 
         for (uint256 i = 0; i < groupIds.length; i++) {
             uint256 groupId = groupIds[i];
-            totalGroupScore_ = _updateGroupScore(
-                scoreMap,
-                capacityReductionMap,
-                extension,
-                groupId,
-                round,
-                totalVotes,
-                distrustVotes,
-                totalGroupScore_
-            );
+            if (!_isVerified[extension][round][groupId]) {
+                continue;
+            }
+
+            uint256 oldScore = scoreMap[groupId];
+            uint256 newScore = _calculateGroupScore(extension, round, groupId);
+            scoreMap[groupId] = newScore;
+            totalGroupScore_ = totalGroupScore_ - oldScore + newScore;
         }
 
         _totalGroupScore[extension][round] = totalGroupScore_;
-    }
-
-    function _updateGroupScore(
-        mapping(uint256 => uint256) storage scoreMap,
-        mapping(uint256 => uint256) storage capacityReductionMap,
-        address extension,
-        uint256 groupId,
-        uint256 round,
-        uint256 totalVotes,
-        uint256 distrustVotes,
-        uint256 totalGroupScore_
-    ) internal returns (uint256 newTotalGroupScore) {
-        if (!_isVerified[extension][round][groupId]) {
-            return totalGroupScore_;
-        }
-
-        uint256 oldScore = scoreMap[groupId];
-        uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
-            extension,
-            round,
-            groupId
-        );
-        uint256 capacityReduction_ = capacityReductionMap[groupId];
-
-        uint256 newScore = _computeGroupScore(
-            groupAmount,
-            totalVotes,
-            distrustVotes,
-            capacityReduction_
-        );
-
-        scoreMap[groupId] = newScore;
-        return totalGroupScore_ - oldScore + newScore;
     }
 }

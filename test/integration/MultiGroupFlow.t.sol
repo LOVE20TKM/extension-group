@@ -308,7 +308,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         // Calculate group rewards based on business rules (no contract view methods)
         // Assumptions for this test:
         // - No distrust votes
-        // - Capacity reduction rate = 1e18 (within capacity)
+        // - Capacity decay rate = 0 (within capacity)
         // So groupScore == groupAmount, and totalGroupScore == sum(groupAmount)
         uint256 g1TotalJoin = 10e18 + 20e18 + 15e18;
         uint256 g2TotalJoin = 25e18 + 30e18 + 12e18;
@@ -566,8 +566,8 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         emit log_named_uint("Alice's group reward %", alicePercent);
     }
 
-    /// @notice Test that capacity reduction coefficient is 1e18 when within capacity
-    function test_capacityReduction_NoReductionInNormalFlow() public {
+    /// @notice Test that capacity decay rate is 0 when within capacity
+    function test_capacityDecay_NoDecayInNormalFlow() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -614,24 +614,24 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         scores2[0] = 100;
         h.group_submit_score(bobGroup2, scores2);
 
-        // Verify capacity reduction coefficients
-        // Both groups should have no reduction (1e18) since join amounts are small
+        // Verify capacity decay rates
+        // Both groups should have no decay (0) since join amounts are small
         IGroupVerify groupVerifyContract2 = IGroupVerify(
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
-        uint256 reduction1 = groupVerifyContract2.capacityReductionRate(
+        uint256 decayRate1 = groupVerifyContract2.capacityDecayRate(
             bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup1.groupId
         );
-        uint256 reduction2 = groupVerifyContract2.capacityReductionRate(
+        uint256 decayRate2 = groupVerifyContract2.capacityDecayRate(
             bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup2.groupId
         );
 
-        assertEq(reduction1, 1e18, "Group1 should have no capacity reduction");
-        assertEq(reduction2, 1e18, "Group2 should have no capacity reduction");
+        assertEq(decayRate1, 0, "Group1 should have no capacity decay");
+        assertEq(decayRate2, 0, "Group2 should have no capacity decay");
 
         // Verify group scores match joined amounts (no reduction applied)
         assertEq(

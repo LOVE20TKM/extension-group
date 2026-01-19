@@ -212,12 +212,6 @@ interface IGroupVerify {
         address groupOwner
     ) external view returns (uint256);
 
-    function distrustVotesByGroupId(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256);
-
     function distrustVotesByVoterByGroupOwner(
         address extension,
         uint256 round,
@@ -267,13 +261,13 @@ interface IGroupVerify {
         uint256 index
     ) external view returns (address);
 
-    function capacityReductionRate(
+    function capacityDecayRate(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
 
-    function distrustReduction(
+    function distrustRateByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
