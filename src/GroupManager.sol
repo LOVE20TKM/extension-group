@@ -3,26 +3,26 @@ pragma solidity =0.8.17;
 
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
+import {IGroupAction} from "./interface/IGroupAction.sol";
+import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
+import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
+import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
+import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
+import {IExtension} from "@extension/src/interface/IExtension.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
+import {RoundHistoryString} from "@extension/src/lib/RoundHistoryString.sol";
+import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
-import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
-import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
-import {IExtension} from "@extension/src/interface/IExtension.sol";
-import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
-import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {IGroupAction} from "./interface/IGroupAction.sol";
 import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {RoundHistoryString} from "@extension/src/lib/RoundHistoryString.sol";
-import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 
 contract GroupManager is IGroupManager {
     using EnumerableSet for EnumerableSet.UintSet;

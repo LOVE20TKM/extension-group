@@ -6,13 +6,18 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
+import {IGroupManager} from "./interface/IGroupManager.sol";
+import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {IGroupManager} from "./interface/IGroupManager.sol";
+import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
+import {
+    RoundHistoryAddressSet
+} from "@extension/src/lib/RoundHistoryAddressSet.sol";
+import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
 import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
@@ -23,11 +28,6 @@ import {
 import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {RoundHistoryUint256} from "@extension/src/lib/RoundHistoryUint256.sol";
-import {
-    RoundHistoryAddressSet
-} from "@extension/src/lib/RoundHistoryAddressSet.sol";
-import {RoundHistoryAddress} from "@extension/src/lib/RoundHistoryAddress.sol";
 
 using RoundHistoryUint256 for RoundHistoryUint256.History;
 using RoundHistoryAddressSet for RoundHistoryAddressSet.Storage;

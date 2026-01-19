@@ -6,14 +6,14 @@ import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
+import {IGroupManager} from "./interface/IGroupManager.sol";
+import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
+import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
-import {IGroupManager} from "./interface/IGroupManager.sol";
 import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
-import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";

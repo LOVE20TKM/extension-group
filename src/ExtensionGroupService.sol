@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IGroupManager} from "./interface/IGroupManager.sol";
+import {IGroupAction} from "./interface/IGroupAction.sol";
 import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+    IExtensionGroupActionFactory
+} from "./interface/IExtensionGroupActionFactory.sol";
+import {IGroupService} from "./interface/IGroupService.sol";
+import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
 import {
     ExtensionBaseRewardJoin
 } from "@extension/src/ExtensionBaseRewardJoin.sol";
@@ -16,17 +20,13 @@ import {
 import {
     RoundHistoryUint256Array
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
-import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
-import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {IGroupManager} from "./interface/IGroupManager.sol";
-import {IGroupAction} from "./interface/IGroupAction.sol";
-import {
-    IExtensionGroupActionFactory
-} from "./interface/IExtensionGroupActionFactory.sol";
-import {IGroupService} from "./interface/IGroupService.sol";
 import {
     ReentrancyGuard
 } from "@openzeppelin/contracts/security/ReentrancyGuard.sol";

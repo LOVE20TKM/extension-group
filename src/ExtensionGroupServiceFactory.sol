@@ -1,14 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
-import {ExtensionGroupService} from "./ExtensionGroupService.sol";
 import {
     IExtensionGroupServiceFactory
 } from "./interface/IExtensionGroupServiceFactory.sol";
-// import {
-//     IExtensionFactory
-// } from "@extension/src/interface/IExtensionFactory.sol";
+import {ExtensionGroupService} from "./ExtensionGroupService.sol";
+import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
 
 interface IExtensionFactoryOnlyCenterAddress {
     function CENTER_ADDRESS() external view returns (address);

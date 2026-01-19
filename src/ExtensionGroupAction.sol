@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
-import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
+import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
+import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 
 contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     IGroupJoin internal immutable _groupJoin;
