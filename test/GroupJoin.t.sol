@@ -5,10 +5,17 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 
+/**
+ * @title GroupJoinTest
+ * @notice Comprehensive test suite for GroupJoin contract
+ * @dev Tests cover join/exit functionality, trial joins, round history, and error cases
+ */
 contract GroupJoinTest is BaseGroupTest {
     ExtensionGroupAction public groupAction;
     uint256 public groupId1;
     uint256 public groupId2;
+
+    // ============ Setup ============
 
     function setUp() public {
         setUpBase();
@@ -68,7 +75,11 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_IsAccountInRangeByRound() public {
+    // ============ isAccountInRangeByRound Tests ============
+
+    /// @notice Test: isAccountInRangeByRound returns correct values for different ranges
+    /// @dev Verifies that the function correctly identifies accounts within specified index ranges
+    function test_isAccountInRangeByRound_WithValidRanges_ReturnsCorrectValues() public {
         address[] memory users = new address[](3);
         uint256[] memory joinAmounts = new uint256[](3);
         for (uint256 i = 0; i < 3; i++) {
@@ -140,7 +151,13 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnZeroAmount() public {
+    // ============ join Tests ============
+
+    // Error Cases
+
+    /// @notice Test: join with zero amount should revert
+    /// @dev Boundary condition: zero value should trigger JoinAmountZero error
+    function test_join_WithZeroAmount_Reverts() public {
         setupUser(user1, 1e18, address(groupJoin));
         uint256 joinAmount = 0;
 
@@ -154,7 +171,77 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnAlreadyInOtherGroup() public {
+    // Success Cases
+
+    /// @notice Test: join with minimum valid amount succeeds
+    /// @dev Boundary condition: minimum amount should be accepted
+    function test_join_WithMinimumAmount_Succeeds() public {
+        uint256 minJoinAmount = 1e18;
+        vm.prank(groupOwner1);
+        groupManager.updateGroupInfo(
+            address(groupAction),
+            groupId1,
+            "Group1",
+            0,
+            minJoinAmount,
+            0,
+            0
+        );
+
+        setupUser(user1, minJoinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            minJoinAmount,
+            new string[](0)
+        );
+
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
+        assertTrue(joinedRound > 0, "Should be joined");
+        assertEq(amount, minJoinAmount, "Amount should match minimum");
+    }
+
+    /// @notice Test: join with maximum valid amount succeeds
+    /// @dev Boundary condition: maximum amount should be accepted
+    function test_join_WithMaximumAmount_Succeeds() public {
+        uint256 maxJoinAmount = 100e18;
+        vm.prank(groupOwner1);
+        groupManager.updateGroupInfo(
+            address(groupAction),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            maxJoinAmount,
+            0
+        );
+
+        setupUser(user1, maxJoinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            maxJoinAmount,
+            new string[](0)
+        );
+
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
+        assertTrue(joinedRound > 0, "Should be joined");
+        assertEq(amount, maxJoinAmount, "Amount should match maximum");
+    }
+
+    /// @notice Test: join when already in another group should revert
+    /// @dev State validation: user cannot join multiple groups simultaneously
+    function test_join_WhenAlreadyInOtherGroup_Reverts() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount * 2, address(groupJoin));
 
@@ -176,7 +263,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnDeactivatedGroup() public {
+    /// @notice Test: join to deactivated group should revert
+    /// @dev State validation: cannot join inactive groups
+    function test_join_ToDeactivatedGroup_Reverts() public {
         advanceRound();
         vm.prank(groupOwner1);
         groupManager.deactivateGroup(address(groupAction), groupId1);
@@ -194,7 +283,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnBelowMinimum() public {
+    /// @notice Test: join with amount below minimum should revert
+    /// @dev Boundary condition: amount validation against group minimum
+    function test_join_WithAmountBelowMinimum_Reverts() public {
         uint256 minJoinAmount = 10e18;
         uint256 joinAmount = minJoinAmount - 1;
 
@@ -221,7 +312,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnGroupMaxJoinAmount() public {
+    /// @notice Test: join with amount exceeding group max should revert
+    /// @dev Boundary condition: amount validation against group maximum
+    function test_join_WithAmountExceedingGroupMax_Reverts() public {
         uint256 maxJoinAmount = 10e18;
         uint256 joinAmount = maxJoinAmount + 1;
 
@@ -248,7 +341,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnGroupAccountsFull() public {
+    /// @notice Test: join when group accounts are full should revert
+    /// @dev Capacity validation: maxAccounts limit enforcement
+    function test_join_WhenGroupAccountsFull_Reverts() public {
         uint256 maxAccounts = 1;
         uint256 joinAmount = 10e18;
 
@@ -284,7 +379,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnGroupCapacityExceeded() public {
+    /// @notice Test: join when group capacity is exceeded should revert
+    /// @dev Capacity validation: maxCapacity limit enforcement
+    function test_join_WhenGroupCapacityExceeded_Reverts() public {
         uint256 maxCapacity = 15e18;
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 10e18;
@@ -321,7 +418,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnOwnerCapacityExceeded() public {
+    /// @notice Test: join when owner capacity is exceeded should revert
+    /// @dev Capacity validation: owner's verify capacity limit enforcement
+    function test_join_WhenOwnerCapacityExceeded_Reverts() public {
         stake.setValidGovVotes(address(token), groupOwner1, 1);
 
         uint256 ownerMaxCapacity = groupManager.maxVerifyCapacityByOwner(
@@ -353,7 +452,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Join_RevertOnExtensionAccountCap() public {
+    /// @notice Test: join when extension account cap is exceeded should revert
+    /// @dev Capacity validation: extension-level max join amount limit
+    function test_join_WhenExtensionAccountCapExceeded_Reverts() public {
         uint256 totalGovVotes = stake.govVotesNum(address(token));
         stake.setValidGovVotes(address(token), groupOwner1, totalGovVotes);
 
@@ -383,13 +484,23 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_Exit_RevertOnNotJoined() public {
+    // ============ exit Tests ============
+
+    // Error Cases
+
+    /// @notice Test: exit when not joined should revert
+    /// @dev State validation: cannot exit if not a member
+    function test_exit_WhenNotJoined_Reverts() public {
         vm.prank(user1);
         vm.expectRevert(IGroupJoin.NotJoinedAction.selector);
         groupJoin.exit(address(groupAction));
     }
 
-    function test_JoinInfo_ReturnsLatestValues() public {
+    // ============ joinInfo Tests ============
+
+    /// @notice Test: joinInfo returns correct latest values after join
+    /// @dev View function validation: verifies join state is correctly stored
+    function test_joinInfo_AfterJoin_ReturnsCorrectValues() public {
         uint256 joinAmount = 10e18;
         setupUser(user1, joinAmount, address(groupJoin));
 
@@ -417,7 +528,11 @@ contract GroupJoinTest is BaseGroupTest {
         assertEq(provider, address(0), "provider should be zero");
     }
 
-    function test_RoundHistory_JoinAndIncreaseAmount() public {
+    // ============ Round History Tests ============
+
+    /// @notice Test: round history correctly tracks join and amount increases across rounds
+    /// @dev Round-based state tracking: verifies historical data preservation
+    function test_roundHistory_JoinAndIncreaseAmount_TracksCorrectly() public {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 5e18;
         uint256 expectedRound1 = join.currentRound();
@@ -562,7 +677,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_RoundHistory_ExitUpdates() public {
+    /// @notice Test: round history correctly tracks exit updates across rounds
+    /// @dev Round-based state tracking: verifies exit state is recorded in subsequent rounds
+    function test_roundHistory_ExitUpdates_TracksCorrectly() public {
         uint256 joinAmount1 = 10e18;
         uint256 joinAmount2 = 5e18;
         uint256 expectedRound1 = join.currentRound();
@@ -669,7 +786,11 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_TrialJoin_UsesProviderEscrowAndExitRefundsProvider() public {
+    // ============ Trial Join Tests ============
+
+    /// @notice Test: trialJoin uses provider escrow and exit refunds provider
+    /// @dev Trial join flow: provider funds escrow, user joins, exit refunds provider
+    function test_trialJoin_UsesProviderEscrow_ExitRefundsProvider() public {
         uint256 providerFunds = 20e18;
         uint256 trialAmount = 10e18;
         address provider = user2;
@@ -734,7 +855,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_TrialJoin_RevertOnJoinAfterTrial() public {
+    /// @notice Test: join after trialJoin should revert
+    /// @dev State validation: trial users cannot join normally
+    function test_trialJoin_AfterTrialJoin_JoinReverts() public {
         uint256 poolAmount = 20e18;
         uint256 trialAmount = 10e18;
         address provider = user2;
@@ -756,7 +879,9 @@ contract GroupJoinTest is BaseGroupTest {
         groupJoin.join(address(groupAction), groupId1, 1e18, new string[](0));
     }
 
-    function test_TrialWaitingListAdd_RevertOnSelf() public {
+    /// @notice Test: trialWaitingListAdd with self as account should revert
+    /// @dev Validation: provider cannot add themselves as trial account
+    function test_trialWaitingListAdd_WithSelfAsAccount_Reverts() public {
         uint256 poolAmount = 20e18;
         uint256 trialAmount = 10e18;
         address provider = user2;
@@ -778,7 +903,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
-    function test_ExitOnBehalf_ByProvider() public {
+    /// @notice Test: provider can exit on behalf of trial user
+    /// @dev Trial join flow: provider can force exit trial users
+    function test_trialExit_ByProvider_ExitsTrialUser() public {
         uint256 poolAmount = 20e18;
         uint256 trialAmount = 10e18;
         address provider = user2;
@@ -816,6 +943,9 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
+    // ============ Helper Functions ============
+
+    /// @notice Helper: Setup trial accounts for testing
     function _setTrialAccounts(
         address provider,
         uint256 trialAmount,
@@ -835,6 +965,7 @@ contract GroupJoinTest is BaseGroupTest {
         );
     }
 
+    /// @notice Helper: Assert join info matches expected values
     function _assertJoinInfo(
         address account,
         uint256 expectedRound,

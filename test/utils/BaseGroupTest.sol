@@ -275,6 +275,85 @@ abstract contract BaseGroupTest is Test {
             );
     }
 
+    // ============ Group State Assertion Helpers ============
+
+    /**
+     * @notice Assert that a group is active
+     * @param extensionAddress The extension address
+     * @param groupId The group ID
+     */
+    function _assertGroupActive(address extensionAddress, uint256 groupId) internal view {
+        assertTrue(
+            groupManager.isGroupActive(extensionAddress, groupId),
+            "Group should be active"
+        );
+    }
+
+    /**
+     * @notice Assert that a group is inactive
+     * @param extensionAddress The extension address
+     * @param groupId The group ID
+     */
+    function _assertGroupInactive(address extensionAddress, uint256 groupId) internal view {
+        assertFalse(
+            groupManager.isGroupActive(extensionAddress, groupId),
+            "Group should be inactive"
+        );
+    }
+
+    /**
+     * @notice Setup an activated group for testing
+     * @param owner The group owner address
+     * @param extensionAddress The extension address
+     * @param groupName The group name
+     * @return groupId The created group ID
+     */
+    function _setupActivatedGroup(
+        address owner,
+        address extensionAddress,
+        string memory groupName
+    ) internal returns (uint256 groupId) {
+        groupId = setupGroupOwner(owner, 10000e18, groupName);
+        setupUser(owner, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
+        
+        vm.prank(owner, owner);
+        groupManager.activateGroup(
+            extensionAddress,
+            groupId,
+            groupName,
+            0,
+            1e18,
+            0,
+            0
+        );
+    }
+
+    /**
+     * @notice Generate a valid join amount within group limits
+     * @param minAmount The minimum join amount
+     * @param maxAmount The maximum join amount (0 = no limit)
+     * @return A valid join amount
+     */
+    function _generateValidJoinAmount(uint256 minAmount, uint256 maxAmount) internal pure returns (uint256) {
+        if (maxAmount == 0) {
+            return minAmount > 0 ? minAmount : 1e18;
+        }
+        return minAmount + (maxAmount - minAmount) / 2;
+    }
+
+    /**
+     * @notice Generate valid scores array for testing
+     * @param count The number of scores to generate
+     * @param baseScore The base score value
+     * @return scores Array of scores
+     */
+    function _generateValidScores(uint256 count, uint256 baseScore) internal pure returns (uint256[] memory scores) {
+        scores = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            scores[i] = baseScore + i;
+        }
+    }
+
     // ============ Array Assertion Helpers ============
 
     function assertArrayEq(
