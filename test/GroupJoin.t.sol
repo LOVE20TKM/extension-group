@@ -79,7 +79,9 @@ contract GroupJoinTest is BaseGroupTest {
 
     /// @notice Test: isAccountInRangeByRound returns correct values for different ranges
     /// @dev Verifies that the function correctly identifies accounts within specified index ranges
-    function test_isAccountInRangeByRound_WithValidRanges_ReturnsCorrectValues() public {
+    function test_isAccountInRangeByRound_WithValidRanges_ReturnsCorrectValues()
+        public
+    {
         address[] memory users = new address[](3);
         uint256[] memory joinAmounts = new uint256[](3);
         for (uint256 i = 0; i < 3; i++) {
