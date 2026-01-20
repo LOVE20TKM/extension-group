@@ -561,7 +561,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address account,
         address expectedProvider
     ) internal view {
-        // _validateExit(extension, account);
         address provider = _trialProviderByAccount[extension][account];
         if (provider != expectedProvider) revert TrialProviderMismatch();
     }
