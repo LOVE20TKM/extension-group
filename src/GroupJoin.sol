@@ -394,7 +394,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address[] memory trialAccounts,
         uint256[] memory trialAmounts
     ) external override nonReentrant onlyValidExtension(extension) {
-        _requireValidGroupId(extension, groupId);
+        if (!_groupManager.isGroupActive(extension, groupId)) {
+            revert CannotJoinInactiveGroup();
+        }
         if (trialAccounts.length != trialAmounts.length) {
             revert TrialArrayLengthMismatch();
         }
@@ -404,32 +406,11 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         uint256 totalAmount;
         for (uint256 i; i < length; ) {
-            address account = trialAccounts[i];
-            uint256 trialAmount = trialAmounts[i];
-            if (account == address(0)) revert TrialAccountZero();
-            if (account == msg.sender) revert TrialAccountIsProvider();
-            if (trialAmount == 0) revert TrialAmountZero();
-            if (
-                _trialWaitingListByProvider[extension][groupId][msg.sender]
-                    .contains(account)
-            ) {
-                revert TrialAccountAlreadyAdded();
-            }
-
-            _trialWaitingListAmountByProvider[extension][groupId][msg.sender][
-                account
-            ] = trialAmount;
-            _trialWaitingListByProvider[extension][groupId][msg.sender].add(
-                account
-            );
-            totalAmount += trialAmount;
-            _emitTrialWaitingListUpdated(
+            totalAmount += _addTrialAccountToWaitingList(
                 extension,
                 groupId,
-                msg.sender,
-                account,
-                true,
-                trialAmount
+                trialAccounts[i],
+                trialAmounts[i]
             );
 
             unchecked {
@@ -799,6 +780,40 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (trialAmount == 0) revert TrialAmountZero();
     }
 
+    function _addTrialAccountToWaitingList(
+        address extension,
+        uint256 groupId,
+        address account,
+        uint256 trialAmount
+    ) internal returns (uint256) {
+        if (account == address(0)) revert TrialAccountZero();
+        if (account == msg.sender) revert TrialAccountIsProvider();
+        if (trialAmount == 0) revert TrialAmountZero();
+        if (
+            _trialWaitingListByProvider[extension][groupId][msg.sender]
+                .contains(account)
+        ) {
+            revert TrialAccountAlreadyAdded();
+        }
+
+        _trialWaitingListAmountByProvider[extension][groupId][msg.sender][
+            account
+        ] = trialAmount;
+        _trialWaitingListByProvider[extension][groupId][msg.sender].add(
+            account
+        );
+        _emitTrialWaitingListUpdated(
+            extension,
+            groupId,
+            msg.sender,
+            account,
+            true,
+            trialAmount
+        );
+
+        return trialAmount;
+    }
+
     function _emitJoin(
         address extension,
         uint256 groupId,
@@ -1038,15 +1053,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         if (ownerTotalJoined + amount > ownerMaxCapacity) {
             revert OwnerCapacityExceeded();
-        }
-    }
-
-    function _requireValidGroupId(
-        address extension,
-        uint256 groupId
-    ) internal view {
-        if (!_groupManager.isGroupActive(extension, groupId)) {
-            revert CannotJoinInactiveGroup();
         }
     }
 
