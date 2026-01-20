@@ -436,38 +436,19 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         uint256 totalRefund;
         for (uint256 i; i < length; ) {
-            address account = trialAccounts[i];
-            if (
-                _trialWaitingListByProvider[extension][groupId][msg.sender]
-                    .remove(account)
-            ) {
-                uint256 trialAmount = _trialWaitingListAmountByProvider[
-                    extension
-                ][groupId][msg.sender][account];
-                delete _trialWaitingListAmountByProvider[extension][groupId][
-                    msg.sender
-                ][account];
-                totalRefund += trialAmount;
-                _emitTrialWaitingListUpdated(
-                    extension,
-                    groupId,
-                    msg.sender,
-                    account,
-                    false,
-                    trialAmount
-                );
-            }
+            totalRefund += _removeTrialAccountFromWaitingList(
+                extension,
+                groupId,
+                trialAccounts[i],
+                msg.sender
+            );
 
             unchecked {
                 ++i;
             }
         }
 
-        if (totalRefund > 0) {
-            address joinTokenAddress = IGroupAction(extension)
-                .JOIN_TOKEN_ADDRESS();
-            IERC20(joinTokenAddress).safeTransfer(msg.sender, totalRefund);
-        }
+        _refundTrialAmount(extension, msg.sender, totalRefund);
     }
 
     function trialWaitingListRemoveAll(
@@ -480,24 +461,11 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 totalRefund;
 
         for (uint256 i; i < accounts.length; ) {
-            address account = accounts[i];
-            _trialWaitingListByProvider[extension][groupId][msg.sender].remove(
-                account
-            );
-            uint256 trialAmount = _trialWaitingListAmountByProvider[extension][
-                groupId
-            ][msg.sender][account];
-            delete _trialWaitingListAmountByProvider[extension][groupId][
-                msg.sender
-            ][account];
-            totalRefund += trialAmount;
-            _emitTrialWaitingListUpdated(
+            totalRefund += _removeTrialAccountFromWaitingList(
                 extension,
                 groupId,
-                msg.sender,
-                account,
-                false,
-                trialAmount
+                accounts[i],
+                msg.sender
             );
 
             unchecked {
@@ -505,11 +473,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             }
         }
 
-        if (totalRefund > 0) {
-            address joinTokenAddress = IGroupAction(extension)
-                .JOIN_TOKEN_ADDRESS();
-            IERC20(joinTokenAddress).safeTransfer(msg.sender, totalRefund);
-        }
+        _refundTrialAmount(extension, msg.sender, totalRefund);
     }
 
     function trialWaitingListByProvider(
@@ -812,6 +776,53 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
 
         return trialAmount;
+    }
+
+    function _removeTrialAccountFromWaitingList(
+        address extension,
+        uint256 groupId,
+        address account,
+        address provider
+    ) internal returns (uint256) {
+        if (
+            !_trialWaitingListByProvider[extension][groupId][provider].contains(
+                account
+            )
+        ) {
+            return 0;
+        }
+
+        _trialWaitingListByProvider[extension][groupId][provider].remove(
+            account
+        );
+        uint256 trialAmount = _trialWaitingListAmountByProvider[extension][
+            groupId
+        ][provider][account];
+        delete _trialWaitingListAmountByProvider[extension][groupId][provider][
+            account
+        ];
+        _emitTrialWaitingListUpdated(
+            extension,
+            groupId,
+            provider,
+            account,
+            false,
+            trialAmount
+        );
+
+        return trialAmount;
+    }
+
+    function _refundTrialAmount(
+        address extension,
+        address provider,
+        uint256 totalRefund
+    ) internal {
+        if (totalRefund > 0) {
+            address joinTokenAddress = IGroupAction(extension)
+                .JOIN_TOKEN_ADDRESS();
+            IERC20(joinTokenAddress).safeTransfer(provider, totalRefund);
+        }
     }
 
     function _emitJoin(
