@@ -159,14 +159,14 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount,
         string[] memory verificationInfos
     ) external override nonReentrant onlyValidExtension(extension) {
-        if (_trialProviderByAccount[extension][msg.sender] != address(0)) {
-            revert TrialAlreadyJoined();
-        }
-        uint256 currentRound = _joinInternal(
+        _validateJoin(extension, groupId, amount);
+        uint256 currentRound = _join.currentRound();
+        _joinInternal(
             extension,
             groupId,
             amount,
-            verificationInfos
+            verificationInfos,
+            currentRound
         );
         _transferJoinToken(extension, msg.sender, amount);
         _emitJoin(
@@ -186,33 +186,23 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         string[] memory verificationInfos
     ) external override nonReentrant onlyValidExtension(extension) {
         uint256 trialAmount = _validateTrialJoin(extension, groupId, provider);
-        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
-            .latestValue();
-        if (joinedGroupId != 0) revert AlreadyJoined();
-        uint256 currentRound = _joinInternal(
+        _validateJoin(extension, groupId, trialAmount);
+        uint256 currentRound = _join.currentRound();
+        _joinInternal(
             extension,
             groupId,
             trialAmount,
-            verificationInfos
+            verificationInfos,
+            currentRound
         );
-        _trialProviderByAccount[extension][msg.sender] = provider;
-        _trialJoinedListByProvider[extension][groupId][provider].add(
-            msg.sender
-        );
-        _trialWaitingListByProvider[extension][groupId][provider].remove(
-            msg.sender
-        );
-        delete _trialWaitingListAmountByProvider[extension][groupId][provider][
-            msg.sender
-        ];
-        _emitTrialWaitingListUpdated(
+        _updateTrialJoinState(
             extension,
             groupId,
             provider,
             msg.sender,
-            false,
             trialAmount
         );
+
         _emitJoin(
             extension,
             groupId,
@@ -226,16 +216,39 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function exit(
         address extension
     ) external override nonReentrant onlyValidExtension(extension) {
-        _exitInternal(extension, msg.sender);
+        _validateExit(extension, msg.sender);
+        uint256 currentRound = _join.currentRound();
+        (uint256 groupId, uint256 amount) = _exitInternal(
+            extension,
+            msg.sender,
+            currentRound
+        );
+        address provider = _transferExitToken(extension, msg.sender, amount);
+        _updateTrialExitState(extension, groupId, provider, msg.sender);
+        _emitExit(
+            extension,
+            groupId,
+            msg.sender,
+            provider,
+            amount,
+            currentRound
+        );
     }
 
     function trialExit(
         address extension,
         address account
     ) external override nonReentrant onlyValidExtension(extension) {
-        address provider = _trialProviderByAccount[extension][account];
-        if (provider != msg.sender) revert TrialProviderMismatch();
-        _exitInternal(extension, account);
+        _validateTrialExit(extension, account, msg.sender);
+        uint256 currentRound = _join.currentRound();
+        (uint256 groupId, uint256 amount) = _exitInternal(
+            extension,
+            account,
+            currentRound
+        );
+        address provider = _transferExitToken(extension, account, amount);
+        _updateTrialExitState(extension, groupId, provider, account);
+        _emitExit(extension, groupId, account, provider, amount, currentRound);
     }
 
     function joinInfo(
@@ -592,29 +605,49 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _trialJoinedListByProvider[extension][groupId][provider].at(index);
     }
 
-    function _exitInternal(address extension, address account) internal {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+    function _validateExit(address extension, address account) internal view {
         uint256 groupId = _groupIdHistoryByAccount[extension][account]
             .latestValue();
         if (groupId == 0) revert NotJoinedAction();
+    }
 
-        uint256 amount = _amountHistoryByAccount[extension][account]
-            .latestValue();
-        uint256 currentRound = _join.currentRound();
+    function _validateTrialExit(
+        address extension,
+        address account,
+        address expectedProvider
+    ) internal view {
+        // _validateExit(extension, account);
+        address provider = _trialProviderByAccount[extension][account];
+        if (provider != expectedProvider) revert TrialProviderMismatch();
+    }
 
+    function _exitInternal(
+        address extension,
+        address account,
+        uint256 currentRound
+    ) internal returns (uint256 groupId, uint256 amount) {
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
+        groupId = _groupIdHistoryByAccount[extension][account].latestValue();
+        amount = _amountHistoryByAccount[extension][account].latestValue();
+
+        // 1. Update account participation info
+        delete _joinedRoundByAccount[extension][account];
         _amountHistoryByAccount[extension][account].record(currentRound, 0);
         _groupIdHistoryByAccount[extension][account].record(currentRound, 0);
 
+        // 2. Update token amounts
         _totalJoinedAmountHistoryByGroupId[extension][groupId].decrease(
             currentRound,
             amount
         );
         _totalJoinedAmountHistory[extension].decrease(currentRound, amount);
 
-        delete _joinedRoundByAccount[extension][account];
+        // 3. Update account list
         _accountsHistory[extension][groupId].remove(currentRound, account);
         _center.removeAccount(tokenAddress, actionId, account);
+
+        // 4. Update global state
         _updateGlobalStateOnExit(
             extension,
             tokenAddress,
@@ -623,26 +656,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             account
         );
 
-        address provider = _trialProviderByAccount[extension][account];
-        if (provider != address(0)) {
-            _trialProviderByAccount[extension][account] = address(0);
-            _trialJoinedListByProvider[extension][groupId][provider].remove(
-                account
-            );
-        }
-
-        address refundTo = provider == address(0) ? account : provider;
-        address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
-        IERC20(joinTokenAddress).safeTransfer(refundTo, amount);
-        emit Exit({
-            tokenAddress: tokenAddress,
-            round: currentRound,
-            actionId: actionId,
-            groupId: groupId,
-            account: account,
-            provider: provider,
-            amount: amount
-        });
+        return (groupId, amount);
     }
 
     function _transferJoinToken(
@@ -658,66 +672,89 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function _increaseAmountHistory(
+    function _joinInternal(
         address extension,
         uint256 groupId,
         uint256 amount,
-        uint256 currentRound,
-        address account
+        string[] memory verificationInfos,
+        uint256 currentRound
     ) internal {
-        _amountHistoryByAccount[extension][account].increase(
+        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
+            .latestValue();
+        bool isFirstJoin = joinedGroupId == 0;
+
+        if (isFirstJoin) {
+            _handleFirstJoin(
+                extension,
+                groupId,
+                amount,
+                verificationInfos,
+                currentRound
+            );
+        } else {
+            _handleNonFirstJoin(
+                extension,
+                groupId,
+                amount,
+                verificationInfos,
+                currentRound
+            );
+        }
+    }
+
+    function _handleFirstJoin(
+        address extension,
+        uint256 groupId,
+        uint256 amount,
+        string[] memory verificationInfos,
+        uint256 currentRound
+    ) internal {
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
+
+        // 1. Update account participation info
+        _joinedRoundByAccount[extension][msg.sender] = currentRound;
+        _groupIdHistoryByAccount[extension][msg.sender].record(
+            currentRound,
+            groupId
+        );
+        _amountHistoryByAccount[extension][msg.sender].increase(
             currentRound,
             amount
         );
+
+        // 2. Update token amounts
         _totalJoinedAmountHistoryByGroupId[extension][groupId].increase(
             currentRound,
             amount
         );
         _totalJoinedAmountHistory[extension].increase(currentRound, amount);
+
+        // 3. Update account list
+        _accountsHistory[extension][groupId].add(currentRound, msg.sender);
+        _center.addAccount(
+            tokenAddress,
+            actionId,
+            msg.sender,
+            verificationInfos
+        );
+
+        // 4. Update global state
+        _updateGlobalStateOnJoin(tokenAddress, actionId, groupId, msg.sender);
     }
 
-    function _joinInternal(
+    function _handleNonFirstJoin(
         address extension,
         uint256 groupId,
         uint256 amount,
-        string[] memory verificationInfos
-    ) internal returns (uint256 currentRound) {
-        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
-            .latestValue();
-        bool isFirstJoin = joinedGroupId == 0;
-
-        currentRound = _join.currentRound();
-        _validateJoin(extension, groupId, amount, isFirstJoin, joinedGroupId);
-        _increaseAmountHistory(
-            extension,
-            groupId,
-            amount,
-            currentRound,
-            msg.sender
-        );
-
+        string[] memory verificationInfos,
+        uint256 currentRound
+    ) internal {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
-        if (isFirstJoin) {
-            _joinedRoundByAccount[extension][msg.sender] = currentRound;
-            _groupIdHistoryByAccount[extension][msg.sender].record(
-                currentRound,
-                groupId
-            );
-            _accountsHistory[extension][groupId].add(currentRound, msg.sender);
-            _center.addAccount(
-                tokenAddress,
-                actionId,
-                msg.sender,
-                verificationInfos
-            );
-            _updateGlobalStateOnJoin(
-                tokenAddress,
-                actionId,
-                groupId,
-                msg.sender
-            );
-        } else if (verificationInfos.length > 0) {
+
+        // 1. Update account participation info
+        if (verificationInfos.length > 0) {
             _center.updateVerificationInfo(
                 tokenAddress,
                 actionId,
@@ -725,6 +762,17 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 verificationInfos
             );
         }
+        _amountHistoryByAccount[extension][msg.sender].increase(
+            currentRound,
+            amount
+        );
+
+        // 2. Update token amounts
+        _totalJoinedAmountHistoryByGroupId[extension][groupId].increase(
+            currentRound,
+            amount
+        );
+        _totalJoinedAmountHistory[extension].increase(currentRound, amount);
     }
 
     function _validateTrialJoin(
@@ -732,10 +780,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address provider
     ) internal view returns (uint256 trialAmount) {
+        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
+            .latestValue();
+        if (joinedGroupId != 0) revert AlreadyJoined();
         if (provider == address(0)) revert TrialProviderMismatch();
-        if (_trialProviderByAccount[extension][msg.sender] != address(0)) {
-            revert TrialAlreadyJoined();
-        }
 
         if (
             !_trialWaitingListByProvider[extension][groupId][provider].contains(
@@ -773,6 +821,80 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         });
     }
 
+    function _transferExitToken(
+        address extension,
+        address account,
+        uint256 amount
+    ) internal returns (address provider) {
+        provider = _trialProviderByAccount[extension][account];
+        address refundTo = provider == address(0) ? account : provider;
+        address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
+        IERC20(joinTokenAddress).safeTransfer(refundTo, amount);
+    }
+
+    function _emitExit(
+        address extension,
+        uint256 groupId,
+        address account,
+        address provider,
+        uint256 amount,
+        uint256 currentRound
+    ) internal {
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
+
+        emit Exit({
+            tokenAddress: tokenAddress,
+            round: currentRound,
+            actionId: actionId,
+            groupId: groupId,
+            account: account,
+            provider: provider,
+            amount: amount
+        });
+    }
+
+    function _updateTrialExitState(
+        address extension,
+        uint256 groupId,
+        address provider,
+        address account
+    ) internal {
+        if (provider == address(0)) {
+            return;
+        }
+        _trialProviderByAccount[extension][account] = address(0);
+        _trialJoinedListByProvider[extension][groupId][provider].remove(
+            account
+        );
+    }
+
+    function _updateTrialJoinState(
+        address extension,
+        uint256 groupId,
+        address provider,
+        address account,
+        uint256 trialAmount
+    ) internal {
+        _trialProviderByAccount[extension][account] = provider;
+        _trialJoinedListByProvider[extension][groupId][provider].add(account);
+        _trialWaitingListByProvider[extension][groupId][provider].remove(
+            account
+        );
+        delete _trialWaitingListAmountByProvider[extension][groupId][provider][
+            account
+        ];
+
+        _emitTrialWaitingListUpdated(
+            extension,
+            groupId,
+            provider,
+            account,
+            false,
+            trialAmount
+        );
+    }
+
     function _emitTrialWaitingListUpdated(
         address extension,
         uint256 groupId,
@@ -797,11 +919,16 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function _validateJoin(
         address extension,
         uint256 groupId,
-        uint256 amount,
-        bool isFirstJoin,
-        uint256 joinedGroupId
+        uint256 amount
     ) internal view {
         if (amount == 0) revert JoinAmountZero();
+        if (_trialProviderByAccount[extension][msg.sender] != address(0)) {
+            revert TrialAlreadyJoined();
+        }
+
+        uint256 joinedGroupId = _groupIdHistoryByAccount[extension][msg.sender]
+            .latestValue();
+        bool isFirstJoin = joinedGroupId == 0;
 
         // Check account's group membership (not based on GroupInfo)
         if (!isFirstJoin && joinedGroupId != groupId) {
