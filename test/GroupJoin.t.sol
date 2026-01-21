@@ -1032,7 +1032,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
 
         _assertJoinInfo(user1, expectedRound, trialAmount, groupId1, provider);
 
-        address inUseAccount = groupJoin.trialJoinedListByProviderAtIndex(
+        address inUseAccount = groupJoin.trialAccountsJoinedAtIndex(
             address(groupAction),
             groupId1,
             provider,
@@ -1090,9 +1090,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         groupJoin.join(address(groupAction), groupId1, 1e18, new string[](0));
     }
 
-    /// @notice Test: trialWaitingListAdd with self as account should revert
+    /// @notice Test: trialAccountsWaitingAdd with self as account should revert
     /// @dev Validation: provider cannot add themselves as trial account
-    function test_trialWaitingListAdd_WithSelfAsAccount_Reverts() public {
+    function test_trialAccountsWaitingAdd_WithSelfAsAccount_Reverts() public {
         uint256 poolAmount = 20e18;
         uint256 trialAmount = 10e18;
         address provider = user2;
@@ -1106,7 +1106,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
 
         vm.prank(provider);
         vm.expectRevert(IGroupJoinErrors.TrialAccountIsProvider.selector);
-        groupJoin.trialWaitingListAdd(
+        groupJoin.trialAccountsWaitingAdd(
             address(groupAction),
             groupId1,
             trialAccounts,
@@ -1168,7 +1168,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         trialAmounts[0] = trialAmount;
 
         vm.prank(provider);
-        groupJoin.trialWaitingListAdd(
+        groupJoin.trialAccountsWaitingAdd(
             address(groupAction),
             groupId1,
             trialAccounts,

@@ -67,13 +67,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     // extension => groupId => provider => account => trialAmount
     mapping(address => mapping(uint256 => mapping(address => mapping(address => uint256))))
-        internal _trialWaitingListAmountByProvider;
+        internal _trialAccountsWaitingAmount;
     // extension => groupId => provider => trial accounts
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.AddressSet)))
-        internal _trialWaitingListByProvider;
+        internal _trialAccountsWaiting;
     // extension => groupId => provider => trial accounts in use
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.AddressSet)))
-        internal _trialJoinedListByProvider;
+        internal _trialAccountsJoined;
     // extension => account => provider
     mapping(address => mapping(address => address))
         internal _trialProviderByAccount;
@@ -388,7 +388,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return index <= endIndex;
     }
 
-    function trialWaitingListAdd(
+    function trialAccountsWaitingAdd(
         address extension,
         uint256 groupId,
         address[] memory trialAccounts,
@@ -426,7 +426,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function trialWaitingListRemove(
+    function trialAccountsWaitingRemove(
         address extension,
         uint256 groupId,
         address[] memory trialAccounts
@@ -451,13 +451,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _refundTrialAmount(extension, msg.sender, totalRefund);
     }
 
-    function trialWaitingListRemoveAll(
+    function trialAccountsWaitingRemoveAll(
         address extension,
         uint256 groupId
     ) external override nonReentrant onlyValidExtension(extension) {
-        address[] memory accounts = _trialWaitingListByProvider[extension][
-            groupId
-        ][msg.sender].values();
+        address[] memory accounts = _trialAccountsWaiting[extension][groupId][
+            msg.sender
+        ].values();
         uint256 totalRefund;
 
         for (uint256 i; i < accounts.length; ) {
@@ -476,17 +476,17 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _refundTrialAmount(extension, msg.sender, totalRefund);
     }
 
-    function trialWaitingListByProvider(
+    function trialAccountsWaiting(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (address[] memory, uint256[] memory) {
-        address[] memory accounts = _trialWaitingListByProvider[extension][
-            groupId
-        ][provider].values();
+        address[] memory accounts = _trialAccountsWaiting[extension][groupId][
+            provider
+        ].values();
         uint256[] memory amounts = new uint256[](accounts.length);
         for (uint256 i; i < accounts.length; ) {
-            amounts[i] = _trialWaitingListAmountByProvider[extension][groupId][
+            amounts[i] = _trialAccountsWaitingAmount[extension][groupId][
                 provider
             ][accounts[i]];
             unchecked {
@@ -496,58 +496,51 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return (accounts, amounts);
     }
 
-    function trialWaitingListByProviderCount(
+    function trialAccountsWaitingCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (uint256) {
-        return
-            _trialWaitingListByProvider[extension][groupId][provider].length();
+        return _trialAccountsWaiting[extension][groupId][provider].length();
     }
 
-    function trialWaitingListByProviderAtIndex(
+    function trialAccountsWaitingAtIndex(
         address extension,
         uint256 groupId,
         address provider,
         uint256 index
     ) external view override returns (address, uint256) {
-        address account = _trialWaitingListByProvider[extension][groupId][
-            provider
-        ].at(index);
+        address account = _trialAccountsWaiting[extension][groupId][provider]
+            .at(index);
         return (
             account,
-            _trialWaitingListAmountByProvider[extension][groupId][provider][
-                account
-            ]
+            _trialAccountsWaitingAmount[extension][groupId][provider][account]
         );
     }
 
-    function trialJoinedListByProvider(
+    function trialAccountsJoined(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (address[] memory) {
-        return
-            _trialJoinedListByProvider[extension][groupId][provider].values();
+        return _trialAccountsJoined[extension][groupId][provider].values();
     }
 
-    function trialJoinedListByProviderCount(
+    function trialAccountsJoinedCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view override returns (uint256) {
-        return
-            _trialJoinedListByProvider[extension][groupId][provider].length();
+        return _trialAccountsJoined[extension][groupId][provider].length();
     }
 
-    function trialJoinedListByProviderAtIndex(
+    function trialAccountsJoinedAtIndex(
         address extension,
         uint256 groupId,
         address provider,
         uint256 index
     ) external view override returns (address) {
-        return
-            _trialJoinedListByProvider[extension][groupId][provider].at(index);
+        return _trialAccountsJoined[extension][groupId][provider].at(index);
     }
 
     function _validateExit(address extension, address account) internal view {
@@ -730,16 +723,16 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (provider == address(0)) revert TrialProviderMismatch();
 
         if (
-            !_trialWaitingListByProvider[extension][groupId][provider].contains(
+            !_trialAccountsWaiting[extension][groupId][provider].contains(
                 msg.sender
             )
         ) {
             revert TrialAccountNotInWaitingList();
         }
 
-        trialAmount = _trialWaitingListAmountByProvider[extension][groupId][
-            provider
-        ][msg.sender];
+        trialAmount = _trialAccountsWaitingAmount[extension][groupId][provider][
+            msg.sender
+        ];
         if (trialAmount == 0) revert TrialAmountZero();
     }
 
@@ -753,18 +746,17 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (account == msg.sender) revert TrialAccountIsProvider();
         if (trialAmount == 0) revert TrialAmountZero();
         if (
-            _trialWaitingListByProvider[extension][groupId][msg.sender]
-                .contains(account)
+            _trialAccountsWaiting[extension][groupId][msg.sender].contains(
+                account
+            )
         ) {
             revert TrialAccountAlreadyAdded();
         }
 
-        _trialWaitingListAmountByProvider[extension][groupId][msg.sender][
+        _trialAccountsWaitingAmount[extension][groupId][msg.sender][
             account
         ] = trialAmount;
-        _trialWaitingListByProvider[extension][groupId][msg.sender].add(
-            account
-        );
+        _trialAccountsWaiting[extension][groupId][msg.sender].add(account);
         _emitTrialWaitingListUpdated(
             extension,
             groupId,
@@ -784,20 +776,18 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address provider
     ) internal returns (uint256) {
         if (
-            !_trialWaitingListByProvider[extension][groupId][provider].contains(
+            !_trialAccountsWaiting[extension][groupId][provider].contains(
                 account
             )
         ) {
             return 0;
         }
 
-        _trialWaitingListByProvider[extension][groupId][provider].remove(
-            account
-        );
-        uint256 trialAmount = _trialWaitingListAmountByProvider[extension][
-            groupId
-        ][provider][account];
-        delete _trialWaitingListAmountByProvider[extension][groupId][provider][
+        _trialAccountsWaiting[extension][groupId][provider].remove(account);
+        uint256 trialAmount = _trialAccountsWaitingAmount[extension][groupId][
+            provider
+        ][account];
+        delete _trialAccountsWaitingAmount[extension][groupId][provider][
             account
         ];
         _emitTrialWaitingListUpdated(
@@ -913,9 +903,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             return;
         }
         _trialProviderByAccount[extension][account] = address(0);
-        _trialJoinedListByProvider[extension][groupId][provider].remove(
-            account
-        );
+        _trialAccountsJoined[extension][groupId][provider].remove(account);
     }
 
     function _updateTrialJoinState(
@@ -926,11 +914,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 trialAmount
     ) internal {
         _trialProviderByAccount[extension][account] = provider;
-        _trialJoinedListByProvider[extension][groupId][provider].add(account);
-        _trialWaitingListByProvider[extension][groupId][provider].remove(
-            account
-        );
-        delete _trialWaitingListAmountByProvider[extension][groupId][provider][
+        _trialAccountsJoined[extension][groupId][provider].add(account);
+        _trialAccountsWaiting[extension][groupId][provider].remove(account);
+        delete _trialAccountsWaitingAmount[extension][groupId][provider][
             account
         ];
 

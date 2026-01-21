@@ -184,56 +184,56 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
         uint256 endIndex
     ) external view returns (bool);
 
-    function trialWaitingListAdd(
+    function trialAccountsWaitingAdd(
         address extension,
         uint256 groupId,
         address[] memory trialAccounts,
         uint256[] memory trialAmounts
     ) external;
 
-    function trialWaitingListRemove(
+    function trialAccountsWaitingRemove(
         address extension,
         uint256 groupId,
         address[] memory trialAccounts
     ) external;
 
-    function trialWaitingListRemoveAll(
+    function trialAccountsWaitingRemoveAll(
         address extension,
         uint256 groupId
     ) external;
 
-    function trialWaitingListByProvider(
+    function trialAccountsWaiting(
         address extension,
         uint256 groupId,
         address provider
     ) external view returns (address[] memory, uint256[] memory);
 
-    function trialWaitingListByProviderCount(
+    function trialAccountsWaitingCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view returns (uint256);
 
-    function trialWaitingListByProviderAtIndex(
+    function trialAccountsWaitingAtIndex(
         address extension,
         uint256 groupId,
         address provider,
         uint256 index
     ) external view returns (address, uint256);
 
-    function trialJoinedListByProvider(
+    function trialAccountsJoined(
         address extension,
         uint256 groupId,
         address provider
     ) external view returns (address[] memory);
 
-    function trialJoinedListByProviderCount(
+    function trialAccountsJoinedCount(
         address extension,
         uint256 groupId,
         address provider
     ) external view returns (uint256);
 
-    function trialJoinedListByProviderAtIndex(
+    function trialAccountsJoinedAtIndex(
         address extension,
         uint256 groupId,
         address provider,
