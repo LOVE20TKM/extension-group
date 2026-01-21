@@ -216,6 +216,17 @@ abstract contract BaseGroupTest is Test {
         uint256 actionId
     ) internal {
         submit.setActionInfo(tokenAddr, actionId, extensionAddress);
+        
+        // Set action author to match extension creator
+        // Try to get creator from factory, default to address(this) if not found
+        address author = address(this);
+        try mockGroupActionFactory.extensionCreator(extensionAddress) returns (address creator) {
+            if (creator != address(0)) {
+                author = creator;
+            }
+        } catch {}
+        submit.setActionAuthor(tokenAddr, actionId, author);
+        
         uint256 round = join.currentRound();
         vote.setVotedActionIds(tokenAddr, round, actionId);
         // Set default votes: 10000e18 total votes, 10000e18 for this action (100% vote rate)
