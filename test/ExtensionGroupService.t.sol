@@ -648,7 +648,9 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             CAPACITY_FACTOR
         );
         submit.setActionInfo(address(token), actionId2, groupAction2Address);
-        address action2Author = actionFactory.extensionCreator(groupAction2Address);
+        address action2Author = actionFactory.extensionCreator(
+            groupAction2Address
+        );
         submit.setActionAuthor(address(token), actionId2, action2Author);
         token.mint(groupAction2Address, 1e18);
 
@@ -713,7 +715,9 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             CAPACITY_FACTOR
         );
         submit.setActionInfo(address(token), actionId2, groupAction2Address);
-        address action2Author = actionFactory.extensionCreator(groupAction2Address);
+        address action2Author = actionFactory.extensionCreator(
+            groupAction2Address
+        );
         submit.setActionAuthor(address(token), actionId2, action2Author);
         token.mint(groupAction2Address, 1e18);
 
@@ -1485,11 +1489,15 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             serviceActionId,
             address(groupService)
         );
-        
+
         // Set action authors to match extension creators
-        address actionAuthor = actionFactory.extensionCreator(address(groupAction));
+        address actionAuthor = actionFactory.extensionCreator(
+            address(groupAction)
+        );
         submit.setActionAuthor(address(token), actionId, actionAuthor);
-        address serviceAuthor = serviceFactory.extensionCreator(address(groupService));
+        address serviceAuthor = serviceFactory.extensionCreator(
+            address(groupService)
+        );
         submit.setActionAuthor(address(token), serviceActionId, serviceAuthor);
 
         // Set voted actionIds for this round
