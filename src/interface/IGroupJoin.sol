@@ -1,7 +1,49 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface IGroupJoin {
+interface IGroupJoinEvents {
+    /// @notice Emitted when an account joins a group
+    /// @param provider If non-zero, indicates this is a trial join sponsored by the provider
+    event Join(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        uint256 indexed groupId,
+        address account,
+        address provider,
+        uint256 amount,
+        uint256 accountCountByGroupId,
+        uint256 accountCountByActionId,
+        uint256 accountCountByTokenAddress
+    );
+
+    /// @notice Emitted when an account exits from a group
+    /// @param provider If non-zero, indicates this was a trial user; funds are refunded to provider
+    event Exit(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        uint256 indexed groupId,
+        address account,
+        address provider,
+        uint256 amount,
+        uint256 accountCountByGroupId,
+        uint256 accountCountByActionId,
+        uint256 accountCountByTokenAddress
+    );
+
+    event TrialWaitingListUpdated(
+        address indexed tokenAddress,
+        uint256 actionId,
+        uint256 indexed groupId,
+        address indexed provider,
+        address account,
+        uint256 trialAmount,
+        bool enabled
+    );
+}
+
+interface IGroupJoinErrors {
     error InvalidJoinTokenAddress();
     error JoinAmountZero();
     error AlreadyInOtherGroup();
@@ -25,40 +67,9 @@ interface IGroupJoin {
     error TrialAmountZero();
     error TrialAccountAlreadyAdded();
     error TrialProviderMismatch();
+}
 
-    /// @notice Emitted when an account joins a group
-    /// @param provider If non-zero, indicates this is a trial join sponsored by the provider
-    event Join(
-        address indexed tokenAddress,
-        uint256 round,
-        uint256 indexed actionId,
-        uint256 indexed groupId,
-        address account,
-        address provider,
-        uint256 amount
-    );
-
-    /// @notice Emitted when an account exits from a group
-    /// @param provider If non-zero, indicates this was a trial user; funds are refunded to provider
-    event Exit(
-        address indexed tokenAddress,
-        uint256 round,
-        uint256 indexed actionId,
-        uint256 indexed groupId,
-        address account,
-        address provider,
-        uint256 amount
-    );
-    event TrialWaitingListUpdated(
-        address indexed tokenAddress,
-        uint256 actionId,
-        uint256 indexed groupId,
-        address indexed provider,
-        address account,
-        uint256 trialAmount,
-        bool enabled
-    );
-
+interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
     function initialize(address factory_) external;
 
     function FACTORY_ADDRESS() external view returns (address);

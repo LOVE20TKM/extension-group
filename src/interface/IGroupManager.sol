@@ -1,16 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface IGroupManager {
-    error NotRegisteredExtension();
-    error GroupAlreadyActivated();
-    error GroupNotActive();
-    error InvalidMinMaxJoinAmount();
-    error CannotDeactivateInActivatedRound();
-    error OnlyGroupOwner();
-    error NotRegisteredExtensionInFactory();
-    error ExtensionNotInitialized();
-
+interface IGroupManagerEvents {
     event ActivateGroup(
         address indexed tokenAddress,
         uint256 indexed actionId,
@@ -38,7 +29,20 @@ interface IGroupManager {
         uint256 maxJoinAmount,
         uint256 maxAccounts
     );
+}
 
+interface IGroupManagerErrors {
+    error NotRegisteredExtension();
+    error GroupAlreadyActivated();
+    error GroupNotActive();
+    error InvalidMinMaxJoinAmount();
+    error CannotDeactivateInActivatedRound();
+    error OnlyGroupOwner();
+    error NotRegisteredExtensionInFactory();
+    error ExtensionNotInitialized();
+}
+
+interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
     struct GroupInfo {
         uint256 groupId;
         string description;

@@ -5,7 +5,9 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
+import {IGroupManagerErrors} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
+import {IGroupJoinErrors} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
@@ -261,7 +263,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.CannotJoinInactiveGroup.selector);
+        vm.expectRevert(IGroupJoinErrors.CannotJoinInactiveGroup.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -295,7 +297,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         scores[0] = 80;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IGroupManager.GroupNotActive.selector);
+        vm.expectRevert(IGroupManagerErrors.GroupNotActive.selector);
         groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
@@ -871,7 +873,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         setupUser(user4, 10e18, address(groupJoin));
 
         vm.prank(user4);
-        vm.expectRevert(IGroupJoin.GroupAccountsFull.selector);
+        vm.expectRevert(IGroupJoinErrors.GroupAccountsFull.selector);
         groupJoin.join(address(groupAction), groupId4, 10e18, new string[](0));
     }
 }
@@ -914,7 +916,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(0x222)
         );
 
-        vm.expectRevert(IGroupJoin.InvalidJoinTokenAddress.selector);
+        vm.expectRevert(IGroupJoinErrors.InvalidJoinTokenAddress.selector);
         new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),

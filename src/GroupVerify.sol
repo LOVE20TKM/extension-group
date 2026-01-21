@@ -7,6 +7,7 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
+import {IGroupManagerErrors} from "./interface/IGroupManager.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
@@ -160,7 +161,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             revert NotVerifier();
         }
         if (!_groupManager.isGroupActive(extension, groupId)) {
-            revert IGroupManager.GroupNotActive();
+            revert IGroupManagerErrors.GroupNotActive();
         }
 
         if (originScores.length == 0) {

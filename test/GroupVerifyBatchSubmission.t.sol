@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
+import {IGroupVerifyErrors} from "../src/interface/IGroupVerify.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 
@@ -351,7 +352,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         batch2[0] = 85;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IGroupVerify.InvalidStartIndex.selector);
+        vm.expectRevert(IGroupVerifyErrors.InvalidStartIndex.selector);
         groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
@@ -383,7 +384,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         scores[2] = 85;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IGroupVerify.ScoresExceedAccountCount.selector);
+        vm.expectRevert(IGroupVerifyErrors.ScoresExceedAccountCount.selector);
         groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
@@ -427,7 +428,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         batch2[1] = 95;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IGroupVerify.ScoresExceedAccountCount.selector);
+        vm.expectRevert(IGroupVerifyErrors.ScoresExceedAccountCount.selector);
         groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,
@@ -653,7 +654,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         scores2[0] = 85;
 
         vm.prank(groupOwner1);
-        vm.expectRevert(IGroupVerify.AlreadyVerified.selector);
+        vm.expectRevert(IGroupVerifyErrors.AlreadyVerified.selector);
         groupVerify.submitOriginScores(
             address(groupAction),
             groupId1,

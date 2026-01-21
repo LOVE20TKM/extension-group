@@ -2,6 +2,8 @@
 pragma solidity =0.8.17;
 
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
+import {IGroupJoinEvents} from "../src/interface/IGroupJoin.sol";
+import {IGroupJoinErrors} from "../src/interface/IGroupJoin.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 
@@ -10,7 +12,7 @@ import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
  * @notice Comprehensive test suite for GroupJoin contract
  * @dev Tests cover join/exit functionality, trial joins, round history, and error cases
  */
-contract GroupJoinTest is BaseGroupTest {
+contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
     ExtensionGroupAction public groupAction;
     uint256 public groupId1;
     uint256 public groupId2;
@@ -164,7 +166,7 @@ contract GroupJoinTest is BaseGroupTest {
         uint256 joinAmount = 0;
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.JoinAmountZero.selector);
+        vm.expectRevert(IGroupJoinErrors.JoinAmountZero.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -256,7 +258,7 @@ contract GroupJoinTest is BaseGroupTest {
         );
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.AlreadyInOtherGroup.selector);
+        vm.expectRevert(IGroupJoinErrors.AlreadyInOtherGroup.selector);
         groupJoin.join(
             address(groupAction),
             groupId2,
@@ -276,7 +278,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.CannotJoinInactiveGroup.selector);
+        vm.expectRevert(IGroupJoinErrors.CannotJoinInactiveGroup.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -305,7 +307,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.AmountBelowMinimum.selector);
+        vm.expectRevert(IGroupJoinErrors.AmountBelowMinimum.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -334,7 +336,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.ExceedsGroupMaxJoinAmount.selector);
+        vm.expectRevert(IGroupJoinErrors.ExceedsGroupMaxJoinAmount.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -372,7 +374,7 @@ contract GroupJoinTest is BaseGroupTest {
         );
 
         vm.prank(user2);
-        vm.expectRevert(IGroupJoin.GroupAccountsFull.selector);
+        vm.expectRevert(IGroupJoinErrors.GroupAccountsFull.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -411,7 +413,7 @@ contract GroupJoinTest is BaseGroupTest {
         );
 
         vm.prank(user2);
-        vm.expectRevert(IGroupJoin.GroupCapacityExceeded.selector);
+        vm.expectRevert(IGroupJoinErrors.GroupCapacityExceeded.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -445,7 +447,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.OwnerCapacityExceeded.selector);
+        vm.expectRevert(IGroupJoinErrors.OwnerCapacityExceeded.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -477,7 +479,7 @@ contract GroupJoinTest is BaseGroupTest {
         setupUser(user1, joinAmount, address(groupJoin));
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.ExceedsActionMaxJoinAmount.selector);
+        vm.expectRevert(IGroupJoinErrors.ExceedsActionMaxJoinAmount.selector);
         groupJoin.join(
             address(groupAction),
             groupId1,
@@ -494,8 +496,215 @@ contract GroupJoinTest is BaseGroupTest {
     /// @dev State validation: cannot exit if not a member
     function test_exit_WhenNotJoined_Reverts() public {
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.NotJoinedAction.selector);
+        vm.expectRevert(IGroupJoinErrors.NotJoinedAction.selector);
         groupJoin.exit(address(groupAction));
+    }
+
+    // ============ Event Tests ============
+
+    /// @notice Test: Join event emits with correct account counts
+    /// @dev Event validation: verifies Join event includes correct count parameters
+    function test_join_EmitsJoinEvent_WithCorrectAccountCounts() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        address tokenAddress = address(token);
+        uint256 actionId = ACTION_ID;
+        uint256 currentRound = join.currentRound();
+
+        // Event is emitted after account is added, so counts should include the new account
+        vm.expectEmit(true, true, true, true);
+        emit Join(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupId1,
+            user1,
+            address(0),
+            joinAmount,
+            1, // After join, should be 1 (includes user1)
+            center.accountsCount(tokenAddress, actionId) + 1, // After join, should increase by 1
+            groupJoin.gAccountsByTokenAddressCount(tokenAddress) == 0
+                ? 1
+                : groupJoin.gAccountsByTokenAddressCount(tokenAddress) + 1 // After join, may increase
+        );
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify counts after join
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            1,
+            "accountCountByGroupId should be 1"
+        );
+        assertEq(
+            center.accountsCount(tokenAddress, actionId),
+            1,
+            "accountCountByActionId should be 1"
+        );
+    }
+
+    /// @notice Test: Exit event emits with correct account counts
+    /// @dev Event validation: verifies Exit event includes correct count parameters
+    function test_exit_EmitsExitEvent_WithCorrectAccountCounts() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        // Join first
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        address tokenAddress = address(token);
+        uint256 actionId = ACTION_ID;
+        uint256 currentRound = join.currentRound();
+
+        // Event is emitted after account is removed, so counts should not include the exited account
+        vm.expectEmit(true, true, true, true);
+        emit Exit(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupId1,
+            user1,
+            address(0),
+            joinAmount,
+            0, // After exit, should be 0 (user1 removed)
+            center.accountsCount(tokenAddress, actionId) - 1, // After exit, should decrease by 1
+            groupJoin.gAccountsByTokenAddressCount(tokenAddress) - 1 // After exit, should decrease
+        );
+
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        // Verify counts after exit
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            0,
+            "accountCountByGroupId should be 0"
+        );
+        assertEq(
+            center.accountsCount(tokenAddress, actionId),
+            0,
+            "accountCountByActionId should be 0"
+        );
+    }
+
+    /// @notice Test: Join event account counts with multiple users
+    /// @dev Event validation: verifies account counts increment correctly with multiple joins
+    function test_join_EmitsJoinEvent_WithMultipleUsers_AccountCountsIncrement()
+        public
+    {
+        uint256 joinAmount = 10e18;
+        address[] memory users = new address[](3);
+        users[0] = user1;
+        users[1] = user2;
+        users[2] = user3;
+
+        address tokenAddress = address(token);
+        uint256 actionId = ACTION_ID;
+
+        // First user joins
+        setupUser(users[0], joinAmount, address(groupJoin));
+        uint256 currentRound = join.currentRound();
+
+        vm.expectEmit(true, true, true, true);
+        emit Join(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupId1,
+            users[0],
+            address(0),
+            joinAmount,
+            1, // After first join, count should be 1
+            center.accountsCount(tokenAddress, actionId) + 1,
+            groupJoin.gAccountsByTokenAddressCount(tokenAddress) == 0
+                ? 1
+                : groupJoin.gAccountsByTokenAddressCount(tokenAddress) + 1
+        );
+
+        vm.prank(users[0]);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Second user joins
+        setupUser(users[1], joinAmount, address(groupJoin));
+        currentRound = join.currentRound();
+
+        vm.expectEmit(true, true, true, true);
+        emit Join(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupId1,
+            users[1],
+            address(0),
+            joinAmount,
+            2, // After second join, count should be 2
+            center.accountsCount(tokenAddress, actionId) + 1,
+            groupJoin.gAccountsByTokenAddressCount(tokenAddress) + 1
+        );
+
+        vm.prank(users[1]);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Third user joins
+        setupUser(users[2], joinAmount, address(groupJoin));
+        currentRound = join.currentRound();
+
+        vm.expectEmit(true, true, true, true);
+        emit Join(
+            tokenAddress,
+            currentRound,
+            actionId,
+            groupId1,
+            users[2],
+            address(0),
+            joinAmount,
+            3, // After third join, count should be 3
+            center.accountsCount(tokenAddress, actionId) + 1,
+            groupJoin.gAccountsByTokenAddressCount(tokenAddress) + 1
+        );
+
+        vm.prank(users[2]);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Verify final counts
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            3,
+            "Final accountCountByGroupId should be 3"
+        );
+        assertEq(
+            center.accountsCount(tokenAddress, actionId),
+            3,
+            "Final accountCountByActionId should be 3"
+        );
     }
 
     // ============ joinInfo Tests ============
@@ -877,7 +1086,7 @@ contract GroupJoinTest is BaseGroupTest {
         );
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoin.TrialAlreadyJoined.selector);
+        vm.expectRevert(IGroupJoinErrors.TrialAlreadyJoined.selector);
         groupJoin.join(address(groupAction), groupId1, 1e18, new string[](0));
     }
 
@@ -896,7 +1105,7 @@ contract GroupJoinTest is BaseGroupTest {
         trialAmounts[0] = trialAmount;
 
         vm.prank(provider);
-        vm.expectRevert(IGroupJoin.TrialAccountIsProvider.selector);
+        vm.expectRevert(IGroupJoinErrors.TrialAccountIsProvider.selector);
         groupJoin.trialWaitingListAdd(
             address(groupAction),
             groupId1,

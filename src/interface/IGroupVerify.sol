@@ -1,27 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface IGroupVerify {
-    /// @notice Maximum origin score for verification (100 = full score)
-    function MAX_ORIGIN_SCORE() external pure returns (uint256);
-
-    /// @notice Precision constant for ratio calculations (1e18)
-    function PRECISION() external pure returns (uint256);
-    error OriginScoresEmpty();
-    error NotVerifier();
-    error ScoreExceedsMax();
-    error NoRemainingVerifyCapacity();
-    error AlreadyVerified();
-    error InvalidStartIndex();
-    error ScoresExceedAccountCount();
-    error NotRegisteredExtension();
-    error VerifyVotesZero();
-    error DistrustVoteExceedsVerifyVotes();
-    error InvalidReason();
-    error ExtensionNotInitialized();
-    error DistrustVoteZeroAmount();
-    error OnlyGroupOwner();
-
+interface IGroupVerifyEvents {
     event SubmitOriginScores(
         address indexed tokenAddress,
         uint256 round,
@@ -47,6 +27,31 @@ interface IGroupVerify {
         uint256 amount,
         string reason
     );
+}
+
+interface IGroupVerifyErrors {
+    error OriginScoresEmpty();
+    error NotVerifier();
+    error ScoreExceedsMax();
+    error NoRemainingVerifyCapacity();
+    error AlreadyVerified();
+    error InvalidStartIndex();
+    error ScoresExceedAccountCount();
+    error NotRegisteredExtension();
+    error VerifyVotesZero();
+    error DistrustVoteExceedsVerifyVotes();
+    error InvalidReason();
+    error ExtensionNotInitialized();
+    error DistrustVoteZeroAmount();
+    error OnlyGroupOwner();
+}
+
+interface IGroupVerify is IGroupVerifyEvents, IGroupVerifyErrors {
+    /// @notice Maximum origin score for verification (100 = full score)
+    function MAX_ORIGIN_SCORE() external pure returns (uint256);
+
+    /// @notice Precision constant for ratio calculations (1e18)
+    function PRECISION() external pure returns (uint256);
 
     function initialize(address factory_) external;
 

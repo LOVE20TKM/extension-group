@@ -4,6 +4,7 @@ pragma solidity =0.8.17;
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
+import {IGroupJoinErrors} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
@@ -179,7 +180,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
                 TOKEN_ADDRESS
             )
         ) {
-            revert IGroupJoin.InvalidJoinTokenAddress();
+            revert IGroupJoinErrors.InvalidJoinTokenAddress();
         }
     }
 }

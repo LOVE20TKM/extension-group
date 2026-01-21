@@ -1,20 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface IGroupService {
-    error NoActiveGroups();
-    error InvalidRatio();
-    error TooManyRecipients();
-    error ZeroAddress();
-    error ZeroRatio();
-    error ArrayLengthMismatch();
-    error DuplicateAddress();
-    error InvalidGroupActionTokenAddress();
-    error InvalidExtension();
-    error NotGroupOwner();
-    error GroupNotActive();
-    error RecipientCannotBeSelf();
-
+interface IGroupServiceEvents {
     event UpdateRecipients(
         address indexed tokenAddress,
         uint256 round,
@@ -42,7 +29,24 @@ interface IGroupService {
         uint256 distributed,
         uint256 remaining
     );
+}
 
+interface IGroupServiceErrors {
+    error NoActiveGroups();
+    error InvalidRatio();
+    error TooManyRecipients();
+    error ZeroAddress();
+    error ZeroRatio();
+    error ArrayLengthMismatch();
+    error DuplicateAddress();
+    error InvalidGroupActionTokenAddress();
+    error InvalidExtension();
+    error NotGroupOwner();
+    error GroupNotActive();
+    error RecipientCannotBeSelf();
+}
+
+interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function PRECISION() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
 

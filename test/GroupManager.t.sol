@@ -4,6 +4,8 @@ pragma solidity =0.8.17;
 import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {GroupManager} from "../src/GroupManager.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
+import {IGroupManagerEvents} from "../src/interface/IGroupManager.sol";
+import {IGroupManagerErrors} from "../src/interface/IGroupManager.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 import {MockExtensionGroupAction} from "./mocks/MockExtensionGroupAction.sol";
@@ -13,37 +15,7 @@ import {MockExtensionGroupAction} from "./mocks/MockExtensionGroupAction.sol";
  * @notice Comprehensive test suite for GroupManager contract
  * @dev Tests cover group activation/deactivation, info updates, view functions, and extension uniqueness constraints
  */
-contract GroupManagerTest is BaseGroupTest {
-    // Re-declare events for testing
-    event ActivateGroup(
-        address indexed tokenAddress,
-        uint256 indexed actionId,
-        uint256 round,
-        uint256 indexed groupId,
-        address owner,
-        uint256 stakeAmount
-    );
-
-    event DeactivateGroup(
-        address indexed tokenAddress,
-        uint256 indexed actionId,
-        uint256 round,
-        uint256 indexed groupId,
-        address owner,
-        uint256 stakeAmount
-    );
-
-    event UpdateGroupInfo(
-        address indexed tokenAddress,
-        uint256 indexed actionId,
-        uint256 round,
-        uint256 indexed groupId,
-        string description,
-        uint256 maxCapacity,
-        uint256 minJoinAmount,
-        uint256 maxJoinAmount,
-        uint256 maxAccounts
-    );
+contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
     // Additional test extensions and tokens
     MockExtensionGroupAction public extension1;
     MockExtensionGroupAction public extension2;
@@ -467,7 +439,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Try to activate again should revert
         vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.GroupAlreadyActivated.selector);
+        vm.expectRevert(IGroupManagerErrors.GroupAlreadyActivated.selector);
         groupManager.activateGroup(
             address(extension1),
             groupId,
@@ -491,7 +463,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // maxJoinAmount < minJoinAmount should revert
         vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.InvalidMinMaxJoinAmount.selector);
+        vm.expectRevert(IGroupManagerErrors.InvalidMinMaxJoinAmount.selector);
         groupManager.activateGroup(
             address(extension1),
             groupId,
@@ -515,7 +487,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // groupOwner2 tries to activate groupOwner1's group
         vm.prank(groupOwner2, groupOwner2);
-        vm.expectRevert(IGroupManager.OnlyGroupOwner.selector);
+        vm.expectRevert(IGroupManagerErrors.OnlyGroupOwner.selector);
         groupManager.activateGroup(
             address(extension1),
             groupId,
@@ -555,7 +527,7 @@ contract GroupManagerTest is BaseGroupTest {
         // Try to deactivate in the same round should revert
         vm.prank(groupOwner1, groupOwner1);
         vm.expectRevert(
-            IGroupManager.CannotDeactivateInActivatedRound.selector
+            IGroupManagerErrors.CannotDeactivateInActivatedRound.selector
         );
         groupManager.deactivateGroup(address(extension1), groupId);
     }
@@ -587,7 +559,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Try to deactivate again should revert
         vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.GroupNotActive.selector);
+        vm.expectRevert(IGroupManagerErrors.GroupNotActive.selector);
         groupManager.deactivateGroup(address(extension1), groupId);
     }
 
@@ -615,7 +587,7 @@ contract GroupManagerTest is BaseGroupTest {
         advanceRound();
         // groupOwner2 tries to deactivate groupOwner1's group
         vm.prank(groupOwner2, groupOwner2);
-        vm.expectRevert(IGroupManager.OnlyGroupOwner.selector);
+        vm.expectRevert(IGroupManagerErrors.OnlyGroupOwner.selector);
         groupManager.deactivateGroup(address(extension1), groupId);
     }
 
@@ -748,7 +720,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // maxJoinAmount < minJoinAmount should revert
         vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.InvalidMinMaxJoinAmount.selector);
+        vm.expectRevert(IGroupManagerErrors.InvalidMinMaxJoinAmount.selector);
         groupManager.updateGroupInfo(
             address(extension1),
             groupId,
@@ -787,7 +759,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // Try to update deactivated group should revert
         vm.prank(groupOwner1, groupOwner1);
-        vm.expectRevert(IGroupManager.GroupNotActive.selector);
+        vm.expectRevert(IGroupManagerErrors.GroupNotActive.selector);
         groupManager.updateGroupInfo(
             address(extension1),
             groupId,
@@ -822,7 +794,7 @@ contract GroupManagerTest is BaseGroupTest {
 
         // groupOwner2 tries to update groupOwner1's group
         vm.prank(groupOwner2, groupOwner2);
-        vm.expectRevert(IGroupManager.OnlyGroupOwner.selector);
+        vm.expectRevert(IGroupManagerErrors.OnlyGroupOwner.selector);
         groupManager.updateGroupInfo(
             address(extension1),
             groupId,
@@ -1681,7 +1653,7 @@ contract GroupManagerTest is BaseGroupTest {
         uint256 stakeAmount = GROUP_ACTIVATION_STAKE_AMOUNT;
 
         vm.expectEmit(true, true, true, true);
-        emit ActivateGroup(
+        emit IGroupManagerEvents.ActivateGroup(
             tokenAddress,
             actionId,
             currentRound,
@@ -1730,7 +1702,7 @@ contract GroupManagerTest is BaseGroupTest {
         uint256 stakeAmount = GROUP_ACTIVATION_STAKE_AMOUNT;
 
         vm.expectEmit(true, true, true, true);
-        emit DeactivateGroup(
+        emit IGroupManagerEvents.DeactivateGroup(
             tokenAddress,
             actionId,
             currentRound,
@@ -1774,7 +1746,7 @@ contract GroupManagerTest is BaseGroupTest {
         uint256 newMaxAccounts = 20;
 
         vm.expectEmit(true, true, true, true);
-        emit UpdateGroupInfo(
+        emit IGroupManagerEvents.UpdateGroupInfo(
             tokenAddress,
             actionId,
             currentRound,

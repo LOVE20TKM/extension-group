@@ -834,6 +834,15 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) internal {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
+        uint256 accountCountByGroupId = _accountsHistory[extension][groupId]
+            .count();
+        uint256 accountCountByActionId = _center.accountsCount(
+            tokenAddress,
+            actionId
+        );
+        uint256 accountCountByTokenAddress = _gAccountsByTokenAddress[
+            tokenAddress
+        ].length();
 
         emit Join({
             tokenAddress: tokenAddress,
@@ -842,7 +851,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             groupId: groupId,
             account: account,
             provider: provider,
-            amount: amount
+            amount: amount,
+            accountCountByGroupId: accountCountByGroupId,
+            accountCountByActionId: accountCountByActionId,
+            accountCountByTokenAddress: accountCountByTokenAddress
         });
     }
 
@@ -867,6 +879,15 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ) internal {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
+        uint256 accountCountByGroupId = _accountsHistory[extension][groupId]
+            .count();
+        uint256 accountCountByActionId = _center.accountsCount(
+            tokenAddress,
+            actionId
+        );
+        uint256 accountCountByTokenAddress = _gAccountsByTokenAddress[
+            tokenAddress
+        ].length();
 
         emit Exit({
             tokenAddress: tokenAddress,
@@ -875,7 +896,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             groupId: groupId,
             account: account,
             provider: provider,
-            amount: amount
+            amount: amount,
+            accountCountByGroupId: accountCountByGroupId,
+            accountCountByActionId: accountCountByActionId,
+            accountCountByTokenAddress: accountCountByTokenAddress
         });
     }
 
