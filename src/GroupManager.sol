@@ -84,12 +84,9 @@ contract GroupManager is IGroupManager {
         uint256 minJoinAmount,
         uint256 maxJoinAmount_,
         uint256 maxAccounts_
-    )
-        external
-        override
-        onlyGroupOwner(groupId)
-        onlyValidExtensionAndAutoInitialize(extension)
-    {
+    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
+        IExtension(extension).initializeIfNeeded();
+
         uint256 currentRound = _join.currentRound();
 
         _activateGroup(
@@ -468,13 +465,6 @@ contract GroupManager is IGroupManager {
         _;
     }
 
-    modifier onlyValidExtensionAndAutoInitialize(address extension) {
-        if (!_factory.exists(extension)) {
-            revert NotRegisteredExtensionInFactory();
-        }
-        IExtension(extension).initializeIfNeeded();
-        _;
-    }
     modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
             revert NotRegisteredExtensionInFactory();

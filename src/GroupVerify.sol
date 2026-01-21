@@ -39,11 +39,9 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     address public FACTORY_ADDRESS;
     bool internal _initialized;
 
-    // extension => groupId => delegate
-    mapping(address => mapping(uint256 => address)) internal _delegateByGroupId;
-    // extension => groupId => group owner at the time of delegation
-    mapping(address => mapping(uint256 => address))
-        internal _delegateSetterByGroupId;
+    // extension => groupOwner => groupId => delegate
+    mapping(address => mapping(address => mapping(uint256 => address)))
+        internal _delegateByGroupId;
     // extension => round => account => score deduction (0 means full score 100, >0 means deduction from 100)
     mapping(address => mapping(uint256 => mapping(address => uint256)))
         internal _originScoreDeductionByAccount;
@@ -142,10 +140,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) external override onlyValidExtension(extension) onlyGroupOwner(groupId) {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
-        _delegateByGroupId[extension][groupId] = delegate;
-        _delegateSetterByGroupId[extension][groupId] = delegate == address(0)
-            ? address(0)
-            : msg.sender;
+        _delegateByGroupId[extension][msg.sender][groupId] = delegate;
         emit SetGroupDelegate({
             tokenAddress: tokenAddress,
             round: _verify.currentRound(),
@@ -594,9 +589,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 groupId
     ) external view override returns (address) {
         address groupOwner = _group.ownerOf(groupId);
-        if (_delegateSetterByGroupId[extension][groupId] != groupOwner)
-            return address(0);
-        return _delegateByGroupId[extension][groupId];
+        return _delegateByGroupId[extension][groupOwner][groupId];
     }
 
     function canVerify(
@@ -606,8 +599,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) public view override returns (bool) {
         address groupOwner = _group.ownerOf(groupId);
         bool isValidDelegate = account ==
-            _delegateByGroupId[extension][groupId] &&
-            _delegateSetterByGroupId[extension][groupId] == groupOwner;
+            _delegateByGroupId[extension][groupOwner][groupId];
         return account == groupOwner || isValidDelegate;
     }
 

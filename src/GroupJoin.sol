@@ -486,9 +486,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         ].values();
         uint256[] memory amounts = new uint256[](accounts.length);
         for (uint256 i; i < accounts.length; ) {
-            amounts[i] = _trialAccountsWaitingAmount[extension][groupId][
-                provider
-            ][accounts[i]];
+            amounts[i] = _trialAccountsWaitingAmount[extension][
+                groupId
+            ][provider][accounts[i]];
             unchecked {
                 ++i;
             }
@@ -514,7 +514,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             .at(index);
         return (
             account,
-            _trialAccountsWaitingAmount[extension][groupId][provider][account]
+            _trialAccountsWaitingAmount[extension][groupId][provider][
+                account
+            ]
         );
     }
 
@@ -730,9 +732,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             revert TrialAccountNotInWaitingList();
         }
 
-        trialAmount = _trialAccountsWaitingAmount[extension][groupId][provider][
-            msg.sender
-        ];
+        trialAmount = _trialAccountsWaitingAmount[extension][groupId][
+            provider
+        ][msg.sender];
         if (trialAmount == 0) revert TrialAmountZero();
     }
 
@@ -784,12 +786,12 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         }
 
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
-        uint256 trialAmount = _trialAccountsWaitingAmount[extension][groupId][
+        uint256 trialAmount = _trialAccountsWaitingAmount[extension][
+            groupId
+        ][provider][account];
+        delete _trialAccountsWaitingAmount[extension][groupId][
             provider
         ][account];
-        delete _trialAccountsWaitingAmount[extension][groupId][provider][
-            account
-        ];
         _emitTrialWaitingListUpdated(
             extension,
             groupId,
@@ -916,9 +918,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _trialProviderByAccount[extension][account] = provider;
         _trialAccountsJoined[extension][groupId][provider].add(account);
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
-        delete _trialAccountsWaitingAmount[extension][groupId][provider][
-            account
-        ];
+        delete _trialAccountsWaitingAmount[extension][groupId][
+            provider
+        ][account];
 
         _emitTrialWaitingListUpdated(
             extension,
