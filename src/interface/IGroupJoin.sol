@@ -67,6 +67,8 @@ interface IGroupJoinErrors {
     error TrialAmountZero();
     error TrialAccountAlreadyAdded();
     error TrialProviderMismatch();
+    error AlreadyInitialized();
+    error InvalidFactoryAddress();
 }
 
 interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {

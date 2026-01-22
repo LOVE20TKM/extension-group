@@ -140,8 +140,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     constructor() {}
 
     function initialize(address factory_) external {
-        require(_initialized == false, "Already initialized");
-        require(factory_ != address(0), "Invalid factory address");
+        if (_initialized) revert AlreadyInitialized();
+        if (factory_ == address(0)) revert InvalidFactoryAddress();
 
         FACTORY_ADDRESS = factory_;
         _factory = IExtensionGroupActionFactory(factory_);
@@ -486,9 +486,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         ].values();
         uint256[] memory amounts = new uint256[](accounts.length);
         for (uint256 i; i < accounts.length; ) {
-            amounts[i] = _trialAccountsWaitingAmount[extension][
-                groupId
-            ][provider][accounts[i]];
+            amounts[i] = _trialAccountsWaitingAmount[extension][groupId][
+                provider
+            ][accounts[i]];
             unchecked {
                 ++i;
             }
@@ -514,9 +514,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             .at(index);
         return (
             account,
-            _trialAccountsWaitingAmount[extension][groupId][provider][
-                account
-            ]
+            _trialAccountsWaitingAmount[extension][groupId][provider][account]
         );
     }
 
@@ -565,8 +563,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address account,
         uint256 currentRound
     ) internal returns (uint256 groupId, uint256 amount) {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        IExtension ext = IExtension(extension);
+        address tokenAddress = ext.TOKEN_ADDRESS();
+        uint256 actionId = ext.actionId();
         groupId = _groupIdHistoryByAccount[extension][account].latestValue();
         amount = _amountHistoryByAccount[extension][account].latestValue();
 
@@ -648,8 +647,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         string[] memory verificationInfos,
         uint256 currentRound
     ) internal {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        IExtension ext = IExtension(extension);
+        address tokenAddress = ext.TOKEN_ADDRESS();
+        uint256 actionId = ext.actionId();
 
         // 1. Update account participation info
         _joinedRoundByAccount[extension][msg.sender] = currentRound;
@@ -689,8 +689,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         string[] memory verificationInfos,
         uint256 currentRound
     ) internal {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        IExtension ext = IExtension(extension);
+        address tokenAddress = ext.TOKEN_ADDRESS();
+        uint256 actionId = ext.actionId();
 
         // 1. Update account participation info
         if (verificationInfos.length > 0) {
@@ -732,9 +733,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             revert TrialAccountNotInWaitingList();
         }
 
-        trialAmount = _trialAccountsWaitingAmount[extension][groupId][
-            provider
-        ][msg.sender];
+        trialAmount = _trialAccountsWaitingAmount[extension][groupId][provider][
+            msg.sender
+        ];
         if (trialAmount == 0) revert TrialAmountZero();
     }
 
@@ -786,12 +787,12 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         }
 
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
-        uint256 trialAmount = _trialAccountsWaitingAmount[extension][
-            groupId
-        ][provider][account];
-        delete _trialAccountsWaitingAmount[extension][groupId][
+        uint256 trialAmount = _trialAccountsWaitingAmount[extension][groupId][
             provider
         ][account];
+        delete _trialAccountsWaitingAmount[extension][groupId][provider][
+            account
+        ];
         _emitTrialWaitingListUpdated(
             extension,
             groupId,
@@ -824,8 +825,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount,
         uint256 currentRound
     ) internal {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        IExtension ext = IExtension(extension);
+        address tokenAddress = ext.TOKEN_ADDRESS();
+        uint256 actionId = ext.actionId();
         uint256 accountCountByGroupId = _accountsHistory[extension][groupId]
             .count();
         uint256 accountCountByActionId = _center.accountsCount(
@@ -869,8 +871,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount,
         uint256 currentRound
     ) internal {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        IExtension ext = IExtension(extension);
+        address tokenAddress = ext.TOKEN_ADDRESS();
+        uint256 actionId = ext.actionId();
         uint256 accountCountByGroupId = _accountsHistory[extension][groupId]
             .count();
         uint256 accountCountByActionId = _center.accountsCount(
@@ -918,9 +921,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _trialProviderByAccount[extension][account] = provider;
         _trialAccountsJoined[extension][groupId][provider].add(account);
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
-        delete _trialAccountsWaitingAmount[extension][groupId][
-            provider
-        ][account];
+        delete _trialAccountsWaitingAmount[extension][groupId][provider][
+            account
+        ];
 
         _emitTrialWaitingListUpdated(
             extension,
@@ -940,8 +943,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         bool enabled,
         uint256 trialAmount
     ) internal {
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
+        IExtension ext = IExtension(extension);
+        address tokenAddress = ext.TOKEN_ADDRESS();
+        uint256 actionId = ext.actionId();
         emit TrialWaitingListUpdated({
             tokenAddress: tokenAddress,
             actionId: actionId,
