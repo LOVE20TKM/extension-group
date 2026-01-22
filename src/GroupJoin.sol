@@ -817,6 +817,29 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         }
     }
 
+    function _getEventData(
+        address extension,
+        uint256 groupId
+    )
+        internal
+        view
+        returns (
+            address tokenAddress,
+            uint256 actionId,
+            uint256 accountCountByGroupId,
+            uint256 accountCountByActionId,
+            uint256 accountCountByTokenAddress
+        )
+    {
+        IExtension ext = IExtension(extension);
+        tokenAddress = ext.TOKEN_ADDRESS();
+        actionId = ext.actionId();
+        accountCountByGroupId = _accountsHistory[extension][groupId].count();
+        accountCountByActionId = _center.accountsCount(tokenAddress, actionId);
+        accountCountByTokenAddress = _gAccountsByTokenAddress[tokenAddress]
+            .length();
+    }
+
     function _emitJoin(
         address extension,
         uint256 groupId,
@@ -825,18 +848,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount,
         uint256 currentRound
     ) internal {
-        IExtension ext = IExtension(extension);
-        address tokenAddress = ext.TOKEN_ADDRESS();
-        uint256 actionId = ext.actionId();
-        uint256 accountCountByGroupId = _accountsHistory[extension][groupId]
-            .count();
-        uint256 accountCountByActionId = _center.accountsCount(
-            tokenAddress,
-            actionId
-        );
-        uint256 accountCountByTokenAddress = _gAccountsByTokenAddress[
-            tokenAddress
-        ].length();
+        (
+            address tokenAddress,
+            uint256 actionId,
+            uint256 accountCountByGroupId,
+            uint256 accountCountByActionId,
+            uint256 accountCountByTokenAddress
+        ) = _getEventData(extension, groupId);
 
         emit Join({
             tokenAddress: tokenAddress,
@@ -871,18 +889,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount,
         uint256 currentRound
     ) internal {
-        IExtension ext = IExtension(extension);
-        address tokenAddress = ext.TOKEN_ADDRESS();
-        uint256 actionId = ext.actionId();
-        uint256 accountCountByGroupId = _accountsHistory[extension][groupId]
-            .count();
-        uint256 accountCountByActionId = _center.accountsCount(
-            tokenAddress,
-            actionId
-        );
-        uint256 accountCountByTokenAddress = _gAccountsByTokenAddress[
-            tokenAddress
-        ].length();
+        (
+            address tokenAddress,
+            uint256 actionId,
+            uint256 accountCountByGroupId,
+            uint256 accountCountByActionId,
+            uint256 accountCountByTokenAddress
+        ) = _getEventData(extension, groupId);
 
         emit Exit({
             tokenAddress: tokenAddress,
