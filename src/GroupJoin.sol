@@ -223,8 +223,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             msg.sender,
             currentRound
         );
-        address provider = _transferExitToken(extension, msg.sender, amount);
+        address provider = _trialProviderByAccount[extension][msg.sender];
         _updateTrialExitState(extension, groupId, provider, msg.sender);
+        _transferExitToken(extension, msg.sender, amount, provider);
         _emitExit(
             extension,
             groupId,
@@ -246,8 +247,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             account,
             currentRound
         );
-        address provider = _transferExitToken(extension, account, amount);
+        address provider = _trialProviderByAccount[extension][account];
         _updateTrialExitState(extension, groupId, provider, account);
+        _transferExitToken(extension, account, amount, provider);
         _emitExit(extension, groupId, account, provider, amount, currentRound);
     }
 
@@ -873,9 +875,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function _transferExitToken(
         address extension,
         address account,
-        uint256 amount
-    ) internal returns (address provider) {
-        provider = _trialProviderByAccount[extension][account];
+        uint256 amount,
+        address provider
+    ) internal {
         address refundTo = provider == address(0) ? account : provider;
         address joinTokenAddress = IGroupAction(extension).JOIN_TOKEN_ADDRESS();
         IERC20(joinTokenAddress).safeTransfer(refundTo, amount);
