@@ -408,12 +408,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
         uint256 totalAmount;
         for (uint256 i; i < length; ) {
-            totalAmount += _addTrialAccountToWaitingList(
+            _addTrialAccountToWaitingList(
                 extension,
                 groupId,
                 trialAccounts[i],
                 trialAmounts[i]
             );
+            totalAmount += trialAmounts[i];
 
             unchecked {
                 ++i;
@@ -746,7 +747,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address account,
         uint256 trialAmount
-    ) internal returns (uint256) {
+    ) internal {
         if (account == address(0)) revert TrialAccountZero();
         if (account == msg.sender) revert TrialAccountIsProvider();
         if (trialAmount == 0) revert TrialAmountZero();
@@ -770,8 +771,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             true,
             trialAmount
         );
-
-        return trialAmount;
     }
 
     function _removeTrialAccountFromWaitingList(
