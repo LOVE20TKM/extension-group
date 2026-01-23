@@ -763,7 +763,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             account
         ] = trialAmount;
         _trialAccountsWaiting[extension][groupId][msg.sender].add(account);
-        _emitTrialWaitingListUpdated(
+        _emitTrialAccountsWaitingUpdated(
             extension,
             groupId,
             msg.sender,
@@ -794,7 +794,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         delete _trialAccountsWaitingAmount[extension][groupId][provider][
             account
         ];
-        _emitTrialWaitingListUpdated(
+        _emitTrialAccountsWaitingUpdated(
             extension,
             groupId,
             provider,
@@ -939,7 +939,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             account
         ];
 
-        _emitTrialWaitingListUpdated(
+        _emitTrialAccountsWaitingUpdated(
             extension,
             groupId,
             provider,
@@ -949,7 +949,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function _emitTrialWaitingListUpdated(
+    function _emitTrialAccountsWaitingUpdated(
         address extension,
         uint256 groupId,
         address provider,
@@ -960,7 +960,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         IExtension ext = IExtension(extension);
         address tokenAddress = ext.TOKEN_ADDRESS();
         uint256 actionId = ext.actionId();
-        emit TrialWaitingListUpdated({
+        emit TrialAccountsWaitingUpdated({
             tokenAddress: tokenAddress,
             actionId: actionId,
             groupId: groupId,

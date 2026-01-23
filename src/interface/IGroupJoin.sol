@@ -32,7 +32,7 @@ interface IGroupJoinEvents {
         uint256 accountCountByTokenAddress
     );
 
-    event TrialWaitingListUpdated(
+    event TrialAccountsWaitingUpdated(
         address indexed tokenAddress,
         uint256 actionId,
         uint256 indexed groupId,
