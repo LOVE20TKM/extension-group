@@ -4,7 +4,6 @@ echo "===================="
 
 base_dir="../network/$network"
 
-source "$base_dir/address.params"
 source "$base_dir/address.extension.center.params"
 source "$base_dir/address.group.params"
 source "$base_dir/address.extension.group.params"
@@ -12,9 +11,6 @@ source "$base_dir/address.extension.group.params"
 echo "-------------------- expected addresses --------------------"
 echo "  centerAddress: $centerAddress"
 echo "  groupAddress: $groupAddress"
-echo "  stakeAddress: $stakeAddress"
-echo "  joinAddress: $joinAddress"
-echo "  verifyAddress: $verifyAddress"
 
 echo "-------------------- GroupManager check --------------------"
 if [ -n "$groupManagerAddress" ]; then

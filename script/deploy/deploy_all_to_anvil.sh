@@ -65,7 +65,7 @@ sync_to_main_project() {
 sync_from_main_project() {
     local submodule_dir="$1"
     local network="$2"
-    local files_to_sync="$3"  # Space-separated file name list, e.g., "address.params address.extension.center.params"
+    local files_to_sync="$3"  # Space-separated file name list, e.g., "address.extension.center.params"
     
     local submodule_network_dir="$submodule_dir/script/network/$network"
     local main_network_dir="$PROJECT_ROOT/script/network/$network"
@@ -137,7 +137,6 @@ echo "[Step 2/4] Deploying Extension Center..."
 # Before deploy: sync required config files and Step 1 address files from main project to Extension submodule
 echo "  Syncing dependencies from main project to Extension submodule..."
 sync_config_files "$PROJECT_ROOT/lib/extension" "$network"
-sync_from_main_project "$PROJECT_ROOT/lib/extension" "$network" "address.params"
 cd "$PROJECT_ROOT/lib/extension/script/deploy"
 run_with_password "one_click_deploy.sh" "$KEYSTORE_PASSWORD"
 cd "$PROJECT_ROOT"
@@ -151,7 +150,6 @@ echo "[Step 3/4] Deploying Group..."
 # Before deploy: sync required config files and Step 1 address files from main project to Group submodule
 echo "  Syncing dependencies from main project to Group submodule..."
 sync_config_files "$PROJECT_ROOT/lib/group" "$network"
-sync_from_main_project "$PROJECT_ROOT/lib/group" "$network" "address.params"
 cd "$PROJECT_ROOT/lib/group/script/deploy"
 run_with_password "one_click_deploy.sh" "$KEYSTORE_PASSWORD"
 cd "$PROJECT_ROOT"
