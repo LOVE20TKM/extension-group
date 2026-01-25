@@ -409,6 +409,10 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 round,
         address account
     ) internal view override returns (uint256) {
+        if (
+            !_center.isAccountJoinedByRound(TOKEN_ADDRESS, actionId, account, round)
+        ) return 0;
+
         (
             uint256 totalServiceReward,
             uint256 totalActionReward

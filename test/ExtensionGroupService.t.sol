@@ -1382,6 +1382,166 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         assertEq(addrs3[0], address(0x300));
         assertEq(points3[0], 5e17);
     }
+
+    // ============ _calculateReward Join Validation Tests ============
+
+    function test_RewardByAccount_ReturnsZero_WhenNotJoinedInRound() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        uint256 round = verify.currentRound();
+
+        // user3 has not joined the service in this round
+        (uint256 reward, bool claimed) = groupService.rewardByAccount(
+            round,
+            user3
+        );
+        assertEq(reward, 0, "Reward should be 0 for non-joined account");
+        assertFalse(claimed, "Should not be claimed");
+    }
+
+    function test_RewardByAccount_ReturnsZero_WhenExitedInRound() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Join in round 0
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Advance to next round
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+        uint256 round1 = verify.currentRound();
+
+        // Exit in round1
+        vm.prank(groupOwner1);
+        groupService.exit();
+
+        // groupOwner1 joined in round0, but exited in round1
+        // Check reward for round1 (should return 0 because exited in round1)
+        (uint256 reward, bool claimed) = groupService.rewardByAccount(
+            round1,
+            groupOwner1
+        );
+        assertEq(reward, 0, "Reward should be 0 when exited in target round");
+        assertFalse(claimed, "Should not be claimed");
+    }
+
+    function test_RewardByAccount_Works_WhenJoinedInPreviousRound() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Join in round 0
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Advance to next round (account remains joined, doesn't need to rejoin)
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+        uint256 round1 = verify.currentRound();
+
+        // Setup verify data for round1 (needed for reward calculation)
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+        vm.prank(groupOwner1);
+        newGroupVerify.submitOriginScores(
+            address(groupAction),
+            groupId1,
+            0,
+            scores
+        );
+
+        // Set rewards for round1
+        uint256 serviceReward = 1000e18;
+        uint256 actionReward = 1000e18;
+        mint.setActionReward(address(token), round1, SERVICE_ACTION_ID, serviceReward);
+        mint.setActionReward(address(token), round1, ACTION_ID, actionReward);
+
+        // Verify account is still joined in round1
+        assertTrue(
+            center.isAccountJoinedByRound(
+                address(token),
+                SERVICE_ACTION_ID,
+                groupOwner1,
+                round1
+            ),
+            "Account should be joined in round1 (joined in round0)"
+        );
+
+        // groupOwner1 joined in round0, and remains joined in round1
+        // Check reward for round1
+        (uint256 reward, bool claimed) = groupService.rewardByAccount(
+            round1,
+            groupOwner1
+        );
+
+        // Calculate expected reward
+        // Formula: reward = (totalServiceReward * generatedByVerifier) / totalActionReward
+        // Since groupOwner1 is the only verifier and has all the action reward:
+        // - totalServiceReward = serviceReward
+        // - totalActionReward = actionReward
+        // - generatedByVerifier = actionReward (all reward goes to groupOwner1)
+        // - reward = (serviceReward * actionReward) / actionReward = serviceReward
+        uint256 expectedReward = serviceReward;
+        assertEq(reward, expectedReward, "Reward should match expected value");
+        assertFalse(claimed, "Should not be claimed yet");
+
+        // Compare with a non-joined account to verify the difference
+        (uint256 nonJoinedReward, ) = groupService.rewardByAccount(
+            round1,
+            user3
+        );
+        // Non-joined account should return 0 because isAccountJoinedByRound check fails
+        assertEq(nonJoinedReward, 0, "Non-joined account reward should be 0 (join check fails)");
+    }
+
+    function test_RewardByAccount_Works_WhenJoinedInRound() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        uint256 round = verify.currentRound();
+
+        // Join in the same round
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Should be able to query reward (even if 0, should not revert)
+        (, bool claimed) = groupService.rewardByAccount(round, groupOwner1);
+        // Reward may be 0 if no reward is set, but should not revert
+        assertFalse(claimed, "Should not be claimed yet");
+        // The actual reward value depends on reward distribution, but the key is
+        // that it doesn't revert when account is joined in the round
+    }
+
+    function test_RewardByAccount_MultipleRounds_JoinValidation() public {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Round 0: groupOwner1 joins
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Advance to round 1
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+        uint256 round1 = verify.currentRound();
+
+        // Round 1: groupOwner1 exits (so not joined in round1)
+        vm.prank(groupOwner1);
+        groupService.exit();
+
+        // Advance to round 2
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        // Round 2: groupOwner1 joins again
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        // Verify rewards for each round
+        (uint256 reward1, ) = groupService.rewardByAccount(round1, groupOwner1);
+
+        // Round 0: joined, should be able to query (may be 0 if no reward)
+        // Round 1: not joined (exited), should return 0
+        assertEq(reward1, 0, "Round1 reward should be 0 (not joined in round1)");
+        // Round 2: joined, should be able to query (may be 0 if no reward)
+        // The key validation is that round1 returns 0 due to join check
+    }
 }
 
 /**
