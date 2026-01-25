@@ -59,6 +59,10 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     // owner => actionId => groupIds
     mapping(address => mapping(uint256 => RoundHistoryUint256Array.History))
         internal _groupIdsByActionIdWithRecipients;
+    // round => burned amount
+    mapping(uint256 => uint256) internal _burnedReward;
+    // round => burned
+    mapping(uint256 => bool) internal _burned;
 
     constructor(
         address factory_,
@@ -410,7 +414,12 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address account
     ) internal view override returns (uint256) {
         if (
-            !_center.isAccountJoinedByRound(TOKEN_ADDRESS, actionId, account, round)
+            !_center.isAccountJoinedByRound(
+                TOKEN_ADDRESS,
+                actionId,
+                account,
+                round
+            )
         ) return 0;
 
         (
@@ -557,5 +566,69 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 ++i;
             }
         }
+    }
+
+    function _calculateBurnAmount(
+        uint256 round,
+        uint256 totalReward
+    ) internal view returns (uint256) {
+        if (totalReward == 0) return 0;
+
+        address[] memory accounts = _center.accountsByRound(
+            TOKEN_ADDRESS,
+            actionId,
+            round
+        );
+
+        uint256 participatedReward;
+        for (uint256 i; i < accounts.length; ) {
+            (uint256 accountReward, ) = rewardByAccount(round, accounts[i]);
+            participatedReward += accountReward;
+            unchecked {
+                ++i;
+            }
+        }
+
+        return totalReward - participatedReward;
+    }
+
+    function burnUnparticipatedReward(uint256 round) external {
+        uint256 currentRound = _verify.currentRound();
+        if (round >= currentRound) revert RoundNotFinished(currentRound);
+        if (_burned[round]) return;
+
+        _prepareRewardIfNeeded(round);
+
+        uint256 totalReward = _reward[round];
+        uint256 burnAmount = _calculateBurnAmount(round, totalReward);
+        if (burnAmount == 0) return;
+
+        _burned[round] = true;
+        _burnedReward[round] = burnAmount;
+        ILOVE20Token(TOKEN_ADDRESS).burn(burnAmount);
+        emit BurnUnparticipatedReward({
+            tokenAddress: TOKEN_ADDRESS,
+            round: round,
+            actionId: actionId,
+            amount: burnAmount
+        });
+    }
+
+    function burnInfo(
+        uint256 round
+    ) external view returns (uint256 burnAmount, bool burned) {
+        uint256 currentRound = _verify.currentRound();
+        if (round >= currentRound) {
+            return (0, false);
+        }
+
+        burned = _burned[round];
+        if (burned) {
+            burnAmount = _burnedReward[round];
+            return (burnAmount, burned);
+        }
+
+        uint256 totalReward = reward(round);
+        burnAmount = _calculateBurnAmount(round, totalReward);
     }
 }

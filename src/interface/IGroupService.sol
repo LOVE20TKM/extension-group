@@ -29,6 +29,12 @@ interface IGroupServiceEvents {
         uint256 distributed,
         uint256 remaining
     );
+    event BurnUnparticipatedReward(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        uint256 amount
+    );
 }
 
 interface IGroupServiceErrors {
@@ -117,4 +123,10 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
         address[] calldata addrs,
         uint256[] calldata ratios
     ) external;
+
+    function burnUnparticipatedReward(uint256 round) external;
+
+    function burnInfo(
+        uint256 round
+    ) external view returns (uint256 burnAmount, bool burned);
 }

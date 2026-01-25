@@ -16,6 +16,7 @@ import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {IJoin} from "@extension/src/interface/IJoin.sol";
 import {IReward} from "@extension/src/interface/IReward.sol";
 import {IRewardErrors} from "@extension/src/interface/IReward.sol";
+import {IExtensionErrors} from "@extension/src/interface/IExtension.sol";
 import {
     MockExtensionFactory
 } from "@extension/test/mocks/MockExtensionFactory.sol";
@@ -1541,6 +1542,347 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         assertEq(reward1, 0, "Round1 reward should be 0 (not joined in round1)");
         // Round 2: joined, should be able to query (may be 0 if no reward)
         // The key validation is that round1 returns 0 due to join check
+    }
+
+    // ============ burnUnparticipatedReward Tests ============
+
+    function test_BurnInfo_NoReward() public {
+        uint256 round = verify.currentRound();
+        (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
+        assertEq(burnAmount, 0);
+        assertFalse(burned);
+    }
+
+    function test_BurnInfo_WithUnparticipatedReward() public {
+        // Setup: two service providers join
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        // Setup action reward for group action
+        uint256 totalActionReward = 50e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // Setup service reward
+        uint256 totalServiceReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        // Only groupOwner1 participates in action (generates action reward)
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Calculate expected burn amount
+        (uint256 participatedReward, ) = groupService.rewardByAccount(
+            round,
+            groupOwner1
+        );
+        uint256 expectedBurnAmount = totalServiceReward - participatedReward;
+
+        (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
+        assertEq(burnAmount, expectedBurnAmount, "Burn amount should match");
+        assertFalse(burned, "Should not be burned yet");
+    }
+
+    function test_BurnUnparticipatedReward_Success() public {
+        // Setup: two service providers join
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        // Setup action reward for group action
+        uint256 totalActionReward = 50e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // Setup service reward
+        uint256 totalServiceReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        // Only groupOwner1 participates in action
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Mint tokens to contract for burning
+        token.mint(address(groupService), totalServiceReward);
+
+        // Calculate expected values
+        (uint256 participatedReward, ) = groupService.rewardByAccount(
+            round,
+            groupOwner1
+        );
+        uint256 expectedBurnAmount = totalServiceReward - participatedReward;
+
+        uint256 tokenBalanceBefore = token.balanceOf(address(groupService));
+
+        // Verify event emitted
+        vm.expectEmit(true, true, true, true);
+        emit BurnUnparticipatedReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            expectedBurnAmount
+        );
+
+        // Burn unparticipated reward
+        groupService.burnUnparticipatedReward(round);
+
+        // Verify burn info
+        (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
+        assertEq(burnAmount, expectedBurnAmount, "Burn amount should match");
+        assertTrue(burned, "Should be burned");
+
+        // Verify token was burned (balance decreased)
+        uint256 tokenBalanceAfter = token.balanceOf(address(groupService));
+        assertEq(
+            tokenBalanceAfter,
+            tokenBalanceBefore - expectedBurnAmount,
+            "Token should be burned"
+        );
+    }
+
+    function test_BurnUnparticipatedReward_AllParticipated() public {
+        // Setup: one service provider joins and participates
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        // Setup action reward for group action
+        uint256 totalActionReward = 50e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // Setup service reward
+        uint256 totalServiceReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        // groupOwner1 participates in action
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Check if groupOwner1 generated action reward
+        // Note: This may be 0 if verification is not complete, which is fine for this test
+        uint256 generatedReward = groupService.generatedActionRewardByVerifier(
+            round,
+            groupOwner1
+        );
+
+        // Calculate expected participated reward
+        (uint256 participatedReward, ) = groupService.rewardByAccount(
+            round,
+            groupOwner1
+        );
+
+        // Calculate expected burn amount
+        // If no action reward was generated (generatedReward == 0), participatedReward will be 0
+        // In that case, all service reward should be burned
+        // If action reward was generated, participatedReward should be > 0, and burnAmount should be < totalServiceReward
+        uint256 expectedBurnAmount = totalServiceReward - participatedReward;
+
+        // Mint tokens to contract
+        token.mint(address(groupService), totalServiceReward);
+
+        uint256 tokenBalanceBefore = token.balanceOf(address(groupService));
+
+        // Try to burn
+        groupService.burnUnparticipatedReward(round);
+
+        // Verify burn info
+        (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
+        assertEq(burnAmount, expectedBurnAmount, "Burn amount should match expected");
+        
+        // Verify token was burned (if expectedBurnAmount > 0)
+        if (expectedBurnAmount > 0) {
+            assertTrue(burned, "Should be burned when burnAmount > 0");
+            uint256 tokenBalanceAfter = token.balanceOf(address(groupService));
+            assertEq(
+                tokenBalanceAfter,
+                tokenBalanceBefore - expectedBurnAmount,
+                "Token should be burned"
+            );
+        } else {
+            // If expectedBurnAmount is 0, no burn should occur
+            assertFalse(burned, "Should not be burned when burnAmount is 0");
+            uint256 tokenBalanceAfter = token.balanceOf(address(groupService));
+            assertEq(
+                tokenBalanceAfter,
+                tokenBalanceBefore,
+                "Token balance should not change when burnAmount is 0"
+            );
+        }
+    }
+
+    function test_BurnUnparticipatedReward_RevertRoundNotFinished() public {
+        uint256 currentRound = verify.currentRound();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IExtensionErrors.RoundNotFinished.selector,
+                currentRound
+            )
+        );
+        groupService.burnUnparticipatedReward(currentRound);
+    }
+
+    function test_BurnUnparticipatedReward_AlreadyBurned() public {
+        // Setup: two service providers join
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        // Setup action reward
+        uint256 totalServiceReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        // Only groupOwner1 participates
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Mint tokens to contract for burning
+        token.mint(address(groupService), totalServiceReward);
+
+        // Burn first time
+        groupService.burnUnparticipatedReward(round);
+
+        // Try to burn again (should return early)
+        uint256 tokenBalanceBefore = token.balanceOf(address(groupService));
+        groupService.burnUnparticipatedReward(round);
+        uint256 tokenBalanceAfter = token.balanceOf(address(groupService));
+
+        // Verify no additional burn
+        assertEq(
+            tokenBalanceAfter,
+            tokenBalanceBefore,
+            "No additional burn on second call"
+        );
+    }
+
+    function test_BurnUnparticipatedReward_MultipleParticipants() public {
+        // Setup: three service providers join
+        // First setup groups for all three
+        uint256 groupId3 = setupGroupOwner(user3, 10000e18, "TestGroup3");
+        
+        // Setup user3 with stake
+        setupUser(
+            user3,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(newGroupManager)
+        );
+        
+        // Activate group for user3
+        vm.prank(user3, user3);
+        newGroupManager.activateGroup(
+            address(groupAction),
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+        
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+        vm.prank(user3);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        // Setup action reward for group action
+        uint256 totalActionReward = 150e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // Setup service reward
+        uint256 totalServiceReward = 300e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        // Setup groups for groupOwner1 and groupOwner2
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 20e18, 90);
+
+        // Mint tokens to contract for burning
+        token.mint(address(groupService), totalServiceReward);
+
+        // Calculate expected burn amount
+        (uint256 participatedReward1, ) = groupService.rewardByAccount(
+            round,
+            groupOwner1
+        );
+        (uint256 participatedReward2, ) = groupService.rewardByAccount(
+            round,
+            groupOwner2
+        );
+        uint256 totalParticipatedReward = participatedReward1 +
+            participatedReward2;
+        uint256 expectedBurnAmount = totalServiceReward -
+            totalParticipatedReward;
+
+        // Burn unparticipated reward
+        groupService.burnUnparticipatedReward(round);
+
+        // Verify burn info
+        (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
+        assertEq(burnAmount, expectedBurnAmount, "Burn amount should match");
+        assertTrue(burned, "Should be burned");
     }
 }
 
