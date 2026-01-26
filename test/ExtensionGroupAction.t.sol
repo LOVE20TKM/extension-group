@@ -44,60 +44,29 @@ contract ExtensionGroupActionTest is BaseGroupTest {
     }
 
     function _minJoinAmount(uint256 groupId) internal view returns (uint256) {
-        (bool ok, bytes memory data) = address(groupManager).staticcall(
-            abi.encodeWithSelector(
-                IGroupManager.groupInfo.selector,
-                address(groupAction),
-                groupId
-            )
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(groupAction),
+            groupId
         );
-        require(ok, "groupInfo call failed");
-        uint256 v;
-        // minJoinAmount is word 3 in the ABI head (after capacity removed)
-        assembly {
-            v := mload(add(data, 0x80))
-        }
-        return v;
+        return info.minJoinAmount;
     }
 
     function _maxJoinAmount(uint256 groupId) internal view returns (uint256) {
-        (bool ok, bytes memory data) = address(groupManager).staticcall(
-            abi.encodeWithSelector(
-                IGroupManager.groupInfo.selector,
-                address(groupAction),
-                groupId
-            )
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(groupAction),
+            groupId
         );
-        require(ok, "groupInfo call failed");
-        uint256 v;
-        // maxJoinAmount is word 4 in the ABI head (after capacity removed)
-        assembly {
-            v := mload(add(data, 0xa0))
-        }
-        return v;
+        return info.maxJoinAmount;
     }
 
     function _groupDescription(
         uint256 groupId
-    ) internal view returns (string memory s) {
-        (bool ok, bytes memory data) = address(groupManager).staticcall(
-            abi.encodeWithSelector(
-                IGroupManager.groupInfo.selector,
-                address(groupAction),
-                groupId
-            )
+    ) internal view returns (string memory) {
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(groupAction),
+            groupId
         );
-        require(ok, "groupInfo call failed");
-
-        uint256 offset;
-        assembly {
-            // slot 1 holds the offset to the string data (relative to start of return data)
-            offset := mload(add(data, 0x40))
-        }
-        // ABI string at (data + 0x20 + offset): [len][bytes...]
-        assembly {
-            s := add(add(data, 0x20), offset)
-        }
+        return info.description;
     }
 
     function setUp() public {
@@ -781,11 +750,11 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
 
         // Verify maxAccounts is 0
-        (, , , , , uint256 maxAccounts, , , ) = groupManager.groupInfo(
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
             address(groupAction),
             groupId3
         );
-        assertEq(maxAccounts, 0, "maxAccounts should be 0");
+        assertEq(info.maxAccounts, 0, "maxAccounts should be 0");
 
         // Join multiple users (more than would normally be allowed if there was a limit)
         // Test with 10 users to ensure no limit is enforced
@@ -839,11 +808,11 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
 
         // Verify maxAccounts is 3
-        (, , , , , uint256 maxAccounts, , , ) = groupManager.groupInfo(
+        IGroupManager.GroupInfo memory info2 = groupManager.groupInfo(
             address(groupAction),
             groupId4
         );
-        assertEq(maxAccounts, 3, "maxAccounts should be 3");
+        assertEq(info2.maxAccounts, 3, "maxAccounts should be 3");
 
         // Join 3 users (should succeed)
         address[] memory users = new address[](3);

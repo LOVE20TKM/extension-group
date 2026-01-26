@@ -670,29 +670,22 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
         );
 
         // Verify updated info
-        (
-            uint256 groupId_,
-            string memory description,
-            uint256 maxCapacity,
-            uint256 minJoinAmount,
-            uint256 maxJoinAmount,
-            uint256 maxAccounts,
-            bool isActive,
-            ,
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(extension1),
+            groupId
+        );
 
-        ) = groupManager.groupInfo(address(extension1), groupId);
-
-        assertEq(groupId_, groupId, "GroupId should match");
+        assertEq(info.groupId, groupId, "GroupId should match");
         assertEq(
-            description,
+            info.description,
             "Updated Description",
             "Description should be updated"
         );
-        assertEq(maxCapacity, 200, "MaxCapacity should be updated");
-        assertEq(minJoinAmount, 2e18, "MinJoinAmount should be updated");
-        assertEq(maxJoinAmount, 3e18, "MaxJoinAmount should be updated");
-        assertEq(maxAccounts, 20, "MaxAccounts should be updated");
-        assertTrue(isActive, "Group should still be active");
+        assertEq(info.maxCapacity, 200, "MaxCapacity should be updated");
+        assertEq(info.minJoinAmount, 2e18, "MinJoinAmount should be updated");
+        assertEq(info.maxJoinAmount, 3e18, "MaxJoinAmount should be updated");
+        assertEq(info.maxAccounts, 20, "MaxAccounts should be updated");
+        assertTrue(info.isActive, "Group should still be active");
     }
 
     // Error Cases
@@ -829,31 +822,24 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
             10
         );
 
-        (
-            uint256 groupId_,
-            string memory description,
-            uint256 maxCapacity,
-            uint256 minJoinAmount,
-            uint256 maxJoinAmount,
-            uint256 maxAccounts,
-            bool isActive,
-            uint256 activatedRound,
-            uint256 deactivatedRound
-        ) = groupManager.groupInfo(address(extension1), groupId);
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(extension1),
+            groupId
+        );
 
-        assertEq(groupId_, groupId, "GroupId should match");
-        assertEq(description, "Test Description", "Description should match");
-        assertEq(maxCapacity, 100, "MaxCapacity should match");
-        assertEq(minJoinAmount, 1e18, "MinJoinAmount should match");
-        assertEq(maxJoinAmount, 2e18, "MaxJoinAmount should match");
-        assertEq(maxAccounts, 10, "MaxAccounts should match");
-        assertTrue(isActive, "Group should be active");
+        assertEq(info.groupId, groupId, "GroupId should match");
+        assertEq(info.description, "Test Description", "Description should match");
+        assertEq(info.maxCapacity, 100, "MaxCapacity should match");
+        assertEq(info.minJoinAmount, 1e18, "MinJoinAmount should match");
+        assertEq(info.maxJoinAmount, 2e18, "MaxJoinAmount should match");
+        assertEq(info.maxAccounts, 10, "MaxAccounts should match");
+        assertTrue(info.isActive, "Group should be active");
         assertEq(
-            activatedRound,
+            info.activatedRound,
             join.currentRound(),
             "ActivatedRound should match"
         );
-        assertEq(deactivatedRound, 0, "DeactivatedRound should be 0");
+        assertEq(info.deactivatedRound, 0, "DeactivatedRound should be 0");
     }
 
     /// @notice Test: descriptionByRound returns correct description for activation round
@@ -971,11 +957,11 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
         assertEq(retrievedDesc3, desc3, "Round 3 description should be correct");
 
         // Verify current groupInfo returns latest description
-        (, string memory currentDesc, , , , , , , ) = groupManager.groupInfo(
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
             address(extension1),
             groupId
         );
-        assertEq(currentDesc, desc3, "Current description should be latest");
+        assertEq(info.description, desc3, "Current description should be latest");
     }
 
     /// @notice Test: descriptionByRound returns empty string for non-existent round
@@ -1506,13 +1492,15 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
             0  // maxAccounts = 0 (valid, means no limit)
         );
 
-        (, , uint256 maxCapacity, uint256 minJoinAmount, uint256 maxJoinAmount, uint256 maxAccounts, , , ) = 
-            groupManager.groupInfo(address(extension1), groupId);
+        IGroupManager.GroupInfo memory info = groupManager.groupInfo(
+            address(extension1),
+            groupId
+        );
         
-        assertEq(maxCapacity, 0, "MaxCapacity should be 0");
-        assertEq(minJoinAmount, 1e18, "MinJoinAmount should be 1e18");
-        assertEq(maxJoinAmount, 0, "MaxJoinAmount should be 0");
-        assertEq(maxAccounts, 0, "MaxAccounts should be 0");
+        assertEq(info.maxCapacity, 0, "MaxCapacity should be 0");
+        assertEq(info.minJoinAmount, 1e18, "MinJoinAmount should be 1e18");
+        assertEq(info.maxJoinAmount, 0, "MaxJoinAmount should be 0");
+        assertEq(info.maxAccounts, 0, "MaxAccounts should be 0");
     }
 
     // ============ Fuzzing Tests ============
@@ -1625,14 +1613,15 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
             maxAccounts
         );
 
-        (, , uint256 updatedMaxCapacity, uint256 updatedMinJoinAmount, 
-         uint256 updatedMaxJoinAmount, uint256 updatedMaxAccounts, , , ) = 
-            groupManager.groupInfo(address(extension1), groupId);
+        IGroupManager.GroupInfo memory updatedInfo = groupManager.groupInfo(
+            address(extension1),
+            groupId
+        );
         
-        assertEq(updatedMaxCapacity, maxCapacity, "MaxCapacity should match");
-        assertEq(updatedMinJoinAmount, minJoinAmount, "MinJoinAmount should match");
-        assertEq(updatedMaxJoinAmount, maxJoinAmount, "MaxJoinAmount should match");
-        assertEq(updatedMaxAccounts, maxAccounts, "MaxAccounts should match");
+        assertEq(updatedInfo.maxCapacity, maxCapacity, "MaxCapacity should match");
+        assertEq(updatedInfo.minJoinAmount, minJoinAmount, "MinJoinAmount should match");
+        assertEq(updatedInfo.maxJoinAmount, maxJoinAmount, "MaxJoinAmount should match");
+        assertEq(updatedInfo.maxAccounts, maxAccounts, "MaxAccounts should match");
     }
 
     // ============ Event Tests ============

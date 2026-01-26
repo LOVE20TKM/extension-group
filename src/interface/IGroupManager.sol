@@ -87,20 +87,7 @@ interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
     function groupInfo(
         address extension,
         uint256 groupId
-    )
-        external
-        view
-        returns (
-            uint256 groupId_,
-            string memory description,
-            uint256 maxCapacity,
-            uint256 minJoinAmount,
-            uint256 maxJoinAmount,
-            uint256 maxAccounts,
-            bool isActive,
-            uint256 activatedRound,
-            uint256 deactivatedRound
-        );
+    ) external view returns (GroupInfo memory);
 
     function descriptionByRound(
         address extension,

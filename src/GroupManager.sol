@@ -84,7 +84,7 @@ contract GroupManager is IGroupManager {
         uint256 minJoinAmount,
         uint256 maxJoinAmount_,
         uint256 maxAccounts_
-    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
+    ) external onlyGroupOwner(groupId) onlyValidExtension(extension) {
         IExtension(extension).initializeIfNeeded();
 
         uint256 currentRound = _join.currentRound();
@@ -122,7 +122,7 @@ contract GroupManager is IGroupManager {
     function deactivateGroup(
         address extension,
         uint256 groupId
-    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
+    ) external onlyGroupOwner(groupId) onlyValidExtension(extension) {
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
 
@@ -171,7 +171,7 @@ contract GroupManager is IGroupManager {
         uint256 newMinJoinAmount,
         uint256 newMaxJoinAmount,
         uint256 newMaxAccounts
-    ) external override onlyGroupOwner(groupId) onlyValidExtension(extension) {
+    ) external onlyGroupOwner(groupId) onlyValidExtension(extension) {
         GroupInfo storage group = _groupInfo[extension][groupId];
         if (!group.isActive) revert GroupNotActive();
 
@@ -191,41 +191,15 @@ contract GroupManager is IGroupManager {
     function groupInfo(
         address extension,
         uint256 groupId
-    )
-        external
-        view
-        override
-        returns (
-            uint256 groupId_,
-            string memory description,
-            uint256 maxCapacity,
-            uint256 minJoinAmount,
-            uint256 maxJoinAmount_,
-            uint256 maxAccounts,
-            bool isActive,
-            uint256 activatedRound,
-            uint256 deactivatedRound
-        )
-    {
-        GroupInfo storage info = _groupInfo[extension][groupId];
-        return (
-            info.groupId,
-            info.description,
-            info.maxCapacity,
-            info.minJoinAmount,
-            info.maxJoinAmount,
-            info.maxAccounts,
-            info.isActive,
-            info.activatedRound,
-            info.deactivatedRound
-        );
+    ) external view returns (GroupInfo memory) {
+        return _groupInfo[extension][groupId];
     }
 
     function descriptionByRound(
         address extension,
         uint256 round,
         uint256 groupId
-    ) external view override returns (string memory) {
+    ) external view returns (string memory) {
         RoundHistoryString.History storage descHistory = _descriptionHistory[
             extension
         ][groupId];
@@ -235,7 +209,7 @@ contract GroupManager is IGroupManager {
     function activeGroupIdsByOwner(
         address extension,
         address owner
-    ) public view override returns (uint256[] memory) {
+    ) public view returns (uint256[] memory) {
         uint256 nftBalance = _group.balanceOf(owner);
         uint256[] memory result = new uint256[](nftBalance);
         uint256 count;
@@ -263,34 +237,34 @@ contract GroupManager is IGroupManager {
 
     function activeGroupIds(
         address extension
-    ) external view override returns (uint256[] memory) {
+    ) external view returns (uint256[] memory) {
         return _activeGroupIds[extension].values();
     }
 
     function activeGroupIdsCount(
         address extension
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _activeGroupIds[extension].length();
     }
 
     function activeGroupIdsAtIndex(
         address extension,
         uint256 index
-    ) external view override returns (uint256 groupId) {
+    ) external view returns (uint256 groupId) {
         return _activeGroupIds[extension].at(index);
     }
 
     function isGroupActive(
         address extension,
         uint256 groupId
-    ) external view override returns (bool) {
+    ) external view returns (bool) {
         return _groupInfo[extension][groupId].isActive;
     }
 
     function hasActiveGroups(
         address tokenAddress,
         address account
-    ) external view override returns (bool) {
+    ) external view returns (bool) {
         uint256 balance = _group.balanceOf(account);
 
         for (uint256 i = 0; i < balance; ) {
@@ -312,7 +286,7 @@ contract GroupManager is IGroupManager {
     function actionIdsByGroupIdCount(
         address tokenAddress,
         uint256 groupId
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _extensionsByActivatedGroupId[tokenAddress][groupId].length();
     }
 
@@ -320,7 +294,7 @@ contract GroupManager is IGroupManager {
         address tokenAddress,
         uint256 groupId,
         uint256 index
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         address extension = _extensionsByActivatedGroupId[tokenAddress][groupId]
             .at(index);
         return IExtension(extension).actionId();
@@ -328,7 +302,7 @@ contract GroupManager is IGroupManager {
 
     function actionIds(
         address tokenAddress
-    ) public view override returns (uint256[] memory) {
+    ) public view returns (uint256[] memory) {
         address[] memory extensions = _extensionsWithGroupActivation[
             tokenAddress
         ].values();
@@ -346,23 +320,21 @@ contract GroupManager is IGroupManager {
 
     function actionIdsCount(
         address tokenAddress
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _extensionsWithGroupActivation[tokenAddress].length();
     }
 
     function actionIdsAtIndex(
         address tokenAddress,
         uint256 index
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         address extension = _extensionsWithGroupActivation[tokenAddress].at(
             index
         );
         return IExtension(extension).actionId();
     }
 
-    function maxJoinAmount(
-        address extension
-    ) public view override returns (uint256) {
+    function maxJoinAmount(address extension) public view returns (uint256) {
         IGroupAction ext = IGroupAction(extension);
         address joinTokenAddress = ext.JOIN_TOKEN_ADDRESS();
         if (joinTokenAddress == address(0)) return 0;
@@ -392,7 +364,7 @@ contract GroupManager is IGroupManager {
     function maxVerifyCapacityByOwner(
         address extension,
         address owner
-    ) public view override returns (uint256) {
+    ) public view returns (uint256) {
         IGroupAction ext = IGroupAction(extension);
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
@@ -408,7 +380,7 @@ contract GroupManager is IGroupManager {
     function stakedByOwner(
         address extension,
         address owner
-    ) public view override returns (uint256 amount) {
+    ) public view returns (uint256 amount) {
         uint256[] memory activeIds = activeGroupIdsByOwner(extension, owner);
         if (activeIds.length == 0) return 0;
 
@@ -416,13 +388,11 @@ contract GroupManager is IGroupManager {
         return activeIds.length * stakeAmount;
     }
 
-    function staked(address extension) public view override returns (uint256) {
+    function staked(address extension) public view returns (uint256) {
         return _staked[extension];
     }
 
-    function totalStaked(
-        address tokenAddress
-    ) public view override returns (uint256) {
+    function totalStaked(address tokenAddress) public view returns (uint256) {
         return _totalStaked[tokenAddress];
     }
 
@@ -444,7 +414,7 @@ contract GroupManager is IGroupManager {
     function actionIdsByGroupId(
         address tokenAddress,
         uint256 groupId
-    ) public view override returns (uint256[] memory) {
+    ) public view returns (uint256[] memory) {
         address[] memory extensions = _extensionsByActivatedGroupId[
             tokenAddress
         ][groupId].values();

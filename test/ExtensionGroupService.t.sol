@@ -1452,7 +1452,12 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         // Set rewards for round1
         uint256 serviceReward = 1000e18;
         uint256 actionReward = 1000e18;
-        mint.setActionReward(address(token), round1, SERVICE_ACTION_ID, serviceReward);
+        mint.setActionReward(
+            address(token),
+            round1,
+            SERVICE_ACTION_ID,
+            serviceReward
+        );
         mint.setActionReward(address(token), round1, ACTION_ID, actionReward);
 
         // Verify account is still joined in round1
@@ -1490,7 +1495,11 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             user3
         );
         // Non-joined account should return 0 because isAccountJoinedByRound check fails
-        assertEq(nonJoinedReward, 0, "Non-joined account reward should be 0 (join check fails)");
+        assertEq(
+            nonJoinedReward,
+            0,
+            "Non-joined account reward should be 0 (join check fails)"
+        );
     }
 
     function test_RewardByAccount_Works_WhenJoinedInRound() public {
@@ -1539,14 +1548,18 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
 
         // Round 0: joined, should be able to query (may be 0 if no reward)
         // Round 1: not joined (exited), should return 0
-        assertEq(reward1, 0, "Round1 reward should be 0 (not joined in round1)");
+        assertEq(
+            reward1,
+            0,
+            "Round1 reward should be 0 (not joined in round1)"
+        );
         // Round 2: joined, should be able to query (may be 0 if no reward)
         // The key validation is that round1 returns 0 due to join check
     }
 
     // ============ burnUnparticipatedReward Tests ============
 
-    function test_BurnInfo_NoReward() public {
+    function test_BurnInfo_NoReward() public view {
         uint256 round = verify.currentRound();
         (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
         assertEq(burnAmount, 0);
@@ -1697,13 +1710,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         // groupOwner1 participates in action
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
-        // Check if groupOwner1 generated action reward
-        // Note: This may be 0 if verification is not complete, which is fine for this test
-        uint256 generatedReward = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner1
-        );
-
         // Calculate expected participated reward
         (uint256 participatedReward, ) = groupService.rewardByAccount(
             round,
@@ -1726,8 +1732,12 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
 
         // Verify burn info
         (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
-        assertEq(burnAmount, expectedBurnAmount, "Burn amount should match expected");
-        
+        assertEq(
+            burnAmount,
+            expectedBurnAmount,
+            "Burn amount should match expected"
+        );
+
         // Verify token was burned (if expectedBurnAmount > 0)
         if (expectedBurnAmount > 0) {
             assertTrue(burned, "Should be burned when burnAmount > 0");
@@ -1806,14 +1816,14 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         // Setup: three service providers join
         // First setup groups for all three
         uint256 groupId3 = setupGroupOwner(user3, 10000e18, "TestGroup3");
-        
+
         // Setup user3 with stake
         setupUser(
             user3,
             GROUP_ACTIVATION_STAKE_AMOUNT,
             address(newGroupManager)
         );
-        
+
         // Activate group for user3
         vm.prank(user3, user3);
         newGroupManager.activateGroup(
@@ -1825,7 +1835,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             0,
             0
         );
-        
+
         vm.prank(groupOwner1);
         groupService.join(new string[](0));
         vm.prank(groupOwner2);

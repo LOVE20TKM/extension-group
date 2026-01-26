@@ -1021,52 +1021,45 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 newTotal
     ) internal view {
         // Fetch group info once
-        (
-            ,
-            ,
-            uint256 maxCapacity,
-            uint256 minJoinAmount,
-            uint256 maxJoinAmount,
-            uint256 maxAccounts,
-            bool isActive,
-            ,
-
-        ) = _groupManager.groupInfo(extension, groupId);
+        IGroupManager.GroupInfo memory info = _groupManager.groupInfo(
+            extension,
+            groupId
+        );
 
         // Validate group status
-        if (!isActive) {
+        if (!info.isActive) {
             revert CannotJoinInactiveGroup();
         }
 
         // Check group-specific account limit
-        if (maxJoinAmount > 0 && newTotal > maxJoinAmount) {
+        if (info.maxJoinAmount > 0 && newTotal > info.maxJoinAmount) {
             revert ExceedsGroupMaxJoinAmount();
         }
 
         // Validate first join specific rules
         if (isFirstJoin) {
             // Check if group has reached max accounts
-            if (maxAccounts > 0) {
+            if (info.maxAccounts > 0) {
                 uint256 currentAccountCount = _accountsHistory[extension][
                     groupId
                 ].count();
-                if (currentAccountCount >= maxAccounts) {
+                if (currentAccountCount >= info.maxAccounts) {
                     revert GroupAccountsFull();
                 }
             }
 
             // Check minimum join amount
-            if (amount < minJoinAmount) {
+            if (amount < info.minJoinAmount) {
                 revert AmountBelowMinimum();
             }
         }
 
         // Validate group capacity
-        if (maxCapacity > 0) {
+        if (info.maxCapacity > 0) {
             uint256 currentGroupTotal = _totalJoinedAmountHistoryByGroupId[
                 extension
             ][groupId].latestValue();
-            if (currentGroupTotal + amount > maxCapacity) {
+            if (currentGroupTotal + amount > info.maxCapacity) {
                 revert GroupCapacityExceeded();
             }
         }
