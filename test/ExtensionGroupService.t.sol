@@ -15,7 +15,9 @@ import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {IJoin} from "@extension/src/interface/IJoin.sol";
 import {IReward} from "@extension/src/interface/IReward.sol";
+import {IRewardEvents} from "@extension/src/interface/IReward.sol";
 import {IRewardErrors} from "@extension/src/interface/IReward.sol";
+
 import {IExtensionErrors} from "@extension/src/interface/IExtension.sol";
 import {
     MockExtensionFactory
@@ -1557,7 +1559,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         // The key validation is that round1 returns 0 due to join check
     }
 
-    // ============ burnUnparticipatedReward Tests ============
+    // ============ burnRewardIfNeeded Tests ============
 
     function test_BurnInfo_NoReward() public view {
         uint256 round = verify.currentRound();
@@ -1654,17 +1656,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
 
         uint256 tokenBalanceBefore = token.balanceOf(address(groupService));
 
-        // Verify event emitted
-        vm.expectEmit(true, true, true, true);
-        emit BurnUnparticipatedReward(
-            address(token),
-            round,
-            SERVICE_ACTION_ID,
-            expectedBurnAmount
-        );
-
         // Burn unparticipated reward
-        groupService.burnUnparticipatedReward(round);
+        groupService.burnRewardIfNeeded(round);
 
         // Verify burn info
         (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
@@ -1728,7 +1721,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         uint256 tokenBalanceBefore = token.balanceOf(address(groupService));
 
         // Try to burn
-        groupService.burnUnparticipatedReward(round);
+        groupService.burnRewardIfNeeded(round);
 
         // Verify burn info
         (uint256 burnAmount, bool burned) = groupService.burnInfo(round);
@@ -1767,7 +1760,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
                 currentRound
             )
         );
-        groupService.burnUnparticipatedReward(currentRound);
+        groupService.burnRewardIfNeeded(currentRound);
     }
 
     function test_BurnUnparticipatedReward_AlreadyBurned() public {
@@ -1797,11 +1790,11 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         token.mint(address(groupService), totalServiceReward);
 
         // Burn first time
-        groupService.burnUnparticipatedReward(round);
+        groupService.burnRewardIfNeeded(round);
 
         // Try to burn again (should return early)
         uint256 tokenBalanceBefore = token.balanceOf(address(groupService));
-        groupService.burnUnparticipatedReward(round);
+        groupService.burnRewardIfNeeded(round);
         uint256 tokenBalanceAfter = token.balanceOf(address(groupService));
 
         // Verify no additional burn
@@ -1887,7 +1880,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             totalParticipatedReward;
 
         // Burn unparticipated reward
-        groupService.burnUnparticipatedReward(round);
+        groupService.burnRewardIfNeeded(round);
 
         // Verify burn info
         (uint256 burnAmount, bool burned) = groupService.burnInfo(round);

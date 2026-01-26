@@ -88,10 +88,6 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
 
     // ============ IGroupAction Interface ============
 
-    function burnUnclaimedReward(uint256 /*round*/) external pure override {
-        revert("Not implemented in mock");
-    }
-
     function generatedActionRewardByGroupId(
         uint256 /*round*/,
         uint256 /*groupId*/

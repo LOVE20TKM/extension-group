@@ -6,7 +6,6 @@ import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 
@@ -19,9 +18,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     uint256 public immutable ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable MAX_JOIN_AMOUNT_RATIO;
     uint256 public immutable MAX_VERIFY_CAPACITY_FACTOR;
-
-    // round => burned amount
-    mapping(uint256 => uint256) internal _burnedReward;
 
     constructor(
         address factory_,
@@ -44,32 +40,18 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
     }
 
-    function burnUnclaimedReward(uint256 round) external override {
-        uint256 currentRound = _verify.currentRound();
-        if (round >= currentRound) revert RoundNotFinished(currentRound);
-        if (_burnedReward[round] > 0) return; // Check early to avoid unnecessary mint
-
+    function _calculateBurnAmount(
+        uint256 round,
+        uint256 totalReward
+    ) internal view override returns (uint256) {
         uint256[] memory verifiedGroupIds = _groupVerify.verifiedGroupIds(
             address(this),
             round
         );
         if (verifiedGroupIds.length > 0) {
-            return;
+            return 0;
         }
-
-        _prepareRewardIfNeeded(round);
-
-        uint256 rewardAmount = _reward[round];
-        if (rewardAmount == 0) return;
-
-        _burnedReward[round] = rewardAmount;
-        ILOVE20Token(TOKEN_ADDRESS).burn(rewardAmount);
-        emit BurnUnclaimedReward({
-            tokenAddress: TOKEN_ADDRESS,
-            round: round,
-            actionId: actionId,
-            amount: rewardAmount
-        });
+        return totalReward;
     }
 
     function generatedActionRewardByGroupId(

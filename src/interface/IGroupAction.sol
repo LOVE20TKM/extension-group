@@ -2,12 +2,6 @@
 pragma solidity =0.8.17;
 
 interface IGroupActionEvents {
-    event BurnUnclaimedReward(
-        address indexed tokenAddress,
-        uint256 round,
-        uint256 indexed actionId,
-        uint256 amount
-    );
 }
 
 interface IGroupAction is IGroupActionEvents {
@@ -15,8 +9,6 @@ interface IGroupAction is IGroupActionEvents {
     function ACTIVATION_STAKE_AMOUNT() external view returns (uint256);
     function MAX_JOIN_AMOUNT_RATIO() external view returns (uint256);
     function MAX_VERIFY_CAPACITY_FACTOR() external view returns (uint256);
-
-    function burnUnclaimedReward(uint256 round) external;
 
     function generatedActionRewardByGroupId(
         uint256 round,
