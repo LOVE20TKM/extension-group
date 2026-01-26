@@ -37,13 +37,13 @@ interface IGroupVerifyErrors {
     error AlreadyVerified();
     error InvalidStartIndex();
     error ScoresExceedAccountCount();
-    error NotRegisteredExtension();
     error VerifyVotesZero();
     error DistrustVoteExceedsVerifyVotes();
     error InvalidReason();
-    error ExtensionNotInitialized();
     error DistrustVoteZeroAmount();
     error OnlyGroupOwner();
+    error NotRegisteredExtensionInFactory();
+    error ExtensionNotInitialized();
 }
 
 interface IGroupVerify is IGroupVerifyEvents, IGroupVerifyErrors {

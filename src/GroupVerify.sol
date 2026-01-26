@@ -120,7 +120,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     modifier onlyValidExtension(address extension) {
         if (!_factory.exists(extension)) {
-            revert NotRegisteredExtension();
+            revert NotRegisteredExtensionInFactory();
         }
         if (!IExtension(extension).initialized()) {
             revert ExtensionNotInitialized();

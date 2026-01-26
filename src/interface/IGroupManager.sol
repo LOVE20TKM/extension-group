@@ -32,14 +32,12 @@ interface IGroupManagerEvents {
 }
 
 interface IGroupManagerErrors {
-    error NotRegisteredExtension();
     error GroupAlreadyActivated();
     error GroupNotActive();
     error InvalidMinMaxJoinAmount();
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
     error NotRegisteredExtensionInFactory();
-    error ExtensionNotInitialized();
 }
 
 interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
