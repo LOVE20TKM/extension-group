@@ -118,6 +118,9 @@ abstract contract BaseGroupTest is Test {
             address(random)
         );
 
+        // Mark token as LOVE20 token
+        launch.setLOVE20Token(address(token), true);
+
         // Deploy mock factory
         mockFactory = new MockExtensionFactory(address(center));
 

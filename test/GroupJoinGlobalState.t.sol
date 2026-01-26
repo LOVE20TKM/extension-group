@@ -1667,6 +1667,8 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
 
         // Create second token and extension
         MockERC20 token2 = new MockERC20();
+        // Mark new token as LOVE20 token
+        launch.setLOVE20Token(address(token2), true);
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token2),
@@ -1759,6 +1761,8 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
 
         // Create second token and extension
         MockERC20 token2 = new MockERC20();
+        // Mark new token as LOVE20 token
+        launch.setLOVE20Token(address(token2), true);
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token2),

@@ -160,6 +160,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         MockGroupToken token2 = new MockGroupToken();
         MockGroupToken token3 = new MockGroupToken();
 
+        // Mark new tokens as LOVE20 tokens
+        launch.setLOVE20Token(address(token2), true);
+        launch.setLOVE20Token(address(token3), true);
+
         token.approve(address(factory), 1e18);
         token2.mint(address(this), 1e18);
         token2.approve(address(factory), 1e18);
@@ -314,6 +318,8 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
 
         MockGroupToken token2 = new MockGroupToken();
+        // Mark new token as LOVE20 token
+        launch.setLOVE20Token(address(token2), true);
         token2.mint(address(this), 1e18);
         token2.approve(address(factory), 1e18);
         address ext2 = factory.createExtension(
