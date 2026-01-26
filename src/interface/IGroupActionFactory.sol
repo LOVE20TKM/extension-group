@@ -3,6 +3,8 @@ pragma solidity =0.8.17;
 
 interface IGroupActionFactoryErrors {
     error InvalidJoinTokenAddress();
+    error InvalidMaxJoinAmountRatio();
+    error InvalidMaxVerifyCapacityFactor();
 }
 
 interface IGroupActionFactory is IGroupActionFactoryErrors {

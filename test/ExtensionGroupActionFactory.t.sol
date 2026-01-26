@@ -5,7 +5,10 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     ExtensionGroupActionFactory
 } from "../src/ExtensionGroupActionFactory.sol";
-import {IGroupActionFactory} from "../src/interface/IGroupActionFactory.sol";
+import {
+    IGroupActionFactory,
+    IGroupActionFactoryErrors
+} from "../src/interface/IGroupActionFactory.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {IGroupAction} from "../src/interface/IGroupAction.sol";
 import {GroupManager} from "../src/GroupManager.sol";
@@ -429,5 +432,88 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         assertEq(aids.length, 1);
         assertEq(exts[0], extension);
         assertEq(aids[0], actionId);
+    }
+
+    // ============ Parameter Validation Tests ============
+
+    function test_CreateExtension_RevertsWhenMaxJoinAmountRatioIsZero() public {
+        token.approve(address(factory), 1e18);
+
+        vm.expectRevert(
+            IGroupActionFactoryErrors.InvalidMaxJoinAmountRatio.selector
+        );
+        factory.createExtension(
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            0, // maxJoinAmountRatio_ = 0 should revert
+            CAPACITY_FACTOR
+        );
+    }
+
+    function test_CreateExtension_RevertsWhenMaxJoinAmountRatioExceedsPrecision()
+        public
+    {
+        token.approve(address(factory), 1e18);
+
+        vm.expectRevert(
+            IGroupActionFactoryErrors.InvalidMaxJoinAmountRatio.selector
+        );
+        factory.createExtension(
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            1e18 + 1, // maxJoinAmountRatio_ > 1e18 should revert
+            CAPACITY_FACTOR
+        );
+    }
+
+    function test_CreateExtension_AcceptsMaxJoinAmountRatioAtPrecision() public {
+        token.approve(address(factory), 1e18);
+
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            1e18, // maxJoinAmountRatio_ = 1e18 should pass
+            CAPACITY_FACTOR
+        );
+
+        assertTrue(extension != address(0));
+        assertTrue(factory.exists(extension));
+    }
+
+    function test_CreateExtension_RevertsWhenMaxVerifyCapacityFactorIsZero()
+        public
+    {
+        token.approve(address(factory), 1e18);
+
+        vm.expectRevert(
+            IGroupActionFactoryErrors.InvalidMaxVerifyCapacityFactor.selector
+        );
+        factory.createExtension(
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            0 // maxVerifyCapacityFactor_ = 0 should revert
+        );
+    }
+
+    function test_CreateExtension_AcceptsMaxVerifyCapacityFactorExceedingPrecision()
+        public
+    {
+        token.approve(address(factory), 1e18);
+
+        address extension = factory.createExtension(
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            2e18 // maxVerifyCapacityFactor_ > 1e18 should pass
+        );
+
+        assertTrue(extension != address(0));
+        assertTrue(factory.exists(extension));
     }
 }

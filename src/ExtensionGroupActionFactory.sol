@@ -41,6 +41,12 @@ contract ExtensionGroupActionFactory is
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
     ) external returns (address extension) {
+        if (maxJoinAmountRatio_ == 0 || maxJoinAmountRatio_ > 1e18) {
+            revert IGroupActionFactoryErrors.InvalidMaxJoinAmountRatio();
+        }
+        if (maxVerifyCapacityFactor_ == 0) {
+            revert IGroupActionFactoryErrors.InvalidMaxVerifyCapacityFactor();
+        }
         _validateJoinToken(tokenAddress_, joinTokenAddress_);
 
         extension = address(
