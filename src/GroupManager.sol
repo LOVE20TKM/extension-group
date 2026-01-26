@@ -207,10 +207,7 @@ contract GroupManager is IGroupManager {
         uint256 round,
         uint256 groupId
     ) external view returns (string memory) {
-        RoundHistoryString.History storage descHistory = _descriptionHistory[
-            extension
-        ][groupId];
-        return descHistory.value(round);
+        return _descriptionHistory[extension][groupId].value(round);
     }
 
     function activeGroupIdsByOwner(
