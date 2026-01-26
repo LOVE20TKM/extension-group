@@ -142,7 +142,9 @@ contract GroupManager is IGroupManager {
         _activeGroupIds[extension].remove(groupId);
 
         _extensionsByActivatedGroupId[tokenAddress][groupId].remove(extension);
-        if (_extensionsByActivatedGroupId[tokenAddress][groupId].length() == 0) {
+        if (
+            _extensionsByActivatedGroupId[tokenAddress][groupId].length() == 0
+        ) {
             _tokenAddressesByGroupId[groupId].remove(tokenAddress);
         }
         if (_activeGroupIds[extension].length() == 0) {
@@ -295,16 +297,7 @@ contract GroupManager is IGroupManager {
         address[] memory extensions = _extensionsByActivatedGroupId[
             tokenAddress
         ][groupId].values();
-        uint256[] memory actionIds_ = new uint256[](extensions.length);
-
-        for (uint256 i; i < extensions.length; ) {
-            actionIds_[i] = IExtension(extensions[i]).actionId();
-            unchecked {
-                ++i;
-            }
-        }
-
-        return actionIds_;
+        return _actionIdsFromExtensions(extensions);
     }
 
     function actionIdsByGroupIdCount(
@@ -330,16 +323,7 @@ contract GroupManager is IGroupManager {
         address[] memory extensions = _extensionsWithGroupActivation[
             tokenAddress
         ].values();
-        uint256[] memory actionIds_ = new uint256[](extensions.length);
-
-        for (uint256 i; i < extensions.length; ) {
-            actionIds_[i] = IExtension(extensions[i]).actionId();
-            unchecked {
-                ++i;
-            }
-        }
-
-        return actionIds_;
+        return _actionIdsFromExtensions(extensions);
     }
 
     function actionIdsCount(
@@ -361,8 +345,6 @@ contract GroupManager is IGroupManager {
     function maxJoinAmount(address extension) public view returns (uint256) {
         IGroupAction ext = IGroupAction(extension);
         address joinTokenAddress = ext.JOIN_TOKEN_ADDRESS();
-        if (joinTokenAddress == address(0)) return 0;
-
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
         uint256 round = _join.currentRound();
@@ -464,6 +446,21 @@ contract GroupManager is IGroupManager {
             revert NotRegisteredExtensionInFactory();
         }
         _;
+    }
+
+    function _actionIdsFromExtensions(
+        address[] memory extensions
+    ) internal view returns (uint256[] memory) {
+        uint256[] memory actionIds_ = new uint256[](extensions.length);
+
+        for (uint256 i; i < extensions.length; ) {
+            actionIds_[i] = IExtension(extensions[i]).actionId();
+            unchecked {
+                ++i;
+            }
+        }
+
+        return actionIds_;
     }
 
     function _updateGroupInfoFields(
