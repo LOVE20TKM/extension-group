@@ -72,17 +72,17 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         });
     }
 
-    function generatedRewardByGroupId(
+    function generatedActionRewardByGroupId(
         uint256 round,
         uint256 groupId
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _calculateRewardByGroupId(round, groupId);
     }
 
     function generatedActionRewardByVerifier(
         uint256 round,
         address verifier
-    ) external view override returns (uint256 amount) {
+    ) external view returns (uint256 amount) {
         uint256[] memory groupIds = _groupVerify.groupIdsByVerifier(
             address(this),
             round,

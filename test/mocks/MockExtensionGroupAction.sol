@@ -92,7 +92,7 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         revert("Not implemented in mock");
     }
 
-    function generatedRewardByGroupId(
+    function generatedActionRewardByGroupId(
         uint256 /*round*/,
         uint256 /*groupId*/
     ) external pure override returns (uint256) {

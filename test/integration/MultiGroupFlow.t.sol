@@ -380,7 +380,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         uint256 verifyRound
     ) internal {
         // Verify group reward matches expected
-        uint256 groupReward = ga.generatedRewardByGroupId(
+        uint256 groupReward = ga.generatedActionRewardByGroupId(
             verifyRound,
             bobGroup1.groupId
         );
@@ -422,7 +422,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         uint256 verifyRound
     ) internal {
         // Verify group reward matches expected
-        uint256 groupReward = ga.generatedRewardByGroupId(
+        uint256 groupReward = ga.generatedActionRewardByGroupId(
             verifyRound,
             bobGroup2.groupId
         );
@@ -464,7 +464,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         uint256 verifyRound
     ) internal {
         // Verify group reward matches expected
-        uint256 groupReward = ga.generatedRewardByGroupId(
+        uint256 groupReward = ga.generatedActionRewardByGroupId(
             verifyRound,
             aliceGroup.groupId
         );
@@ -513,11 +513,11 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         }
 
         // Verify group rewards match expected
-        uint256 group1Reward = ga.generatedRewardByGroupId(
+        uint256 group1Reward = ga.generatedActionRewardByGroupId(
             verifyRound,
             bobGroup1.groupId
         );
-        uint256 group2Reward = ga.generatedRewardByGroupId(
+        uint256 group2Reward = ga.generatedActionRewardByGroupId(
             verifyRound,
             bobGroup2.groupId
         );

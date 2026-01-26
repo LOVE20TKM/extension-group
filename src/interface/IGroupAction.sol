@@ -11,9 +11,14 @@ interface IGroupActionEvents {
 }
 
 interface IGroupAction is IGroupActionEvents {
+    function JOIN_TOKEN_ADDRESS() external view returns (address);
+    function ACTIVATION_STAKE_AMOUNT() external view returns (uint256);
+    function MAX_JOIN_AMOUNT_RATIO() external view returns (uint256);
+    function MAX_VERIFY_CAPACITY_FACTOR() external view returns (uint256);
+
     function burnUnclaimedReward(uint256 round) external;
 
-    function generatedRewardByGroupId(
+    function generatedActionRewardByGroupId(
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
@@ -22,12 +27,4 @@ interface IGroupAction is IGroupActionEvents {
         uint256 round,
         address verifier
     ) external view returns (uint256);
-
-    function JOIN_TOKEN_ADDRESS() external view returns (address);
-
-    function ACTIVATION_STAKE_AMOUNT() external view returns (uint256);
-
-    function MAX_JOIN_AMOUNT_RATIO() external view returns (uint256);
-
-    function MAX_VERIFY_CAPACITY_FACTOR() external view returns (uint256);
 }

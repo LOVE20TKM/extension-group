@@ -437,10 +437,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         address extension = _checkActionId(actionId_);
 
-        uint256 groupReward = IGroupAction(extension).generatedRewardByGroupId(
-            round,
-            groupId
-        );
+        uint256 groupReward = IGroupAction(extension)
+            .generatedActionRewardByGroupId(round, groupId);
         if (groupReward == 0) return 0;
 
         return (totalServiceReward * groupReward) / totalActionReward;
