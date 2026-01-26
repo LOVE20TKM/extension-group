@@ -10,11 +10,7 @@ interface IGroupActionEvents {
     );
 }
 
-interface IGroupActionErrors {
-    error RoundHasVerifiedGroups();
-}
-
-interface IGroupAction is IGroupActionEvents, IGroupActionErrors {
+interface IGroupAction is IGroupActionEvents {
     function burnUnclaimedReward(uint256 round) external;
 
     function generatedRewardByGroupId(

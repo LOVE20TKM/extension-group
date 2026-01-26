@@ -54,7 +54,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
             round
         );
         if (verifiedGroupIds.length > 0) {
-            revert RoundHasVerifiedGroups();
+            return;
         }
 
         _prepareRewardIfNeeded(round);
