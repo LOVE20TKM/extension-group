@@ -447,8 +447,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         (amount, claimed) = rewardByAccount(round, msg.sender);
         if (claimed) revert AlreadyClaimed();
 
-        _claimed[round][msg.sender] = true;
-        _claimedReward[round][msg.sender] = amount;
+        _claimedByAccount[round][msg.sender] = true;
+        _claimedRewardByAccount[round][msg.sender] = amount;
 
         uint256 distributed;
         uint256 remaining;
