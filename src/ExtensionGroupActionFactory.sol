@@ -9,6 +9,8 @@ import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
+import {TokenLib} from "@extension/src/lib/TokenLib.sol";
+import {IGroupActionFactoryErrors} from "./interface/IGroupActionFactory.sol";
 
 contract ExtensionGroupActionFactory is
     ExtensionFactoryBase,
@@ -39,6 +41,8 @@ contract ExtensionGroupActionFactory is
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
     ) external returns (address extension) {
+        _validateJoinToken(tokenAddress_, joinTokenAddress_);
+
         extension = address(
             new ExtensionGroupAction(
                 address(this),
@@ -97,5 +101,27 @@ contract ExtensionGroupActionFactory is
             mstore(actionIds_, validCount)
         }
         return (actionIds_, extensions);
+    }
+
+    function _validateJoinToken(
+        address tokenAddress_,
+        address joinTokenAddress_
+    ) private view {
+        if (joinTokenAddress_ == tokenAddress_) return;
+
+        if (
+            !TokenLib.isLpTokenFromFactory(
+                joinTokenAddress_,
+                IExtensionCenter(CENTER_ADDRESS).uniswapV2FactoryAddress()
+            )
+        ) {
+            revert IGroupActionFactoryErrors.InvalidJoinTokenAddress();
+        }
+
+        if (
+            !TokenLib.isLpTokenContainsToken(joinTokenAddress_, tokenAddress_)
+        ) {
+            revert IGroupActionFactoryErrors.InvalidJoinTokenAddress();
+        }
     }
 }

@@ -3,9 +3,15 @@ pragma solidity =0.8.17;
 
 import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
 import {IGroupActionFactory} from "../../src/interface/IGroupActionFactory.sol";
+import {
+    IGroupActionFactoryErrors
+} from "../../src/interface/IGroupActionFactory.sol";
 import {IGroupManager} from "../../src/interface/IGroupManager.sol";
 import {GroupJoin} from "../../src/GroupJoin.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
+import {ExtensionGroupAction} from "../../src/ExtensionGroupAction.sol";
+import {TokenLib} from "@extension/src/lib/TokenLib.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 
 /// @title MockExtensionGroupActionFactory
 /// @notice Mock factory for testing ExtensionGroupAction
@@ -49,13 +55,48 @@ contract MockExtensionGroupActionFactory is
 
     /// @notice Create a new extension (mock implementation)
     function createExtension(
-        address,
-        address,
-        uint256,
-        uint256,
-        uint256
-    ) external pure returns (address) {
-        revert("Mock factory does not create extensions");
+        address tokenAddress_,
+        address joinTokenAddress_,
+        uint256 activationStakeAmount_,
+        uint256 maxJoinAmountRatio_,
+        uint256 maxVerifyCapacityFactor_
+    ) external returns (address extension) {
+        _validateJoinToken(tokenAddress_, joinTokenAddress_);
+
+        extension = address(
+            new ExtensionGroupAction(
+                address(this),
+                tokenAddress_,
+                joinTokenAddress_,
+                activationStakeAmount_,
+                maxJoinAmountRatio_,
+                maxVerifyCapacityFactor_
+            )
+        );
+
+        _registerExtension(extension, tokenAddress_);
+    }
+
+    function _validateJoinToken(
+        address tokenAddress_,
+        address joinTokenAddress_
+    ) private view {
+        if (joinTokenAddress_ == tokenAddress_) return;
+
+        IExtensionCenter center_ = IExtensionCenter(CENTER_ADDRESS);
+        address uniswapV2Factory = center_.uniswapV2FactoryAddress();
+
+        if (
+            !TokenLib.isLpTokenFromFactory(joinTokenAddress_, uniswapV2Factory)
+        ) {
+            revert IGroupActionFactoryErrors.InvalidJoinTokenAddress();
+        }
+
+        if (
+            !TokenLib.isLpTokenContainsToken(joinTokenAddress_, tokenAddress_)
+        ) {
+            revert IGroupActionFactoryErrors.InvalidJoinTokenAddress();
+        }
     }
 
     // ============ Test Helper Functions ============

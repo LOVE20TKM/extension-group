@@ -6,7 +6,6 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
-import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 import {ILOVE20Join} from "@core/interfaces/ILOVE20Join.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";

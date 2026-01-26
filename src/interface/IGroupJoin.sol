@@ -44,7 +44,6 @@ interface IGroupJoinEvents {
 }
 
 interface IGroupJoinErrors {
-    error InvalidJoinTokenAddress();
     error JoinAmountZero();
     error AlreadyInOtherGroup();
     error NotJoinedAction();

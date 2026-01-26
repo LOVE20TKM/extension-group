@@ -8,6 +8,9 @@ import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupManagerErrors} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupJoinErrors} from "../src/interface/IGroupJoin.sol";
+import {
+    IGroupActionFactoryErrors
+} from "../src/interface/IGroupActionFactory.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
@@ -857,19 +860,27 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
     function setUp() public {
         setUpBase();
 
-        // Create LP token containing token
-        lpToken = new MockUniswapV2Pair(address(token), address(0x999));
+        // Create LP token containing token using uniswapFactory
+        address otherToken = address(0x999);
+        lpToken = MockUniswapV2Pair(
+            uniswapFactory.createPair(address(token), otherToken)
+        );
         lpToken.setReserves(1000e18, 500e18); // 1000 token, 500 other
         lpToken.mint(address(this), 100e18); // LP total supply
+
+        // Approve factory to transfer tokens for registration
+        token.mint(address(this), 1e18);
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
     }
 
     function test_InvalidJoinToken_NotLPToken() public {
         // Using random address that's not an LP token
         address invalidToken = address(0x123);
 
-        vm.expectRevert(); // Low-level call to non-contract returns no data
-        new ExtensionGroupAction(
-            address(mockGroupActionFactory),
+        vm.expectRevert(
+            IGroupActionFactoryErrors.InvalidJoinTokenAddress.selector
+        );
+        mockGroupActionFactory.createExtension(
             address(token),
             invalidToken, // invalid joinToken
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -880,14 +891,16 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_InvalidJoinToken_LPNotContainingToken() public {
         // Create LP with neither token being tokenAddress
-        MockUniswapV2Pair badLp = new MockUniswapV2Pair(
-            address(0x111),
-            address(0x222)
+        address token1 = address(0x111);
+        address token2 = address(0x222);
+        MockUniswapV2Pair badLp = MockUniswapV2Pair(
+            uniswapFactory.createPair(token1, token2)
         );
 
-        vm.expectRevert(IGroupJoinErrors.InvalidJoinTokenAddress.selector);
-        new ExtensionGroupAction(
-            address(mockGroupActionFactory),
+        vm.expectRevert(
+            IGroupActionFactoryErrors.InvalidJoinTokenAddress.selector
+        );
+        mockGroupActionFactory.createExtension(
             address(token),
             address(badLp), // LP doesn't contain token
             GROUP_ACTIVATION_STAKE_AMOUNT,
@@ -898,19 +911,16 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_ValidJoinToken_TokenItself() public {
         // Should not revert
-        ExtensionGroupAction action = new ExtensionGroupAction(
-            address(mockGroupActionFactory),
+        address extension = mockGroupActionFactory.createExtension(
             address(token),
             address(token), // joinToken = token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
+        ExtensionGroupAction action = ExtensionGroupAction(extension);
 
-        // Register extension to get actionId
-        token.mint(address(this), 1e18);
-        token.approve(address(mockFactory), type(uint256).max);
-        mockFactory.registerExtension(address(action), address(token));
+        // Prepare extension init
         prepareExtensionInit(address(action), address(token), ACTION_ID);
 
         // Get joinTokenAddress from extension config
@@ -925,19 +935,16 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_ValidJoinToken_LPContainingToken() public {
         // Should not revert
-        ExtensionGroupAction action = new ExtensionGroupAction(
-            address(mockGroupActionFactory),
+        address extension = mockGroupActionFactory.createExtension(
             address(token),
             address(lpToken), // LP containing token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
+        ExtensionGroupAction action = ExtensionGroupAction(extension);
 
-        // Register extension to get actionId
-        token.mint(address(this), 1e18);
-        token.approve(address(mockFactory), type(uint256).max);
-        mockFactory.registerExtension(address(action), address(token));
+        // Prepare extension init
         prepareExtensionInit(address(action), address(token), ACTION_ID);
 
         // Get joinTokenAddress from extension config
@@ -947,23 +954,14 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
 
     function test_JoinedAmount_WithLPToken() public {
         // Deploy action with LP as joinToken
-        ExtensionGroupAction action = new ExtensionGroupAction(
-            address(mockGroupActionFactory),
+        address extension = mockGroupActionFactory.createExtension(
             address(token),
             address(lpToken),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
             CAPACITY_FACTOR
         );
-
-        // Register extension in mockGroupActionFactory (not mockFactory)
-        // because action.factory() returns mockGroupActionFactory
-        token.mint(address(this), 1e18);
-        token.approve(address(mockGroupActionFactory), type(uint256).max);
-        mockGroupActionFactory.registerExtensionForTesting(
-            address(action),
-            address(token)
-        );
+        ExtensionGroupAction action = ExtensionGroupAction(extension);
 
         // Setup group owner
         uint256 groupId = setupGroupOwner(groupOwner1, 10000e18, "TestGroup");

@@ -4,10 +4,8 @@ pragma solidity =0.8.17;
 import {IGroupAction} from "./interface/IGroupAction.sol";
 import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
 import {IGroupJoin} from "./interface/IGroupJoin.sol";
-import {IGroupJoinErrors} from "./interface/IGroupJoin.sol";
 import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {IGroupManager} from "./interface/IGroupManager.sol";
-import {TokenConversionLib} from "./lib/TokenConversionLib.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
@@ -44,7 +42,6 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;
         MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
-        _validateJoinToken(joinTokenAddress_);
     }
 
     function burnUnclaimedReward(uint256 round) external override {
@@ -169,18 +166,5 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
             groupId
         );
         return (totalReward * groupScore) / totalScore;
-    }
-
-    function _validateJoinToken(address joinTokenAddress_) private view {
-        if (joinTokenAddress_ == TOKEN_ADDRESS) return;
-
-        if (
-            !TokenConversionLib.isLPTokenContainingTarget(
-                joinTokenAddress_,
-                TOKEN_ADDRESS
-            )
-        ) {
-            revert IGroupJoinErrors.InvalidJoinTokenAddress();
-        }
     }
 }

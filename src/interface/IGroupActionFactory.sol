@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface IGroupActionFactory {
+interface IGroupActionFactoryErrors {
+    error InvalidJoinTokenAddress();
+}
+
+interface IGroupActionFactory is IGroupActionFactoryErrors {
     function GROUP_MANAGER_ADDRESS() external view returns (address);
 
     function GROUP_JOIN_ADDRESS() external view returns (address);
