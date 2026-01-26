@@ -57,6 +57,9 @@ contract GroupManager is IGroupManager {
     // tokenAddress => extensions
     mapping(address => EnumerableSet.AddressSet)
         internal _extensionsWithGroupActivation;
+    // groupId => tokenAddresses
+    mapping(uint256 => EnumerableSet.AddressSet)
+        internal _tokenAddressesByGroupId;
 
     constructor() {}
 
@@ -139,6 +142,9 @@ contract GroupManager is IGroupManager {
         _activeGroupIds[extension].remove(groupId);
 
         _extensionsByActivatedGroupId[tokenAddress][groupId].remove(extension);
+        if (_extensionsByActivatedGroupId[tokenAddress][groupId].length() == 0) {
+            _tokenAddressesByGroupId[groupId].remove(tokenAddress);
+        }
         if (_activeGroupIds[extension].length() == 0) {
             _extensionsWithGroupActivation[tokenAddress].remove(extension);
         }
@@ -282,6 +288,25 @@ contract GroupManager is IGroupManager {
         return false;
     }
 
+    function actionIdsByGroupId(
+        address tokenAddress,
+        uint256 groupId
+    ) public view returns (uint256[] memory) {
+        address[] memory extensions = _extensionsByActivatedGroupId[
+            tokenAddress
+        ][groupId].values();
+        uint256[] memory actionIds_ = new uint256[](extensions.length);
+
+        for (uint256 i; i < extensions.length; ) {
+            actionIds_[i] = IExtension(extensions[i]).actionId();
+            unchecked {
+                ++i;
+            }
+        }
+
+        return actionIds_;
+    }
+
     function actionIdsByGroupIdCount(
         address tokenAddress,
         uint256 groupId
@@ -410,23 +435,23 @@ contract GroupManager is IGroupManager {
         return total;
     }
 
-    function actionIdsByGroupId(
-        address tokenAddress,
+    function tokenAddressesByGroupId(
         uint256 groupId
-    ) public view returns (uint256[] memory) {
-        address[] memory extensions = _extensionsByActivatedGroupId[
-            tokenAddress
-        ][groupId].values();
-        uint256[] memory actionIds_ = new uint256[](extensions.length);
+    ) external view returns (address[] memory) {
+        return _tokenAddressesByGroupId[groupId].values();
+    }
 
-        for (uint256 i; i < extensions.length; ) {
-            actionIds_[i] = IExtension(extensions[i]).actionId();
-            unchecked {
-                ++i;
-            }
-        }
+    function tokenAddressesByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256) {
+        return _tokenAddressesByGroupId[groupId].length();
+    }
 
-        return actionIds_;
+    function tokenAddressesByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address) {
+        return _tokenAddressesByGroupId[groupId].at(index);
     }
 
     modifier onlyGroupOwner(uint256 groupId) {
@@ -521,5 +546,6 @@ contract GroupManager is IGroupManager {
         _totalStaked[tokenAddress] += stakeAmount;
         _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
         _extensionsWithGroupActivation[tokenAddress].add(extension);
+        _tokenAddressesByGroupId[groupId].add(tokenAddress);
     }
 }

@@ -136,6 +136,19 @@ interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
         address owner
     ) external view returns (uint256);
 
+    function tokenAddressesByGroupId(
+        uint256 groupId
+    ) external view returns (address[] memory);
+
+    function tokenAddressesByGroupIdCount(
+        uint256 groupId
+    ) external view returns (uint256);
+
+    function tokenAddressesByGroupIdAtIndex(
+        uint256 groupId,
+        uint256 index
+    ) external view returns (address);
+
     function actionIdsByGroupId(
         address tokenAddress,
         uint256 groupId
