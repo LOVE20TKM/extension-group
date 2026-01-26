@@ -14,6 +14,8 @@ import {
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 import {MockUniswapV2Pair} from "@extension/test/mocks/MockUniswapV2Pair.sol";
+import {IReward} from "@extension/src/interface/IReward.sol";
+import {IExtensionErrors} from "@extension/src/interface/IExtension.sol";
 
 /**
  * @title ExtensionGroupActionTest
@@ -847,6 +849,234 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user4);
         vm.expectRevert(IGroupJoinErrors.GroupAccountsFull.selector);
         groupJoin.join(address(groupAction), groupId4, 10e18, new string[](0));
+    }
+
+    // ============ burnRewardIfNeeded Tests ============
+
+    function test_BurnInfo_NoReward() public view {
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(verify.currentRound());
+        assertEq(burnAmount, 0);
+        assertFalse(burned);
+    }
+
+    function test_BurnInfo_WithVerifiedGroups() public {
+        advanceRound();
+        uint256 newRound = verify.currentRound();
+        vote.setVotedActionIds(address(token), newRound, ACTION_ID);
+        vote.setVotesNum(address(token), newRound, 10000e18);
+        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+
+        // Setup action reward
+        uint256 totalActionReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            newRound,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // User joins and gets verified
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Submit scores to create verified group
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+
+        vm.prank(groupOwner1);
+        groupVerify.submitOriginScores(
+            address(groupAction),
+            groupId1,
+            0,
+            scores
+        );
+
+        // Advance round to make the previous round finished
+        advanceRound();
+
+        // Verify burnInfo returns 0 when there are verified groups
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(newRound);
+        assertEq(burnAmount, 0, "Burn amount should be 0 when verified groups exist");
+        assertFalse(burned, "Should not be burned");
+    }
+
+    function test_BurnRewardIfNeeded_WithVerifiedGroups() public {
+        advanceRound();
+        uint256 newRound = verify.currentRound();
+        vote.setVotedActionIds(address(token), newRound, ACTION_ID);
+        vote.setVotesNum(address(token), newRound, 10000e18);
+        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+
+        // Setup action reward
+        uint256 totalActionReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            newRound,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // User joins and gets verified
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // Submit scores to create verified group
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+
+        vm.prank(groupOwner1);
+        groupVerify.submitOriginScores(
+            address(groupAction),
+            groupId1,
+            0,
+            scores
+        );
+
+        // Advance round to make the previous round finished
+        advanceRound();
+
+        // Mint tokens to contract for burning
+        token.mint(address(groupAction), totalActionReward);
+
+        uint256 tokenBalanceBefore = token.balanceOf(address(groupAction));
+
+        // Try to burn (should not burn because verified groups exist)
+        IReward(address(groupAction)).burnRewardIfNeeded(newRound);
+
+        // Verify no tokens were burned
+        uint256 tokenBalanceAfter = token.balanceOf(address(groupAction));
+        assertEq(
+            tokenBalanceAfter,
+            tokenBalanceBefore,
+            "Token should not be burned when verified groups exist"
+        );
+
+        // Verify burn info
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(newRound);
+        assertEq(burnAmount, 0, "Burn amount should be 0");
+        assertFalse(burned, "Should not be burned");
+    }
+
+    function test_BurnRewardIfNeeded_NoVerifiedGroups() public {
+        advanceRound();
+        uint256 newRound = verify.currentRound();
+        vote.setVotedActionIds(address(token), newRound, ACTION_ID);
+        vote.setVotesNum(address(token), newRound, 10000e18);
+        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+
+        // Setup action reward
+        uint256 totalActionReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            newRound,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // User joins but does NOT get verified (no scores submitted)
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        // No scores submitted, so no verified groups
+
+        // Advance round to make the previous round finished
+        advanceRound();
+
+        // Mint tokens to contract for burning
+        token.mint(address(groupAction), totalActionReward);
+
+        uint256 tokenBalanceBefore = token.balanceOf(address(groupAction));
+
+        // Burn should succeed and burn all reward
+        IReward(address(groupAction)).burnRewardIfNeeded(newRound);
+
+        // Verify tokens were burned
+        uint256 tokenBalanceAfter = token.balanceOf(address(groupAction));
+        assertEq(
+            tokenBalanceAfter,
+            tokenBalanceBefore - totalActionReward,
+            "Token should be burned when no verified groups exist"
+        );
+
+        // Verify burn info
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(newRound);
+        assertEq(burnAmount, totalActionReward, "Burn amount should match total reward");
+        assertTrue(burned, "Should be burned");
+    }
+
+    function test_BurnRewardIfNeeded_RevertRoundNotFinished() public {
+        uint256 currentRound = verify.currentRound();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IExtensionErrors.RoundNotFinished.selector,
+                currentRound
+            )
+        );
+        IReward(address(groupAction)).burnRewardIfNeeded(currentRound);
+    }
+
+    function test_BurnRewardIfNeeded_AlreadyBurned() public {
+        advanceRound();
+        uint256 newRound = verify.currentRound();
+        vote.setVotedActionIds(address(token), newRound, ACTION_ID);
+        vote.setVotesNum(address(token), newRound, 10000e18);
+        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+
+        // Setup action reward
+        uint256 totalActionReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            newRound,
+            ACTION_ID,
+            totalActionReward
+        );
+
+        // No verified groups, so all reward should be burned
+
+        // Advance round to make the previous round finished
+        advanceRound();
+
+        // Mint tokens to contract for burning
+        token.mint(address(groupAction), totalActionReward);
+
+        // Burn first time
+        IReward(address(groupAction)).burnRewardIfNeeded(newRound);
+
+        // Try to burn again (should return early)
+        uint256 tokenBalanceBefore = token.balanceOf(address(groupAction));
+        IReward(address(groupAction)).burnRewardIfNeeded(newRound);
+        uint256 tokenBalanceAfter = token.balanceOf(address(groupAction));
+
+        // Verify no additional burn
+        assertEq(
+            tokenBalanceAfter,
+            tokenBalanceBefore,
+            "No additional burn on second call"
+        );
     }
 }
 
