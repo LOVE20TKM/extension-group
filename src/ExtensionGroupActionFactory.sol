@@ -71,7 +71,7 @@ contract ExtensionGroupActionFactory is
 
         extensions = new address[](count);
         actionIds_ = new uint256[](count);
-        uint256 valid;
+        uint256 validCount;
 
         for (uint256 i; i < count; ) {
             uint256 aid = vote.votedActionIdsAtIndex(tokenAddress, round, i);
@@ -79,10 +79,10 @@ contract ExtensionGroupActionFactory is
             address ext = actionInfo.body.whiteListAddress;
 
             if (ext != address(0) && _isExtension[ext]) {
-                extensions[valid] = ext;
-                actionIds_[valid] = aid;
+                extensions[validCount] = ext;
+                actionIds_[validCount] = aid;
                 unchecked {
-                    ++valid;
+                    ++validCount;
                 }
             }
             unchecked {
@@ -90,11 +90,11 @@ contract ExtensionGroupActionFactory is
             }
         }
 
-        if (valid == 0) return (actionIds_, extensions);
+        if (validCount == 0) return (actionIds_, extensions);
 
         assembly {
-            mstore(extensions, valid)
-            mstore(actionIds_, valid)
+            mstore(extensions, validCount)
+            mstore(actionIds_, validCount)
         }
         return (actionIds_, extensions);
     }
