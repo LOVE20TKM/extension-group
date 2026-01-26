@@ -45,7 +45,6 @@ interface IGroupServiceErrors {
     error ZeroRatio();
     error ArrayLengthMismatch();
     error DuplicateAddress();
-    error InvalidGroupActionTokenAddress();
     error InvalidExtension();
     error NotGroupOwner();
     error GroupNotActive();

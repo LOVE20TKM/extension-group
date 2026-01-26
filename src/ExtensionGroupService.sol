@@ -42,7 +42,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
 
-    ILOVE20Launch internal immutable _launch;
     IGroupManager internal immutable _groupManager;
     IERC721Enumerable internal immutable _group;
     IExtensionGroupActionFactory internal immutable _actionFactory;
@@ -72,18 +71,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) ExtensionBaseRewardJoin(factory_, tokenAddress_) {
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
-
-        _launch = ILOVE20Launch(_center.launchAddress());
-
-        if (groupActionTokenAddress_ != tokenAddress_) {
-            if (
-                !_launch.isLOVE20Token(groupActionTokenAddress_) ||
-                ILOVE20Token(groupActionTokenAddress_).parentTokenAddress() !=
-                tokenAddress_
-            ) {
-                revert InvalidGroupActionTokenAddress();
-            }
-        }
 
         _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_

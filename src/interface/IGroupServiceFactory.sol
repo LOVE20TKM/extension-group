@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity =0.8.17;
 
-interface IGroupServiceFactory {
+interface IGroupServiceFactoryErrors {
+    error InvalidGroupActionTokenAddress();
+}
+
+interface IGroupServiceFactory is IGroupServiceFactoryErrors {
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
 
     function createExtension(

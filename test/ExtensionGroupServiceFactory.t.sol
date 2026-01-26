@@ -17,6 +17,21 @@ import {GroupVerify} from "../src/GroupVerify.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
+import {IGroupServiceFactoryErrors} from "../src/interface/IGroupServiceFactory.sol";
+import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {MockGroupToken} from "./mocks/MockGroupToken.sol";
+
+/**
+ * @title MockLOVE20Token
+ * @notice Mock token that implements ILOVE20Token for testing
+ */
+contract MockLOVE20Token {
+    address public immutable parentTokenAddress;
+
+    constructor(address parent_) {
+        parentTokenAddress = parent_;
+    }
+}
 
 /**
  * @title ExtensionGroupServiceFactoryTest
@@ -221,5 +236,70 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         assertEq(extension, expectedExtension);
+    }
+
+    // ============ GroupActionTokenAddress Validation Tests ============
+
+    function test_CreateExtension_InvalidGroupActionToken_NotLOVE20Token()
+        public
+    {
+        token.approve(address(factory), 1e18);
+
+        // Use a random address that's not a LOVE20Token
+        address invalidToken = address(0x123);
+        launch.setLOVE20Token(invalidToken, false);
+
+        vm.expectRevert(IGroupServiceFactoryErrors.InvalidGroupActionTokenAddress.selector);
+        factory.createExtension(address(token), invalidToken);
+    }
+
+    function test_CreateExtension_InvalidGroupActionToken_WrongParent() public {
+        token.approve(address(factory), 1e18);
+
+        // Create a child token with wrong parent
+        MockGroupToken otherParent = new MockGroupToken();
+        launch.setLOVE20Token(address(otherParent), true);
+        MockLOVE20Token childToken = new MockLOVE20Token(address(otherParent));
+        launch.setLOVE20Token(address(childToken), true);
+
+        vm.expectRevert(IGroupServiceFactoryErrors.InvalidGroupActionTokenAddress.selector);
+        factory.createExtension(address(token), address(childToken));
+    }
+
+    function test_CreateExtension_ValidGroupActionToken_SameAsTokenAddress()
+        public
+    {
+        token.approve(address(factory), 1e18);
+
+        // Should succeed when groupActionTokenAddress equals tokenAddress
+        address extension = factory.createExtension(
+            address(token),
+            address(token)
+        );
+
+        assertTrue(extension != address(0));
+        assertTrue(factory.exists(extension));
+    }
+
+    function test_CreateExtension_ValidGroupActionToken_ValidChildToken()
+        public
+    {
+        token.approve(address(factory), 1e18);
+
+        // Create a valid child token with correct parent
+        MockLOVE20Token childToken = new MockLOVE20Token(address(token));
+        launch.setLOVE20Token(address(childToken), true);
+
+        // Should succeed when groupActionTokenAddress is a valid child token
+        address extension = factory.createExtension(
+            address(token),
+            address(childToken)
+        );
+
+        assertTrue(extension != address(0));
+        assertTrue(factory.exists(extension));
+
+        ExtensionGroupService groupService = ExtensionGroupService(extension);
+        assertEq(groupService.GROUP_ACTION_TOKEN_ADDRESS(), address(childToken));
     }
 }
