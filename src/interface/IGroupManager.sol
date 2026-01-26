@@ -49,8 +49,8 @@ interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
         uint256 maxJoinAmount; // 0 = no limit
         uint256 maxAccounts; // 0 = no limit
         bool isActive;
-        uint256 activatedRound; // 0 = never activated
-        uint256 deactivatedRound; // 0 = never deactivated
+        uint256 activatedRound; // 0 = not activated
+        uint256 deactivatedRound; // 0 = not deactivated
     }
 
     function FACTORY_ADDRESS() external view returns (address);
@@ -131,9 +131,9 @@ interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
     function staked(address extension) external view returns (uint256);
 
     function totalStaked(address tokenAddress) external view returns (uint256);
-    function totalStakedByAccount(
+    function totalStakedByOwner(
         address tokenAddress,
-        address account
+        address owner
     ) external view returns (uint256);
 
     function actionIdsByGroupId(
@@ -167,6 +167,6 @@ interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
 
     function hasActiveGroups(
         address tokenAddress,
-        address account
+        address owner
     ) external view returns (bool);
 }

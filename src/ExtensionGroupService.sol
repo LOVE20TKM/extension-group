@@ -243,15 +243,14 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address account
     ) external view override(ExtensionBase) returns (uint256) {
         return
-            _groupManager.totalStakedByAccount(
+            _groupManager.totalStakedByOwner(
                 GROUP_ACTION_TOKEN_ADDRESS,
                 account
             );
     }
 
-    function hasActiveGroups(address account) public view returns (bool) {
-        return
-            _groupManager.hasActiveGroups(GROUP_ACTION_TOKEN_ADDRESS, account);
+    function hasActiveGroups(address owner) public view returns (bool) {
+        return _groupManager.hasActiveGroups(GROUP_ACTION_TOKEN_ADDRESS, owner);
     }
 
     function generatedActionRewardByVerifier(

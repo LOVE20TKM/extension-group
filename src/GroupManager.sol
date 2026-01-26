@@ -262,12 +262,12 @@ contract GroupManager is IGroupManager {
 
     function hasActiveGroups(
         address tokenAddress,
-        address account
+        address owner
     ) external view returns (bool) {
-        uint256 balance = _group.balanceOf(account);
+        uint256 balance = _group.balanceOf(owner);
 
         for (uint256 i = 0; i < balance; ) {
-            uint256 groupId = _group.tokenOfOwnerByIndex(account, i);
+            uint256 groupId = _group.tokenOfOwnerByIndex(owner, i);
             if (
                 _extensionsByActivatedGroupId[tokenAddress][groupId].length() >
                 0
@@ -395,14 +395,14 @@ contract GroupManager is IGroupManager {
         return _totalStaked[tokenAddress];
     }
 
-    function totalStakedByAccount(
+    function totalStakedByOwner(
         address tokenAddress,
-        address account
+        address owner
     ) public view returns (uint256 total) {
         uint256[] memory aids = actionIds(tokenAddress);
         for (uint256 i; i < aids.length; ) {
             address ext = _center.extension(tokenAddress, aids[i]);
-            total += stakedByOwner(ext, account);
+            total += stakedByOwner(ext, owner);
             unchecked {
                 ++i;
             }

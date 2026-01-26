@@ -99,7 +99,7 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
             uint256 ownerAmount
         );
 
-    function hasActiveGroups(address account) external view returns (bool);
+    function hasActiveGroups(address owner) external view returns (bool);
 
     function generatedActionRewardByVerifier(
         uint256 round,
