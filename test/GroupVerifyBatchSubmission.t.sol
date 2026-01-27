@@ -152,66 +152,44 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             90,
             "User 1 score should be 90"
         );
-        uint256 expectedUnverifiedScore = 0;
         assertEq(
             groupVerify.originScoreByAccount(
                 address(groupAction),
                 round,
                 users[2]
             ),
-            expectedUnverifiedScore,
+            0,
             "User 2 score should be 0 before verified"
         );
-        bool expectedInRange = true;
-        bool expectedOutOfRange = false;
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
+        {
+            (bool found1, uint256 index1) = groupJoin.accountIndexByGroupIdByRound(
                 address(groupAction),
-                round,
                 groupId1,
                 users[1],
-                0,
-                1
-            ),
-            expectedInRange,
-            "User 1 should be in range [0,1]"
-        );
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
+                round
+            );
+            assertTrue(found1, "User 1 should be found");
+            assertEq(index1, 1, "User 1 should be at index 1");
+        }
+        {
+            (bool found2, uint256 index2) = groupJoin.accountIndexByGroupIdByRound(
                 address(groupAction),
-                round,
                 groupId1,
                 users[2],
-                0,
-                1
-            ),
-            expectedOutOfRange,
-            "User 2 should be out of range [0,1]"
-        );
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
+                round
+            );
+            assertTrue(found2, "User 2 should be found");
+            assertTrue(index2 > 1, "User 2 should be out of range [0,1]");
+        }
+        {
+            (bool found0, ) = groupJoin.accountIndexByGroupIdByRound(
                 address(groupAction),
-                round,
-                groupId1,
-                users[1],
-                1,
-                1
-            ),
-            expectedInRange,
-            "User 1 should be in range [1,1]"
-        );
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
-                address(groupAction),
-                round,
                 groupId1,
                 users[0],
-                1,
-                1
-            ),
-            expectedOutOfRange,
-            "User 0 should be out of range [1,1]"
-        );
+                round
+            );
+            assertTrue(found0, "User 0 should be found");
+        }
 
         // Batch 2: Submit next 2 accounts (startIndex = 2)
         uint256[] memory batch2 = new uint256[](2);

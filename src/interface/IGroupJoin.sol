@@ -176,14 +176,12 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
         address owner
     ) external view returns (uint256);
 
-    function isAccountInRangeByRound(
+    function accountIndexByGroupIdByRound(
         address extension,
-        uint256 round,
         uint256 groupId,
         address account,
-        uint256 startIndex,
-        uint256 endIndex
-    ) external view returns (bool);
+        uint256 round
+    ) external view returns (bool found, uint256 index);
 
     function trialAccountsWaitingAdd(
         address extension,

@@ -466,16 +466,13 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             return 0;
         }
 
-        if (
-            !_groupJoin.isAccountInRangeByRound(
-                extension,
-                round,
-                groupId,
-                account,
-                0,
-                verifiedCount - 1
-            )
-        ) {
+        (bool found, uint256 index) = _groupJoin.accountIndexByGroupIdByRound(
+            extension,
+            groupId,
+            account,
+            round
+        );
+        if (!found || index >= verifiedCount) {
             return 0;
         }
 

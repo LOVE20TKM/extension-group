@@ -77,11 +77,11 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
     }
 
-    // ============ isAccountInRangeByRound Tests ============
+    // ============ accountIndexByGroupIdByRound Tests ============
 
-    /// @notice Test: isAccountInRangeByRound returns correct values for different ranges
-    /// @dev Verifies that the function correctly identifies accounts within specified index ranges
-    function test_isAccountInRangeByRound_WithValidRanges_ReturnsCorrectValues()
+    /// @notice Test: accountIndexByGroupIdByRound returns correct index values
+    /// @dev Verifies that the function correctly returns found status and index for accounts
+    function test_accountIndexByGroupIdByRound_WithValidAccounts_ReturnsCorrectValues()
         public
     {
         address[] memory users = new address[](3);
@@ -101,58 +101,33 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         }
 
         uint256 round = verify.currentRound();
-        bool expectedTrue = true;
-        bool expectedFalse = false;
         address nonMember = address(0x999);
 
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
-                address(groupAction),
-                round,
-                groupId1,
-                users[0],
-                0,
-                1
-            ),
-            expectedTrue,
-            "User 0 should be in range [0,1]"
+        (bool found0, uint256 index0) = groupJoin.accountIndexByGroupIdByRound(
+            address(groupAction),
+            groupId1,
+            users[0],
+            round
         );
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
-                address(groupAction),
-                round,
-                groupId1,
-                users[2],
-                0,
-                1
-            ),
-            expectedFalse,
-            "User 2 should be out of range [0,1]"
+        assertTrue(found0, "User 0 should be found");
+        assertEq(index0, 0, "User 0 should be at index 0");
+
+        (bool found2, uint256 index2) = groupJoin.accountIndexByGroupIdByRound(
+            address(groupAction),
+            groupId1,
+            users[2],
+            round
         );
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
-                address(groupAction),
-                round,
-                groupId1,
-                users[2],
-                2,
-                2
-            ),
-            expectedTrue,
-            "User 2 should be in range [2,2]"
+        assertTrue(found2, "User 2 should be found");
+        assertEq(index2, 2, "User 2 should be at index 2");
+
+        (bool foundNonMember, ) = groupJoin.accountIndexByGroupIdByRound(
+            address(groupAction),
+            groupId1,
+            nonMember,
+            round
         );
-        assertEq(
-            groupJoin.isAccountInRangeByRound(
-                address(groupAction),
-                round,
-                groupId1,
-                nonMember,
-                0,
-                2
-            ),
-            expectedFalse,
-            "Non-member should be out of range"
-        );
+        assertFalse(foundNonMember, "Non-member should not be found");
     }
 
     // ============ join Tests ============

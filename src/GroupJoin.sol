@@ -370,24 +370,20 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _amountHistoryByAccount[extension][account].value(round);
     }
 
-    function isAccountInRangeByRound(
+    function accountIndexByGroupIdByRound(
         address extension,
-        uint256 round,
         uint256 groupId,
         address account,
-        uint256 startIndex,
-        uint256 endIndex
-    ) external view override returns (bool) {
+        uint256 round
+    ) external view override returns (bool found, uint256 index) {
         RoundHistoryAddressSet.Storage storage accounts = _accountsHistory[
             extension
         ][groupId];
-        uint256 index = accounts.accountsIndexHistory[account].value(round);
+        index = accounts.accountsIndexHistory[account].value(round);
         address accountAtIndex = accounts.accountsAtIndexHistory[index].value(
             round
         );
-        if (accountAtIndex != account) return false;
-        if (index < startIndex) return false;
-        return index <= endIndex;
+        found = accountAtIndex == account;
     }
 
     function trialAccountsWaitingAdd(
