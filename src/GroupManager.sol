@@ -63,6 +63,18 @@ contract GroupManager is IGroupManager {
 
     constructor() {}
 
+    modifier onlyGroupOwner(uint256 groupId) {
+        if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
+        _;
+    }
+
+    modifier onlyValidExtension(address extension) {
+        if (!_factory.exists(extension)) {
+            revert NotRegisteredExtensionInFactory();
+        }
+        _;
+    }
+
     function initialize(address factory_) external {
         require(_initialized == false, "Already initialized");
         require(factory_ != address(0), "Invalid factory");
@@ -445,18 +457,6 @@ contract GroupManager is IGroupManager {
         uint256 index
     ) external view returns (address) {
         return _tokenAddressesByGroupId[groupId].at(index);
-    }
-
-    modifier onlyGroupOwner(uint256 groupId) {
-        if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
-        _;
-    }
-
-    modifier onlyValidExtension(address extension) {
-        if (!_factory.exists(extension)) {
-            revert NotRegisteredExtensionInFactory();
-        }
-        _;
     }
 
     function _actionIdsFromExtensions(
