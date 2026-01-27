@@ -403,10 +403,24 @@ contract GroupManager is IGroupManager {
         address tokenAddress,
         address owner
     ) public view returns (uint256 total) {
-        uint256[] memory aids = actionIds(tokenAddress);
-        for (uint256 i; i < aids.length; ) {
-            address ext = _center.extension(tokenAddress, aids[i]);
-            total += stakedByOwner(ext, owner);
+        uint256 nftBalance = _group.balanceOf(owner);
+        if (nftBalance == 0) return 0;
+
+        for (uint256 i; i < nftBalance; ) {
+            uint256 groupId = _group.tokenOfOwnerByIndex(owner, i);
+            EnumerableSet.AddressSet
+                storage extensions = _extensionsByActivatedGroupId[
+                    tokenAddress
+                ][groupId];
+            uint256 extCount = extensions.length();
+
+            for (uint256 j; j < extCount; ) {
+                total += IGroupAction(extensions.at(j))
+                    .ACTIVATION_STAKE_AMOUNT();
+                unchecked {
+                    ++j;
+                }
+            }
             unchecked {
                 ++i;
             }
