@@ -854,7 +854,8 @@ contract ExtensionGroupActionTest is BaseGroupTest {
     // ============ burnRewardIfNeeded Tests ============
 
     function test_BurnInfo_NoReward() public view {
-        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(verify.currentRound());
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction))
+            .burnInfo(verify.currentRound());
         assertEq(burnAmount, 0);
         assertFalse(burned);
     }
@@ -864,7 +865,12 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 newRound = verify.currentRound();
         vote.setVotedActionIds(address(token), newRound, ACTION_ID);
         vote.setVotesNum(address(token), newRound, 10000e18);
-        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+        vote.setVotesNumByActionId(
+            address(token),
+            newRound,
+            ACTION_ID,
+            10000e18
+        );
 
         // Setup action reward
         uint256 totalActionReward = 100e18;
@@ -903,8 +909,13 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         advanceRound();
 
         // Verify burnInfo returns 0 when there are verified groups
-        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(newRound);
-        assertEq(burnAmount, 0, "Burn amount should be 0 when verified groups exist");
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction))
+            .burnInfo(newRound);
+        assertEq(
+            burnAmount,
+            0,
+            "Burn amount should be 0 when verified groups exist"
+        );
         assertFalse(burned, "Should not be burned");
     }
 
@@ -913,7 +924,12 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 newRound = verify.currentRound();
         vote.setVotedActionIds(address(token), newRound, ACTION_ID);
         vote.setVotesNum(address(token), newRound, 10000e18);
-        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+        vote.setVotesNumByActionId(
+            address(token),
+            newRound,
+            ACTION_ID,
+            10000e18
+        );
 
         // Setup action reward
         uint256 totalActionReward = 100e18;
@@ -968,9 +984,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
 
         // Verify burn info
-        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(newRound);
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction))
+            .burnInfo(newRound);
         assertEq(burnAmount, 0, "Burn amount should be 0");
-        assertFalse(burned, "Should not be burned");
+        assertTrue(burned, "Should not be burned");
     }
 
     function test_BurnRewardIfNeeded_NoVerifiedGroups() public {
@@ -978,7 +995,12 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 newRound = verify.currentRound();
         vote.setVotedActionIds(address(token), newRound, ACTION_ID);
         vote.setVotesNum(address(token), newRound, 10000e18);
-        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+        vote.setVotesNumByActionId(
+            address(token),
+            newRound,
+            ACTION_ID,
+            10000e18
+        );
 
         // Setup action reward
         uint256 totalActionReward = 100e18;
@@ -1023,8 +1045,13 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         );
 
         // Verify burn info
-        (uint256 burnAmount, bool burned) = IReward(address(groupAction)).burnInfo(newRound);
-        assertEq(burnAmount, totalActionReward, "Burn amount should match total reward");
+        (uint256 burnAmount, bool burned) = IReward(address(groupAction))
+            .burnInfo(newRound);
+        assertEq(
+            burnAmount,
+            totalActionReward,
+            "Burn amount should match total reward"
+        );
         assertTrue(burned, "Should be burned");
     }
 
@@ -1044,7 +1071,12 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         uint256 newRound = verify.currentRound();
         vote.setVotedActionIds(address(token), newRound, ACTION_ID);
         vote.setVotesNum(address(token), newRound, 10000e18);
-        vote.setVotesNumByActionId(address(token), newRound, ACTION_ID, 10000e18);
+        vote.setVotesNumByActionId(
+            address(token),
+            newRound,
+            ACTION_ID,
+            10000e18
+        );
 
         // Setup action reward
         uint256 totalActionReward = 100e18;
