@@ -6,7 +6,7 @@ interface IGroupVerifyEvents {
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
-        uint256 groupId,
+        uint256 indexed groupId,
         uint256 startIndex,
         uint256 count,
         bool isComplete
@@ -22,7 +22,7 @@ interface IGroupVerifyEvents {
         address indexed tokenAddress,
         uint256 round,
         uint256 indexed actionId,
-        address groupOwner,
+        address indexed groupOwner,
         address voter,
         uint256 amount,
         string reason
