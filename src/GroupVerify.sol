@@ -82,7 +82,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
     // extension => round => groupId => capacity decay rate
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _capacityDecayRate;
+        internal _capacityDecayRateByGroupId;
 
     // extension => round => groupOwner => total distrust votes
     mapping(address => mapping(uint256 => mapping(address => uint256)))
@@ -296,7 +296,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         ][currentRound][groupId];
 
         // 6. Calculate and update group score
-        _capacityDecayRate[extension][currentRound][
+        _capacityDecayRateByGroupId[extension][currentRound][
             groupId
         ] = _calculateCapacityDecay(
             extension,
@@ -517,12 +517,12 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         return _groupScore[extension][round][groupId];
     }
 
-    function capacityDecayRate(
+    function capacityDecayRateByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (uint256) {
-        return _capacityDecayRate[extension][round][groupId];
+        return _capacityDecayRateByGroupId[extension][round][groupId];
     }
 
     function distrustRateByGroupId(
@@ -920,7 +920,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             round,
             groupId
         );
-        uint256 capacityDecayRate_ = _capacityDecayRate[extension][round][
+        uint256 capacityDecayRate_ = _capacityDecayRateByGroupId[extension][round][
             groupId
         ];
 

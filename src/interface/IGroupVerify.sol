@@ -266,7 +266,7 @@ interface IGroupVerify is IGroupVerifyEvents, IGroupVerifyErrors {
         uint256 index
     ) external view returns (address);
 
-    function capacityDecayRate(
+    function capacityDecayRateByGroupId(
         address extension,
         uint256 round,
         uint256 groupId

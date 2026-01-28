@@ -7,7 +7,7 @@ import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionIntegrationTest
-/// @notice Integration tests for capacityDecayRate and distrustRate functions
+/// @notice Integration tests for capacityDecayRateByGroupId and distrustRate functions
 contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
     uint256 constant PRECISION = 1e18;
 
@@ -129,7 +129,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
     }
 
-    /// @notice Test capacityDecayRate and distrustRate work together
+    /// @notice Test capacityDecayRateByGroupId and distrustRate work together
     function test_capacityAndDistrustRate_Integration() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
@@ -199,7 +199,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
 
         // Get both rates
-        uint256 capacityDecayRate = groupVerify.capacityDecayRate(
+        uint256 capacityDecayRate = groupVerify.capacityDecayRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
@@ -213,7 +213,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         // Verify both are set correctly
         assertTrue(
             capacityDecayRate >= 0 && capacityDecayRate <= PRECISION,
-            "capacityDecayRate should be between 0 and PRECISION"
+            "capacityDecayRateByGroupId should be between 0 and PRECISION"
         );
         assertTrue(
             distrustRate >= 0 && distrustRate <= PRECISION,
@@ -227,11 +227,11 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
             bobGroup1.groupId
         );
 
-        // Group score should be: groupAmount * (1 - distrustRate) * (1 - capacityDecayRate) / PRECISION^2
+        // Group score should be: groupAmount * (1 - distrustRate) * (1 - capacityDecayRateByGroupId) / PRECISION^2
         uint256 groupAmount = 10e18;
 
         // Verify group score is calculated correctly
-        // Group score = groupAmount * (1 - distrustRate) * (1 - capacityDecayRate) / PRECISION^2
+        // Group score = groupAmount * (1 - distrustRate) * (1 - capacityDecayRateByGroupId) / PRECISION^2
         // Note: There may be small rounding differences due to division order
         uint256 oneMinusDistrust = PRECISION - distrustRate;
         uint256 oneMinusDecay = PRECISION - capacityDecayRate;

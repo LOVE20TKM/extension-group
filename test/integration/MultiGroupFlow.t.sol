@@ -623,12 +623,12 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         IGroupVerify groupVerifyContract2 = IGroupVerify(
             h.groupActionFactory().GROUP_VERIFY_ADDRESS()
         );
-        uint256 decayRate1 = groupVerifyContract2.capacityDecayRate(
+        uint256 decayRate1 = groupVerifyContract2.capacityDecayRateByGroupId(
             bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup1.groupId
         );
-        uint256 decayRate2 = groupVerifyContract2.capacityDecayRate(
+        uint256 decayRate2 = groupVerifyContract2.capacityDecayRateByGroupId(
             bobGroup1.groupActionAddress,
             verifyRound,
             bobGroup2.groupId
