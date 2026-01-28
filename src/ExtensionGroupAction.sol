@@ -82,7 +82,11 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         override(ExtensionBase)
         returns (uint256)
     {
-        return _groupJoin.joinedAmount(address(this));
+        return
+            _groupJoin.joinedAmountByRound(
+                address(this),
+                _join.currentRound()
+            );
     }
 
     function joinedAmountByAccount(

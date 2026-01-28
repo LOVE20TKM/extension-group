@@ -575,8 +575,10 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accounts = groupJoin.accountsByGroupId(
+        uint256 joinRound = h.joinContract().currentRound();
+        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
+            joinRound,
             bobGroup1.groupId
         );
         assertEq(accounts.length, 1, "Should have 1 account");
@@ -619,8 +621,10 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accounts = groupJoin.accountsByGroupId(
+        uint256 joinRound = h.joinContract().currentRound();
+        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
+            joinRound,
             bobGroup1.groupId
         );
         assertEq(accounts.length, 3, "Should have 3 accounts");
@@ -668,8 +672,10 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accountsBefore = groupJoin.accountsByGroupId(
+        uint256 joinRound = h.joinContract().currentRound();
+        address[] memory accountsBefore = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
+            joinRound,
             bobGroup1.groupId
         );
         assertEq(
@@ -682,8 +688,9 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.group_exit(m1, bobGroup1);
 
         // 5. Verify accountsByGroupId after exit
-        address[] memory accountsAfter = groupJoin.accountsByGroupId(
+        address[] memory accountsAfter = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
+            joinRound,
             bobGroup1.groupId
         );
         assertEq(accountsAfter.length, 1, "Should have 1 account after exit");
@@ -911,26 +918,31 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         m3.groupActionAddress = bobGroup1.groupActionAddress;
         h.group_join(m3, bobGroup1);
 
-        // 3. Verify consistency between accountsByGroupId and accountsByGroupIdAtIndex
+        // 3. Verify consistency between accountsByGroupIdByRound and accountsByGroupIdByRoundAtIndex
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accounts = groupJoin.accountsByGroupId(
+        uint256 joinRound = h.joinContract().currentRound();
+        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
             bobGroup1.groupActionAddress,
+            joinRound,
             bobGroup1.groupId
         );
-        uint256 count = groupJoin.accountsByGroupIdCount(
+        uint256 count = groupJoin.accountsByGroupIdByRoundCount(
             bobGroup1.groupActionAddress,
+            joinRound,
             bobGroup1.groupId
         );
 
         assertEq(accounts.length, count, "Array length should match count");
         for (uint256 i = 0; i < count; i++) {
-            address accountAtIndex = groupJoin.accountsByGroupIdAtIndex(
-                bobGroup1.groupActionAddress,
-                bobGroup1.groupId,
-                i
-            );
+            address accountAtIndex = groupJoin
+                .accountsByGroupIdByRoundAtIndex(
+                    bobGroup1.groupActionAddress,
+                    joinRound,
+                    bobGroup1.groupId,
+                    i
+                );
             assertTrue(
                 _containsAddress(accounts, accountAtIndex),
                 "Account at index should be in array"

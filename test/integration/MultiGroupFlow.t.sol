@@ -98,25 +98,29 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             2,
             "2 unique verifiers (bobGroup1=bobGroup2, aliceGroup)"
         );
+        uint256 joinRound = h.joinContract().currentRound();
         assertEq(
-            groupJoin.accountsByGroupIdCount(
+            groupJoin.accountsByGroupIdByRoundCount(
                 bobGroup1.groupActionAddress,
+                joinRound,
                 bobGroup1.groupId
             ),
             3,
             "Group1 has 3 members"
         );
         assertEq(
-            groupJoin.accountsByGroupIdCount(
+            groupJoin.accountsByGroupIdByRoundCount(
                 bobGroup1.groupActionAddress,
+                joinRound,
                 bobGroup2.groupId
             ),
             3,
             "Group2 has 3 members"
         );
         assertEq(
-            groupJoin.accountsByGroupIdCount(
+            groupJoin.accountsByGroupIdByRoundCount(
                 bobGroup1.groupActionAddress,
+                joinRound,
                 aliceGroup.groupId
             ),
             3,

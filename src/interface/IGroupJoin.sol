@@ -106,31 +106,10 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
             address provider
         );
 
-    function accountsByGroupId(
-        address extension,
-        uint256 groupId
-    ) external view returns (address[] memory);
-
-    function accountsByGroupIdCount(
-        address extension,
-        uint256 groupId
-    ) external view returns (uint256);
-
-    function accountsByGroupIdAtIndex(
-        address extension,
-        uint256 groupId,
-        uint256 index
-    ) external view returns (address);
-
     function groupIdByAccountByRound(
         address extension,
         uint256 round,
         address account
-    ) external view returns (uint256);
-
-    function totalJoinedAmountByGroupId(
-        address extension,
-        uint256 groupId
     ) external view returns (uint256);
 
     function totalJoinedAmountByGroupIdByRound(
@@ -138,8 +117,6 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
-
-    function joinedAmount(address extension) external view returns (uint256);
 
     function joinedAmountByRound(
         address extension,
@@ -205,7 +182,14 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
         address extension,
         uint256 groupId,
         address provider
-    ) external view returns (address[] memory, uint256[] memory);
+    )
+        external
+        view
+        returns (
+            address[] memory accounts,
+            uint256[] memory trialAmounts,
+            uint256[] memory blockNumbers
+        );
 
     function trialAccountsWaitingCount(
         address extension,
@@ -218,7 +202,10 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
         uint256 groupId,
         address provider,
         uint256 index
-    ) external view returns (address, uint256);
+    )
+        external
+        view
+        returns (address account, uint256 trialAmount, uint256 blockNumber);
 
     function trialAccountsJoined(
         address extension,

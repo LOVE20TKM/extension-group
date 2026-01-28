@@ -68,6 +68,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     // extension => groupId => provider => account => trialAmount
     mapping(address => mapping(uint256 => mapping(address => mapping(address => uint256))))
         internal _trialAccountsWaitingAmount;
+    // extension => groupId => provider => account => block number when added
+    mapping(address => mapping(uint256 => mapping(address => mapping(address => uint256))))
+        internal _trialAccountsWaitingBlockNumber;
     // extension => groupId => provider => trial accounts
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.AddressSet)))
         internal _trialAccountsWaiting;
@@ -158,7 +161,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         uint256 amount,
         string[] memory verificationInfos
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         _validateJoin(extension, groupId, amount);
         uint256 currentRound = _join.currentRound();
         _joinInternal(
@@ -184,7 +187,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address provider,
         string[] memory verificationInfos
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         uint256 trialAmount = _validateTrialJoin(extension, groupId, provider);
         _validateJoin(extension, groupId, trialAmount);
         uint256 currentRound = _join.currentRound();
@@ -215,7 +218,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
 
     function exit(
         address extension
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         _validateExit(extension, msg.sender);
         uint256 currentRound = _join.currentRound();
         (uint256 groupId, uint256 amount) = _exitInternal(
@@ -239,7 +242,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function trialExit(
         address extension,
         address account
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         _validateTrialExit(extension, account, msg.sender);
         uint256 currentRound = _join.currentRound();
         (uint256 groupId, uint256 amount) = _exitInternal(
@@ -259,7 +262,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     )
         external
         view
-        override
         returns (
             uint256 joinedRound,
             uint256 amount,
@@ -275,64 +277,27 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         );
     }
 
-    function accountsByGroupId(
-        address extension,
-        uint256 groupId
-    ) external view override returns (address[] memory) {
-        return _accountsHistory[extension][groupId].values();
-    }
-
-    function accountsByGroupIdCount(
-        address extension,
-        uint256 groupId
-    ) external view override returns (uint256) {
-        return _accountsHistory[extension][groupId].count();
-    }
-
-    function accountsByGroupIdAtIndex(
-        address extension,
-        uint256 groupId,
-        uint256 index
-    ) external view override returns (address) {
-        return _accountsHistory[extension][groupId].atIndex(index);
-    }
-
     function groupIdByAccountByRound(
         address extension,
         uint256 round,
         address account
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _groupIdHistoryByAccount[extension][account].value(round);
-    }
-
-    function totalJoinedAmountByGroupId(
-        address extension,
-        uint256 groupId
-    ) external view override returns (uint256) {
-        return
-            _totalJoinedAmountHistoryByGroupId[extension][groupId]
-                .latestValue();
     }
 
     function totalJoinedAmountByGroupIdByRound(
         address extension,
         uint256 round,
         uint256 groupId
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return
             _totalJoinedAmountHistoryByGroupId[extension][groupId].value(round);
-    }
-
-    function joinedAmount(
-        address extension
-    ) external view override returns (uint256) {
-        return _totalJoinedAmountHistory[extension].latestValue();
     }
 
     function joinedAmountByRound(
         address extension,
         uint256 round
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _totalJoinedAmountHistory[extension].value(round);
     }
 
@@ -340,7 +305,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 round,
         uint256 groupId
-    ) external view override returns (address[] memory) {
+    ) external view returns (address[] memory) {
         return _accountsHistory[extension][groupId].valuesByRound(round);
     }
 
@@ -348,7 +313,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 round,
         uint256 groupId
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _accountsHistory[extension][groupId].countByRound(round);
     }
 
@@ -357,7 +322,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 round,
         uint256 groupId,
         uint256 index
-    ) external view override returns (address) {
+    ) external view returns (address) {
         return
             _accountsHistory[extension][groupId].atIndexByRound(index, round);
     }
@@ -366,7 +331,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 round,
         address account
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _amountHistoryByAccount[extension][account].value(round);
     }
 
@@ -375,7 +340,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address account,
         uint256 round
-    ) external view override returns (bool found, uint256 index) {
+    ) external view returns (bool found, uint256 index) {
         RoundHistoryAddressSet.Storage storage accounts = _accountsHistory[
             extension
         ][groupId];
@@ -391,7 +356,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address[] memory trialAccounts,
         uint256[] memory trialAmounts
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         if (!_groupManager.isGroupActive(extension, groupId)) {
             revert CannotJoinInactiveGroup();
         }
@@ -429,7 +394,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address[] memory trialAccounts
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         if (trialAccounts.length == 0) return;
         _removeTrialAccountsFromWaitingList(
             extension,
@@ -442,7 +407,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function trialAccountsWaitingRemoveAll(
         address extension,
         uint256 groupId
-    ) external override nonReentrant onlyValidExtension(extension) {
+    ) external nonReentrant onlyValidExtension(extension) {
         address[] memory accounts = _trialAccountsWaiting[extension][groupId][
             msg.sender
         ].values();
@@ -479,27 +444,38 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address provider
-    ) external view override returns (address[] memory, uint256[] memory) {
-        address[] memory accounts = _trialAccountsWaiting[extension][groupId][
-            provider
-        ].values();
-        uint256[] memory amounts = new uint256[](accounts.length);
-        for (uint256 i; i < accounts.length; ) {
-            amounts[i] = _trialAccountsWaitingAmount[extension][groupId][
+    )
+        external
+        view
+        returns (
+            address[] memory accounts,
+            uint256[] memory trialAmounts,
+            uint256[] memory blockNumbers
+        )
+    {
+        accounts = _trialAccountsWaiting[extension][groupId][provider].values();
+        uint256 len = accounts.length;
+        trialAmounts = new uint256[](len);
+        blockNumbers = new uint256[](len);
+        for (uint256 i; i < len; ) {
+            trialAmounts[i] = _trialAccountsWaitingAmount[extension][groupId][
                 provider
             ][accounts[i]];
+            blockNumbers[i] = _trialAccountsWaitingBlockNumber[extension][
+                groupId
+            ][provider][accounts[i]];
             unchecked {
                 ++i;
             }
         }
-        return (accounts, amounts);
+        return (accounts, trialAmounts, blockNumbers);
     }
 
     function trialAccountsWaitingCount(
         address extension,
         uint256 groupId,
         address provider
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _trialAccountsWaiting[extension][groupId][provider].length();
     }
 
@@ -508,12 +484,18 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address provider,
         uint256 index
-    ) external view override returns (address, uint256) {
-        address account = _trialAccountsWaiting[extension][groupId][provider]
-            .at(index);
+    )
+        external
+        view
+        returns (address account, uint256 trialAmount, uint256 blockNumber)
+    {
+        account = _trialAccountsWaiting[extension][groupId][provider].at(index);
         return (
             account,
-            _trialAccountsWaitingAmount[extension][groupId][provider][account]
+            _trialAccountsWaitingAmount[extension][groupId][provider][account],
+            _trialAccountsWaitingBlockNumber[extension][groupId][provider][
+                account
+            ]
         );
     }
 
@@ -521,7 +503,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address provider
-    ) external view override returns (address[] memory) {
+    ) external view returns (address[] memory) {
         return _trialAccountsJoined[extension][groupId][provider].values();
     }
 
@@ -529,7 +511,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address provider
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _trialAccountsJoined[extension][groupId][provider].length();
     }
 
@@ -538,7 +520,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address provider,
         uint256 index
-    ) external view override returns (address) {
+    ) external view returns (address) {
         return _trialAccountsJoined[extension][groupId][provider].at(index);
     }
 
@@ -750,6 +732,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _trialAccountsWaitingAmount[extension][groupId][msg.sender][
             account
         ] = trialAmount;
+        _trialAccountsWaitingBlockNumber[extension][groupId][msg.sender][
+            account
+        ] = block.number;
         _trialAccountsWaiting[extension][groupId][msg.sender].add(account);
         _emitTrialAccountsWaitingUpdated(
             extension,
@@ -780,6 +765,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             provider
         ][account];
         delete _trialAccountsWaitingAmount[extension][groupId][provider][
+            account
+        ];
+        delete _trialAccountsWaitingBlockNumber[extension][groupId][provider][
             account
         ];
         _emitTrialAccountsWaitingUpdated(
@@ -924,6 +912,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _trialAccountsJoined[extension][groupId][provider].add(account);
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
         delete _trialAccountsWaitingAmount[extension][groupId][provider][
+            account
+        ];
+        delete _trialAccountsWaitingBlockNumber[extension][groupId][provider][
             account
         ];
 
@@ -1080,7 +1071,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     function totalJoinedAmountByGroupOwner(
         address extension,
         address owner
-    ) external view override returns (uint256) {
+    ) external view returns (uint256) {
         return _totalJoinedAmountByGroupOwner(extension, owner);
     }
 

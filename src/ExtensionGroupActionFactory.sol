@@ -69,7 +69,6 @@ contract ExtensionGroupActionFactory is
     )
         external
         view
-        override
         returns (uint256[] memory actionIds_, address[] memory extensions)
     {
         IExtensionCenter center_ = IExtensionCenter(CENTER_ADDRESS);
