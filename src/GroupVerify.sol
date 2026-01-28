@@ -6,7 +6,10 @@ import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
-import {IGroupManager, IGroupManagerErrors} from "./interface/IGroupManager.sol";
+import {
+    IGroupManager,
+    IGroupManagerErrors
+} from "./interface/IGroupManager.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
@@ -202,12 +205,10 @@ contract GroupVerify is IGroupVerify {
             revert AlreadyVerified();
         }
 
-        mapping(uint256 => uint256)
-            storage verifiedCount = _verifiedAccountCount[extension][
-                currentRound
-            ];
-
-        if (startIndex != verifiedCount[groupId]) {
+        if (
+            startIndex !=
+            _verifiedAccountCount[extension][currentRound][groupId]
+        ) {
             revert InvalidStartIndex();
         }
 
@@ -243,11 +244,7 @@ contract GroupVerify is IGroupVerify {
 
         isComplete =
             _verifiedAccountCount[extension][currentRound][groupId] ==
-            _groupJoin.accountsByGroupIdCount(
-                extension,
-                currentRound,
-                groupId
-            );
+            _groupJoin.accountsByGroupIdCount(extension, currentRound, groupId);
     }
 
     function _finalizeVerification(
@@ -872,12 +869,11 @@ contract GroupVerify is IGroupVerify {
             revert NoRemainingVerifyCapacity();
         }
 
-        uint256 currentGroupCapacity = _groupJoin
-            .totalJoinedAmountByGroupId(
-                extension,
-                round,
-                currentGroupId
-            );
+        uint256 currentGroupCapacity = _groupJoin.totalJoinedAmountByGroupId(
+            extension,
+            round,
+            currentGroupId
+        );
 
         if (remainingCapacity >= currentGroupCapacity) {
             return 0;
@@ -915,9 +911,9 @@ contract GroupVerify is IGroupVerify {
             round,
             groupId
         );
-        uint256 capacityDecayRate_ = _capacityDecayRateByGroupId[extension][round][
-            groupId
-        ];
+        uint256 capacityDecayRate_ = _capacityDecayRateByGroupId[extension][
+            round
+        ][groupId];
 
         return
             _computeGroupScore(groupAmount, distrustRate_, capacityDecayRate_);
