@@ -939,10 +939,6 @@ contract GroupVerify is IGroupVerify {
 
         for (uint256 i = 0; i < groupIds.length; i++) {
             uint256 groupId = groupIds[i];
-            if (!_isVerified[extension][round][groupId]) {
-                continue;
-            }
-
             uint256 oldScore = scoreMap[groupId];
             uint256 newScore = _calculateGroupScore(extension, round, groupId);
             scoreMap[groupId] = newScore;
