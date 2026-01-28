@@ -6,6 +6,7 @@ import {IGroupJoinEvents} from "../src/interface/IGroupJoin.sol";
 import {IGroupJoinErrors} from "../src/interface/IGroupJoin.sol";
 import {ExtensionGroupAction} from "../src/ExtensionGroupAction.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
+import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 
 /**
  * @title GroupJoinTest
@@ -395,6 +396,46 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             joinAmount2,
             new string[](0)
         );
+    }
+
+    /// @notice Test: join with amount exactly at maxCapacity boundary succeeds
+    /// @dev Capacity validation: amount == maxCapacity when group is empty is accepted
+    function test_join_AmountExactlyAtMaxCapacity_Succeeds() public {
+        uint256 maxCapacity = 10e18;
+        uint256 joinAmount = maxCapacity;
+
+        vm.prank(groupOwner1);
+        groupManager.updateGroupInfo(
+            address(groupAction),
+            groupId1,
+            "Group1",
+            maxCapacity,
+            1e18,
+            0,
+            0
+        );
+
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(address(groupAction), groupId1),
+            maxCapacity,
+            "total joined should equal maxCapacity"
+        );
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
+        assertTrue(joinedRound > 0, "should be joined");
+        assertEq(amount, joinAmount, "amount should match");
     }
 
     /// @notice Test: join when owner capacity is exceeded should revert
@@ -972,6 +1013,499 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
     }
 
+    /// @notice Test: join and exit in same round leaves state correct
+    /// @dev Round boundary: no round advance between join and exit
+    function test_joinAndExit_InSameRound_StateCorrect() public {
+        uint256 joinAmount = 10e18;
+        uint256 currentRound = join.currentRound();
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
+            .joinInfo(address(groupAction), user1);
+        uint256 expectedJoinedRound = 0;
+        uint256 expectedAmount = 0;
+        uint256 expectedGroupId = 0;
+        assertEq(joinedRound, expectedJoinedRound, "joinedRound should be cleared");
+        assertEq(amount, expectedAmount, "amount should be cleared");
+        assertEq(groupId, expectedGroupId, "groupId should be cleared");
+
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            0,
+            "accountsByGroupIdCount should be 0"
+        );
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(address(groupAction), groupId1),
+            0,
+            "totalJoinedAmountByGroupId should be 0"
+        );
+        assertEq(
+            groupJoin.joinedAmountByAccountByRound(
+                address(groupAction),
+                currentRound,
+                user1
+            ),
+            0,
+            "joinedAmountByAccountByRound at current round should be 0"
+        );
+        assertEq(
+            groupJoin.groupIdByAccountByRound(
+                address(groupAction),
+                currentRound,
+                user1
+            ),
+            0,
+            "groupIdByAccountByRound at current round should be 0"
+        );
+    }
+
+    /// @notice Test: quick join-exit-rejoin leaves state correct
+    /// @dev Boundary: join, exit, then rejoin same group without round advance
+    function test_quickJoinExitRejoin_StateCorrect() public {
+        uint256 joinAmount1 = 10e18;
+        uint256 joinAmount2 = 15e18;
+        setupUser(user1, joinAmount1 + joinAmount2, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
+
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount2,
+            new string[](0)
+        );
+
+        (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
+            .joinInfo(address(groupAction), user1);
+        assertTrue(joinedRound > 0, "should be joined after rejoin");
+        assertEq(amount, joinAmount2, "amount should be second join amount");
+        assertEq(groupId, groupId1, "groupId should match");
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(address(groupAction), groupId1),
+            joinAmount2,
+            "group total should reflect rejoin amount only"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            1,
+            "accounts count should be 1"
+        );
+    }
+
+    /// @notice Test: querying historical data at round 0 returns zero/empty
+    /// @dev Round boundary: round 0 has no recorded data
+    function test_queryHistoricalData_AtRound0_ReturnsZero() public view {
+        uint256 round0 = 0;
+        uint256 expectedTotalByGroup = 0;
+        uint256 expectedJoinedByRound = 0;
+        uint256 expectedCountByRound = 0;
+        uint256 expectedGroupIdByAccount = 0;
+
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupIdByRound(
+                address(groupAction),
+                round0,
+                groupId1
+            ),
+            expectedTotalByGroup,
+            "totalJoinedAmountByGroupIdByRound at round 0 should be 0"
+        );
+        assertEq(
+            groupJoin.joinedAmountByRound(address(groupAction), round0),
+            expectedJoinedByRound,
+            "joinedAmountByRound at round 0 should be 0"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdByRoundCount(
+                address(groupAction),
+                round0,
+                groupId1
+            ),
+            expectedCountByRound,
+            "accountsByGroupIdByRoundCount at round 0 should be 0"
+        );
+
+        assertEq(
+            groupJoin.groupIdByAccountByRound(
+                address(groupAction),
+                round0,
+                user1
+            ),
+            expectedGroupIdByAccount,
+            "groupIdByAccountByRound at round 0 for non-joined account should be 0"
+        );
+    }
+
+    // ============ Global State Tests ============
+
+    /// @notice Test: after last user exits, global indices are cleaned up
+    /// @dev Global state: gGroupIds, gAccounts, gTokenAddresses etc. cleared when last user exits
+    function test_lastUserExit_GlobalStateCleanup() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        assertEq(groupJoin.gGroupIdsCount(), 1, "gGroupIdsCount should be 1 before exit");
+        assertEq(groupJoin.gAccountsCount(), 1, "gAccountsCount should be 1 before exit");
+
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        assertEq(groupJoin.gGroupIdsCount(), 0, "gGroupIdsCount should be 0 after last exit");
+        assertEq(groupJoin.gAccountsCount(), 0, "gAccountsCount should be 0 after last exit");
+        assertEq(
+            groupJoin.gTokenAddressesCount(),
+            0,
+            "gTokenAddressesCount should be 0 after last exit"
+        );
+        assertEq(
+            groupJoin.gGroupIdsByAccountCount(user1),
+            0,
+            "gGroupIdsByAccount should be empty"
+        );
+        assertEq(
+            groupJoin.gAccountsByGroupIdCount(groupId1),
+            0,
+            "gAccountsByGroupId should be empty"
+        );
+    }
+
+    /// @notice Test: same groupId participated via two different tokenAddresses has isolated state
+    /// @dev Boundary: one groupId activated for two extensions (two tokens); user joins both
+    function test_sameGroupId_DifferentTokenAddress_StateIsolated() public {
+        uint256 actionId2 = 1;
+        MockGroupToken token2 = new MockGroupToken();
+        token2.mint(address(this), 1e18);
+        token2.mint(user1, 20e18);
+        launch.setLOVE20Token(address(token2), true);
+        stake.setGovVotesNum(address(token2), 100_000e18);
+        stake.setValidGovVotes(address(token2), groupOwner1, 10000e18);
+
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token2),
+            address(token2),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+        token2.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token2)
+        );
+        prepareExtensionInit(address(groupAction2), address(token2), actionId2);
+
+        token2.mint(groupOwner1, GROUP_ACTIVATION_STAKE_AMOUNT);
+        vm.prank(groupOwner1);
+        token2.approve(address(groupManager), type(uint256).max);
+        vm.prank(groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+        vm.prank(user1);
+        token2.approve(address(groupJoin), type(uint256).max);
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction2),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        (uint256 r1, uint256 amt1, uint256 g1, ) = groupJoin.joinInfo(
+            address(groupAction),
+            user1
+        );
+        (uint256 r2, uint256 amt2, uint256 g2, ) = groupJoin.joinInfo(
+            address(groupAction2),
+            user1
+        );
+        assertTrue(r1 > 0 && r2 > 0, "joined both extensions");
+        assertEq(amt1, joinAmount, "amount for ext1");
+        assertEq(amt2, joinAmount, "amount for ext2");
+        assertEq(g1, groupId1, "groupId for ext1");
+        assertEq(g2, groupId1, "groupId for ext2");
+
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            1,
+            "ext1 groupId1 count"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                address(groupAction2),
+                groupId1
+            ),
+            1,
+            "ext2 groupId1 count"
+        );
+        assertTrue(
+            groupJoin.gGroupIdsByTokenAddressCount(address(token)) >= 1,
+            "token should have groupId"
+        );
+        assertTrue(
+            groupJoin.gGroupIdsByTokenAddressCount(address(token2)) >= 1,
+            "token2 should have groupId"
+        );
+    }
+
+    /// @notice Test: 3 extensions on same token; global and per-extension state correct
+    /// @dev Boundary: 3 actionIds, 3 groups, 3 users; verify g* and per-extension views
+    function test_threeExtensions_SameToken_GlobalAndPerExtensionState()
+        public
+    {
+        uint256 actionId2 = 1;
+        uint256 actionId3 = 2;
+        uint256 joinAmount = 10e18;
+
+        ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+        ExtensionGroupAction groupAction3 = new ExtensionGroupAction(
+            address(mockGroupActionFactory),
+            address(token),
+            address(token),
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            MAX_JOIN_AMOUNT_RATIO,
+            CAPACITY_FACTOR
+        );
+        token.approve(address(mockGroupActionFactory), type(uint256).max);
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction2),
+            address(token)
+        );
+        mockGroupActionFactory.registerExtensionForTesting(
+            address(groupAction3),
+            address(token)
+        );
+        prepareExtensionInit(address(groupAction2), address(token), actionId2);
+        prepareExtensionInit(address(groupAction3), address(token), actionId3);
+
+        uint256 groupId3 = setupGroupOwner(groupOwner1, 10000e18, "Group3");
+        uint256 groupId4 = setupGroupOwner(groupOwner2, 10000e18, "Group4");
+
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        vm.prank(groupOwner1);
+        groupManager.activateGroup(
+            address(groupAction2),
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction3),
+            groupId4,
+            "Group4",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        setupUser(user1, joinAmount, address(groupJoin));
+        setupUser(user2, joinAmount, address(groupJoin));
+        setupUser(user3, joinAmount, address(groupJoin));
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+        vm.prank(user2);
+        groupJoin.join(
+            address(groupAction2),
+            groupId3,
+            joinAmount,
+            new string[](0)
+        );
+        vm.prank(user3);
+        groupJoin.join(
+            address(groupAction3),
+            groupId4,
+            joinAmount,
+            new string[](0)
+        );
+
+        assertEq(
+            groupJoin.gTokenAddressesCount(),
+            1,
+            "single tokenAddress"
+        );
+        assertTrue(
+            groupJoin.gActionIdsByTokenAddressCount(address(token)) >= 3,
+            "at least 3 actionIds for token"
+        );
+        assertTrue(
+            groupJoin.gGroupIdsCount() >= 3,
+            "at least 3 groupIds"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(address(groupAction), groupId1),
+            1,
+            "ext1 groupId1"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                address(groupAction2),
+                groupId3
+            ),
+            1,
+            "ext2 groupId3"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdCount(
+                address(groupAction3),
+                groupId4
+            ),
+            1,
+            "ext3 groupId4"
+        );
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(address(groupAction), groupId1),
+            joinAmount,
+            "ext1 total"
+        );
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(
+                address(groupAction2),
+                groupId3
+            ),
+            joinAmount,
+            "ext2 total"
+        );
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(
+                address(groupAction3),
+                groupId4
+            ),
+            joinAmount,
+            "ext3 total"
+        );
+    }
+
+    /// @notice Test: first user joining a newly activated group updates global state correctly
+    /// @dev Global state: new groupId appears in gGroupIds after first join
+    function test_firstUserJoin_NewlyActivatedGroup() public {
+        uint256 groupId3 = setupGroupOwner(groupOwner2, 10000e18, "Group3");
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(groupManager)
+        );
+        vm.prank(groupOwner2);
+        groupManager.activateGroup(
+            address(groupAction),
+            groupId3,
+            "Group3",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        uint256 joinAmount = 10e18;
+        address firstUser = user3;
+        setupUser(firstUser, joinAmount, address(groupJoin));
+
+        uint256 gGroupIdsCountBefore = groupJoin.gGroupIdsCount();
+        vm.prank(firstUser);
+        groupJoin.join(
+            address(groupAction),
+            groupId3,
+            joinAmount,
+            new string[](0)
+        );
+
+        assertTrue(
+            groupJoin.gGroupIdsCount() >= gGroupIdsCountBefore + 1,
+            "gGroupIds should include new group"
+        );
+        assertTrue(
+            groupJoin.gAccountsByGroupIdCount(groupId3) >= 1,
+            "groupId3 should have at least one account"
+        );
+        assertEq(
+            groupJoin.accountsByGroupIdAtIndex(
+                address(groupAction),
+                groupId3,
+                0
+            ),
+            firstUser,
+            "first account in groupId3 should be firstUser"
+        );
+        assertEq(
+            groupJoin.totalJoinedAmountByGroupId(address(groupAction), groupId3),
+            joinAmount,
+            "totalJoinedAmountByGroupId for groupId3 should match"
+        );
+    }
+
     // ============ Trial Join Tests ============
 
     /// @notice Test: trialJoin uses provider escrow and exit refunds provider
@@ -1127,6 +1661,121 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             0,
             "accounts should be removed after exit"
         );
+    }
+
+    /// @notice Test: trialJoin after provider removes account from waiting list reverts
+    /// @dev Trial account: user cannot trialJoin if provider has removed them from waiting list
+    function test_trialJoin_AfterProviderRemoves_Reverts() public {
+        uint256 poolAmount = 20e18;
+        uint256 trialAmount = 10e18;
+        address provider = user2;
+
+        setupUser(provider, poolAmount, address(groupJoin));
+        _setTrialAccounts(provider, trialAmount, user1);
+
+        address[] memory toRemove = new address[](1);
+        toRemove[0] = user1;
+        vm.prank(provider);
+        groupJoin.trialAccountsWaitingRemove(
+            address(groupAction),
+            groupId1,
+            toRemove
+        );
+
+        vm.prank(user1);
+        vm.expectRevert(IGroupJoinErrors.TrialAccountNotInWaitingList.selector);
+        groupJoin.trialJoin(
+            address(groupAction),
+            groupId1,
+            provider,
+            new string[](0)
+        );
+    }
+
+    /// @notice Test: same account added by multiple providers has independent waiting lists
+    /// @dev Trial account: per-provider waiting list; one trialJoin consumes only that provider's entry
+    function test_trialAccountsWaiting_MultipleProviders_Independent() public {
+        uint256 trialAmount = 10e18;
+        address provider1 = user2;
+        address provider2 = user3;
+
+        setupUser(provider1, trialAmount, address(groupJoin));
+        setupUser(provider2, trialAmount, address(groupJoin));
+
+        _setTrialAccounts(provider1, trialAmount, user1);
+        _setTrialAccounts(provider2, trialAmount, user1);
+
+        assertEq(
+            groupJoin.trialAccountsWaitingCount(
+                address(groupAction),
+                groupId1,
+                provider1
+            ),
+            1,
+            "provider1 waiting count should be 1"
+        );
+        assertEq(
+            groupJoin.trialAccountsWaitingCount(
+                address(groupAction),
+                groupId1,
+                provider2
+            ),
+            1,
+            "provider2 waiting count should be 1"
+        );
+
+        vm.prank(user1);
+        groupJoin.trialJoin(
+            address(groupAction),
+            groupId1,
+            provider1,
+            new string[](0)
+        );
+
+        assertEq(
+            groupJoin.trialAccountsWaitingCount(
+                address(groupAction),
+                groupId1,
+                provider2
+            ),
+            1,
+            "provider2 waiting list still has user1 (independent)"
+        );
+    }
+
+    /// @notice Test: trial join with amount exactly equal to group max succeeds
+    /// @dev Trial account: boundary when trialAmount == group maxJoinAmount
+    function test_trialJoin_AmountEqualsGroupMax_Succeeds() public {
+        uint256 maxJoinAmount = 10e18;
+        vm.prank(groupOwner1);
+        groupManager.updateGroupInfo(
+            address(groupAction),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            maxJoinAmount,
+            0
+        );
+
+        address provider = user2;
+        setupUser(provider, maxJoinAmount, address(groupJoin));
+        _setTrialAccounts(provider, maxJoinAmount, user1);
+
+        vm.prank(user1);
+        groupJoin.trialJoin(
+            address(groupAction),
+            groupId1,
+            provider,
+            new string[](0)
+        );
+
+        (uint256 joinedRound, uint256 amount, uint256 groupId, address prov) = groupJoin
+            .joinInfo(address(groupAction), user1);
+        assertTrue(joinedRound > 0, "should be joined");
+        assertEq(amount, maxJoinAmount, "amount should equal group max");
+        assertEq(groupId, groupId1, "groupId should match");
+        assertEq(prov, provider, "provider should match");
     }
 
     // ============ Helper Functions ============
