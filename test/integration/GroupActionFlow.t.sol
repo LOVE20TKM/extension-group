@@ -75,7 +75,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         assertEq(
-            groupJoin.joinedAmountByRound(
+            groupJoin.joinedAmount(
                 bobGroup1.groupActionAddress,
                 h.joinContract().currentRound()
             ),
@@ -83,7 +83,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
             "Total joined mismatch"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 bobGroup1.groupActionAddress,
                 h.joinContract().currentRound(),
                 bobGroup1.groupId

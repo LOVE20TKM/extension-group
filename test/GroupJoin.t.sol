@@ -104,7 +104,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         uint256 round = verify.currentRound();
         address nonMember = address(0x999);
 
-        (bool found0, uint256 index0) = groupJoin.accountIndexByGroupIdByRound(
+        (bool found0, uint256 index0) = groupJoin.accountIndexByGroupId(
             address(groupAction),
             groupId1,
             users[0],
@@ -113,7 +113,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         assertTrue(found0, "User 0 should be found");
         assertEq(index0, 0, "User 0 should be at index 0");
 
-        (bool found2, uint256 index2) = groupJoin.accountIndexByGroupIdByRound(
+        (bool found2, uint256 index2) = groupJoin.accountIndexByGroupId(
             address(groupAction),
             groupId1,
             users[2],
@@ -122,7 +122,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         assertTrue(found2, "User 2 should be found");
         assertEq(index2, 2, "User 2 should be at index 2");
 
-        (bool foundNonMember, ) = groupJoin.accountIndexByGroupIdByRound(
+        (bool foundNonMember, ) = groupJoin.accountIndexByGroupId(
             address(groupAction),
             groupId1,
             nonMember,
@@ -178,7 +178,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfoByRound(
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -212,7 +212,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfoByRound(
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -428,7 +428,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -436,7 +436,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             maxCapacity,
             "total joined should equal maxCapacity"
         );
-        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfoByRound(
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -562,7 +562,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
 
         // Verify counts after join
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -616,7 +616,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
 
         // Verify counts after exit
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -727,7 +727,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
 
         // Verify final counts
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -767,7 +767,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address provider
-        ) = groupJoin.joinInfoByRound(
+        ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -797,7 +797,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address provider
-        ) = groupJoin.joinInfoByRound(address(groupAction), r, user1);
+        ) = groupJoin.joinInfo(address(groupAction), r, user1);
         assertEq(joinedRound, r, "joinedRound at join round");
         assertEq(amount, joinAmount, "amount at join round");
         assertEq(groupId, groupId1, "groupId at join round");
@@ -836,7 +836,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 joinedRound1,
             uint256 amount1,
             ,
-        ) = groupJoin.joinInfoByRound(address(groupAction), r1, user1);
+        ) = groupJoin.joinInfo(address(groupAction), r1, user1);
         assertEq(joinedRound1, r1, "joinedRound at r1");
         assertEq(amount1, joinAmount1, "amount at r1");
 
@@ -844,7 +844,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 joinedRound2,
             uint256 amount2,
             ,
-        ) = groupJoin.joinInfoByRound(address(groupAction), r2, user1);
+        ) = groupJoin.joinInfo(address(groupAction), r2, user1);
         assertEq(joinedRound2, r1, "joinedRound at r2 still r1");
         assertEq(amount2, joinAmount1 + joinAmount2, "amount at r2");
     }
@@ -859,7 +859,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 joinedRound,
             uint256 amount,
             uint256 groupId,
-        ) = groupJoin.joinInfoByRound(address(groupAction), r, user1);
+        ) = groupJoin.joinInfo(address(groupAction), r, user1);
         assertEq(joinedRound, 0, "joinedRound before join");
         assertEq(amount, 0, "amount before join");
         assertEq(groupId, 0, "groupId before join");
@@ -871,7 +871,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             joinAmount,
             new string[](0)
         );
-        (joinedRound, amount, groupId, ) = groupJoin.joinInfoByRound(
+        (joinedRound, amount, groupId, ) = groupJoin.joinInfo(
             address(groupAction),
             r,
             user1
@@ -904,7 +904,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 joinedRound2,
             uint256 amount2,
             uint256 gIdAtR2,
-        ) = groupJoin.joinInfoByRound(address(groupAction), r2, user1);
+        ) = groupJoin.joinInfo(address(groupAction), r2, user1);
         assertEq(joinedRound2, 0, "joinedRound at r2 after exit");
         assertEq(amount2, 0, "amount at r2 after exit");
         assertEq(gIdAtR2, 0, "groupId at r2 after exit");
@@ -913,7 +913,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 joinedRound1,
             uint256 amount1,
             uint256 groupId1AtR1,
-        ) = groupJoin.joinInfoByRound(address(groupAction), r1, user1);
+        ) = groupJoin.joinInfo(address(groupAction), r1, user1);
         assertEq(joinedRound1, r1, "joinedRound at r1 still r1");
         assertEq(amount1, joinAmount, "amount at r1 unchanged");
         assertEq(groupId1AtR1, groupId1, "groupId at r1 unchanged");
@@ -961,7 +961,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.groupIdByAccountByRound(
+            groupJoin.groupIdByAccount(
                 address(groupAction),
                 expectedRound1,
                 user1
@@ -970,7 +970,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "groupId should match in round1"
         );
         assertEq(
-            groupJoin.groupIdByAccountByRound(
+            groupJoin.groupIdByAccount(
                 address(groupAction),
                 expectedRound2,
                 user1
@@ -980,7 +980,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.joinedAmountByAccountByRound(
+            groupJoin.joinedAmountByAccount(
                 address(groupAction),
                 expectedRound1,
                 user1
@@ -989,7 +989,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "amount should match in round1"
         );
         assertEq(
-            groupJoin.joinedAmountByAccountByRound(
+            groupJoin.joinedAmountByAccount(
                 address(groupAction),
                 expectedRound2,
                 user1
@@ -999,7 +999,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 expectedRound1,
                 groupId1
@@ -1008,7 +1008,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "group amount should match in round1"
         );
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 expectedRound2,
                 groupId1
@@ -1018,18 +1018,18 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.joinedAmountByRound(address(groupAction), expectedRound1),
+            groupJoin.joinedAmount(address(groupAction), expectedRound1),
             expectedAmountRound1,
             "total joined should match in round1"
         );
         assertEq(
-            groupJoin.joinedAmountByRound(address(groupAction), expectedRound2),
+            groupJoin.joinedAmount(address(groupAction), expectedRound2),
             expectedAmountRound2,
             "total joined should match in round2"
         );
 
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 expectedRound1,
                 groupId1
@@ -1038,7 +1038,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "accounts count should be 1 in round1"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 expectedRound2,
                 groupId1
@@ -1047,7 +1047,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "accounts count should be 1 in round2"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundAtIndex(
+            groupJoin.accountsByGroupIdAtIndex(
                 address(groupAction),
                 expectedRound1,
                 groupId1,
@@ -1057,7 +1057,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "account should match in round1"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundAtIndex(
+            groupJoin.accountsByGroupIdAtIndex(
                 address(groupAction),
                 expectedRound2,
                 groupId1,
@@ -1115,7 +1115,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         groupJoin.exit(address(groupAction));
 
         assertEq(
-            groupJoin.joinedAmountByAccountByRound(
+            groupJoin.joinedAmountByAccount(
                 address(groupAction),
                 expectedRound1,
                 user1
@@ -1124,7 +1124,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "amount should match in round1"
         );
         assertEq(
-            groupJoin.joinedAmountByAccountByRound(
+            groupJoin.joinedAmountByAccount(
                 address(groupAction),
                 expectedRound2,
                 user1
@@ -1133,7 +1133,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "amount should match in round2"
         );
         assertEq(
-            groupJoin.joinedAmountByAccountByRound(
+            groupJoin.joinedAmountByAccount(
                 address(groupAction),
                 expectedRound3,
                 user1
@@ -1143,7 +1143,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 expectedRound3,
                 groupId1
@@ -1152,13 +1152,13 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "group amount should be 0 in round3"
         );
         assertEq(
-            groupJoin.joinedAmountByRound(address(groupAction), expectedRound3),
+            groupJoin.joinedAmount(address(groupAction), expectedRound3),
             expectedAmountRound3,
             "total joined should be 0 in round3"
         );
 
         assertEq(
-            groupJoin.groupIdByAccountByRound(
+            groupJoin.groupIdByAccount(
                 address(groupAction),
                 expectedRound3,
                 user1
@@ -1167,7 +1167,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "groupId should be 0 in round3"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 expectedRound3,
                 groupId1
@@ -1196,7 +1196,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         groupJoin.exit(address(groupAction));
 
         (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
-            .joinInfoByRound(
+            .joinInfo(
                 address(groupAction),
                 join.currentRound(),
                 user1
@@ -1213,7 +1213,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         assertEq(groupId, expectedGroupId, "groupId should be cleared");
 
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1222,7 +1222,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "accountsByGroupIdCount should be 0"
         );
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1231,7 +1231,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "totalJoinedAmountByGroupId should be 0"
         );
         assertEq(
-            groupJoin.joinedAmountByAccountByRound(
+            groupJoin.joinedAmountByAccount(
                 address(groupAction),
                 currentRound,
                 user1
@@ -1240,7 +1240,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "joinedAmountByAccountByRound at current round should be 0"
         );
         assertEq(
-            groupJoin.groupIdByAccountByRound(
+            groupJoin.groupIdByAccount(
                 address(groupAction),
                 currentRound,
                 user1
@@ -1277,7 +1277,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
-            .joinInfoByRound(
+            .joinInfo(
                 address(groupAction),
                 join.currentRound(),
                 user1
@@ -1286,7 +1286,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         assertEq(amount, joinAmount2, "amount should be second join amount");
         assertEq(groupId, groupId1, "groupId should match");
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1295,7 +1295,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "group total should reflect rejoin amount only"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1315,7 +1315,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         uint256 expectedGroupIdByAccount = 0;
 
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 round0,
                 groupId1
@@ -1324,22 +1324,22 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "totalJoinedAmountByGroupIdByRound at round 0 should be 0"
         );
         assertEq(
-            groupJoin.joinedAmountByRound(address(groupAction), round0),
+            groupJoin.joinedAmount(address(groupAction), round0),
             expectedJoinedByRound,
             "joinedAmountByRound at round 0 should be 0"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 round0,
                 groupId1
             ),
             expectedCountByRound,
-            "accountsByGroupIdByRoundCount at round 0 should be 0"
+            "accountsByGroupIdCount at round 0 should be 0"
         );
 
         assertEq(
-            groupJoin.groupIdByAccountByRound(
+            groupJoin.groupIdByAccount(
                 address(groupAction),
                 round0,
                 user1
@@ -1466,12 +1466,12 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (uint256 r1, uint256 amt1, uint256 g1, ) = groupJoin.joinInfoByRound(
+        (uint256 r1, uint256 amt1, uint256 g1, ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
         );
-        (uint256 r2, uint256 amt2, uint256 g2, ) = groupJoin.joinInfoByRound(
+        (uint256 r2, uint256 amt2, uint256 g2, ) = groupJoin.joinInfo(
             address(groupAction2),
             join.currentRound(),
             user1
@@ -1483,7 +1483,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         assertEq(g2, groupId1, "groupId for ext2");
 
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1492,7 +1492,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "ext1 groupId1 count"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction2),
                 join.currentRound(),
                 groupId1
@@ -1614,7 +1614,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
         assertTrue(groupJoin.gGroupIdsCount() >= 3, "at least 3 groupIds");
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1623,7 +1623,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "ext1 groupId1"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction2),
                 join.currentRound(),
                 groupId3
@@ -1632,7 +1632,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "ext2 groupId3"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction3),
                 join.currentRound(),
                 groupId4
@@ -1641,7 +1641,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "ext3 groupId4"
         );
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -1650,7 +1650,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "ext1 total"
         );
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction2),
                 join.currentRound(),
                 groupId3
@@ -1659,7 +1659,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "ext2 total"
         );
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction3),
                 join.currentRound(),
                 groupId4
@@ -1711,7 +1711,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "groupId3 should have at least one account"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundAtIndex(
+            groupJoin.accountsByGroupIdAtIndex(
                 address(groupAction),
                 join.currentRound(),
                 groupId3,
@@ -1721,7 +1721,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             "first account in groupId3 should be firstUser"
         );
         assertEq(
-            groupJoin.totalJoinedAmountByGroupIdByRound(
+            groupJoin.totalJoinedAmountByGroupId(
                 address(groupAction),
                 join.currentRound(),
                 groupId3
@@ -1789,7 +1789,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             userBalanceBeforeExit,
             "trial user should not receive refund"
         );
-        (, , , address clearedProvider) = groupJoin.joinInfoByRound(
+        (, , , address clearedProvider) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -1877,14 +1877,14 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             providerBalanceBeforeExit + trialAmount,
             "provider balance should be refunded"
         );
-        (, , , address exitProvider) = groupJoin.joinInfoByRound(
+        (, , , address exitProvider) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
         );
         assertEq(exitProvider, address(0), "trial provider should be cleared");
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -2033,7 +2033,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address prov
-        ) = groupJoin.joinInfoByRound(
+        ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -2079,7 +2079,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address provider
-        ) = groupJoin.joinInfoByRound(
+        ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             account

@@ -83,7 +83,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         }
 
         uint256 round = verify.currentRound();
-        uint256 accountCount = groupJoin.accountsByGroupIdByRoundCount(
+        uint256 accountCount = groupJoin.accountsByGroupIdCount(
             address(groupAction),
             round,
             groupId1
@@ -162,7 +162,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             "User 2 score should be 0 before verified"
         );
         {
-            (bool found1, uint256 index1) = groupJoin.accountIndexByGroupIdByRound(
+            (bool found1, uint256 index1) = groupJoin.accountIndexByGroupId(
                 address(groupAction),
                 groupId1,
                 users[1],
@@ -172,7 +172,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             assertEq(index1, 1, "User 1 should be at index 1");
         }
         {
-            (bool found2, uint256 index2) = groupJoin.accountIndexByGroupIdByRound(
+            (bool found2, uint256 index2) = groupJoin.accountIndexByGroupId(
                 address(groupAction),
                 groupId1,
                 users[2],
@@ -182,7 +182,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             assertTrue(index2 > 1, "User 2 should be out of range [0,1]");
         }
         {
-            (bool found0, ) = groupJoin.accountIndexByGroupIdByRound(
+            (bool found0, ) = groupJoin.accountIndexByGroupId(
                 address(groupAction),
                 groupId1,
                 users[0],

@@ -141,7 +141,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        (uint256 joinedRound, , , ) = groupJoin.joinInfoByRound(
+        (uint256 joinedRound, , , ) = groupJoin.joinInfo(
             bobGroup1.groupActionAddress,
             h.joinContract().currentRound(),
             member1().userAddress
@@ -152,7 +152,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.group_exit(m1, bobGroup1);
 
         // Verify exited
-        (joinedRound, , , ) = groupJoin.joinInfoByRound(
+        (joinedRound, , , ) = groupJoin.joinInfo(
             bobGroup1.groupActionAddress,
             h.joinContract().currentRound(),
             member1().userAddress
@@ -165,7 +165,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // Verify rejoined
         uint256 amount;
-        (joinedRound, amount, , ) = groupJoin.joinInfoByRound(
+        (joinedRound, amount, , ) = groupJoin.joinInfo(
             bobGroup1.groupActionAddress,
             h.joinContract().currentRound(),
             member1().userAddress
@@ -579,7 +579,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         uint256 joinRound = h.joinContract().currentRound();
-        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+        address[] memory accounts = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             joinRound,
             bobGroup1.groupId
@@ -625,7 +625,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         uint256 joinRound = h.joinContract().currentRound();
-        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+        address[] memory accounts = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             joinRound,
             bobGroup1.groupId
@@ -676,7 +676,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         uint256 joinRound = h.joinContract().currentRound();
-        address[] memory accountsBefore = groupJoin.accountsByGroupIdByRound(
+        address[] memory accountsBefore = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             joinRound,
             bobGroup1.groupId
@@ -691,7 +691,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.group_exit(m1, bobGroup1);
 
         // 5. Verify accountsByGroupId after exit
-        address[] memory accountsAfter = groupJoin.accountsByGroupIdByRound(
+        address[] memory accountsAfter = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             joinRound,
             bobGroup1.groupId
@@ -736,7 +736,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+        address[] memory accounts = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             round1,
             bobGroup1.groupId
@@ -789,7 +789,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accountsRound1 = groupJoin.accountsByGroupIdByRound(
+        address[] memory accountsRound1 = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             round1,
             bobGroup1.groupId
@@ -805,7 +805,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
 
         // 6. Verify round 2 accounts (should still have both m1 and m2, as they persist)
-        address[] memory accountsRound2 = groupJoin.accountsByGroupIdByRound(
+        address[] memory accountsRound2 = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             round2,
             bobGroup1.groupId
@@ -860,7 +860,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accountsRound1 = groupJoin.accountsByGroupIdByRound(
+        address[] memory accountsRound1 = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             round1,
             bobGroup1.groupId
@@ -872,7 +872,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         );
 
         // 6. Verify round 2 accounts (should only have m2)
-        address[] memory accountsRound2 = groupJoin.accountsByGroupIdByRound(
+        address[] memory accountsRound2 = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             round2,
             bobGroup1.groupId
@@ -926,12 +926,12 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
         uint256 joinRound = h.joinContract().currentRound();
-        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+        address[] memory accounts = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             joinRound,
             bobGroup1.groupId
         );
-        uint256 count = groupJoin.accountsByGroupIdByRoundCount(
+        uint256 count = groupJoin.accountsByGroupIdCount(
             bobGroup1.groupActionAddress,
             joinRound,
             bobGroup1.groupId
@@ -940,7 +940,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         assertEq(accounts.length, count, "Array length should match count");
         for (uint256 i = 0; i < count; i++) {
             address accountAtIndex = groupJoin
-                .accountsByGroupIdByRoundAtIndex(
+                .accountsByGroupIdAtIndex(
                     bobGroup1.groupActionAddress,
                     joinRound,
                     bobGroup1.groupId,
@@ -985,12 +985,12 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        address[] memory accounts = groupJoin.accountsByGroupIdByRound(
+        address[] memory accounts = groupJoin.accountsByGroupId(
             bobGroup1.groupActionAddress,
             round1,
             bobGroup1.groupId
         );
-        uint256 count = groupJoin.accountsByGroupIdByRoundCount(
+        uint256 count = groupJoin.accountsByGroupIdCount(
             bobGroup1.groupActionAddress,
             round1,
             bobGroup1.groupId
@@ -998,7 +998,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         assertEq(accounts.length, count, "Array length should match count");
         for (uint256 i = 0; i < count; i++) {
-            address accountAtIndex = groupJoin.accountsByGroupIdByRoundAtIndex(
+            address accountAtIndex = groupJoin.accountsByGroupIdAtIndex(
                 bobGroup1.groupActionAddress,
                 round1,
                 bobGroup1.groupId,

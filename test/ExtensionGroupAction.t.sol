@@ -165,14 +165,14 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Verify join state
         assertEq(
-            groupJoin.joinedAmountByRound(
+            groupJoin.joinedAmount(
                 address(groupAction),
                 join.currentRound()
             ),
             joinAmount1 + joinAmount2
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -216,12 +216,12 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        assertEq(groupJoin.joinedAmountByRound(
+        assertEq(groupJoin.joinedAmount(
                 address(groupAction),
                 join.currentRound()
             ), joinAmount2);
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -502,7 +502,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupJoin.joinedAmountByRound(
+        assertEq(groupJoin.joinedAmount(
                 address(groupAction),
                 join.currentRound()
             ), joinAmount);
@@ -511,7 +511,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        assertEq(groupJoin.joinedAmountByRound(
+        assertEq(groupJoin.joinedAmount(
                 address(groupAction),
                 join.currentRound()
             ), 0);
@@ -525,11 +525,11 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupJoin.joinedAmountByRound(
+        assertEq(groupJoin.joinedAmount(
                 address(groupAction),
                 join.currentRound()
             ), joinAmount);
-        (, , uint256 groupId, ) = groupJoin.joinInfoByRound(
+        (, , uint256 groupId, ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
             user1
@@ -657,7 +657,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Verify join was successful
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 address(groupAction),
                 join.currentRound(),
                 groupId1
@@ -806,7 +806,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         }
 
         // Verify all users joined successfully
-        uint256 accountCount = groupJoin.accountsByGroupIdByRoundCount(
+        uint256 accountCount = groupJoin.accountsByGroupIdCount(
             address(groupAction),
             verify.currentRound(),
             groupId3
@@ -863,7 +863,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         }
 
         // Verify 3 users joined
-        uint256 accountCount = groupJoin.accountsByGroupIdByRoundCount(
+        uint256 accountCount = groupJoin.accountsByGroupIdCount(
             address(groupAction),
             verify.currentRound(),
             groupId4

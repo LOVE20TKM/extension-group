@@ -93,7 +93,7 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
 
     function trialExit(address extension, address account) external;
 
-    function joinInfoByRound(
+    function joinInfo(
         address extension,
         uint256 round,
         address account
@@ -107,43 +107,43 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
             address provider
         );
 
-    function groupIdByAccountByRound(
+    function groupIdByAccount(
         address extension,
         uint256 round,
         address account
     ) external view returns (uint256);
 
-    function totalJoinedAmountByGroupIdByRound(
+    function totalJoinedAmountByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
 
-    function joinedAmountByRound(
+    function joinedAmount(
         address extension,
         uint256 round
     ) external view returns (uint256);
 
-    function accountsByGroupIdByRound(
+    function accountsByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (address[] memory);
 
-    function accountsByGroupIdByRoundCount(
+    function accountsByGroupIdCount(
         address extension,
         uint256 round,
         uint256 groupId
     ) external view returns (uint256);
 
-    function accountsByGroupIdByRoundAtIndex(
+    function accountsByGroupIdAtIndex(
         address extension,
         uint256 round,
         uint256 groupId,
         uint256 index
     ) external view returns (address);
 
-    function joinedAmountByAccountByRound(
+    function joinedAmountByAccount(
         address extension,
         uint256 round,
         address account
@@ -154,7 +154,7 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
         address owner
     ) external view returns (uint256);
 
-    function accountIndexByGroupIdByRound(
+    function accountIndexByGroupId(
         address extension,
         uint256 groupId,
         address account,

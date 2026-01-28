@@ -100,7 +100,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         );
         uint256 joinRound = h.joinContract().currentRound();
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 bobGroup1.groupActionAddress,
                 joinRound,
                 bobGroup1.groupId
@@ -109,7 +109,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             "Group1 has 3 members"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 bobGroup1.groupActionAddress,
                 joinRound,
                 bobGroup2.groupId
@@ -118,7 +118,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             "Group2 has 3 members"
         );
         assertEq(
-            groupJoin.accountsByGroupIdByRoundCount(
+            groupJoin.accountsByGroupIdCount(
                 bobGroup1.groupActionAddress,
                 joinRound,
                 aliceGroup.groupId

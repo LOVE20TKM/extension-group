@@ -216,7 +216,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             revert InvalidStartIndex();
         }
 
-        uint256 accountCount = _groupJoin.accountsByGroupIdByRoundCount(
+        uint256 accountCount = _groupJoin.accountsByGroupIdCount(
             extension,
             currentRound,
             groupId
@@ -248,7 +248,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
         isComplete =
             _verifiedAccountCount[extension][currentRound][groupId] ==
-            _groupJoin.accountsByGroupIdByRoundCount(
+            _groupJoin.accountsByGroupIdCount(
                 extension,
                 currentRound,
                 groupId
@@ -439,7 +439,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         address account
     ) public view returns (uint256) {
-        uint256 groupId = _groupJoin.groupIdByAccountByRound(
+        uint256 groupId = _groupJoin.groupIdByAccount(
             extension,
             round,
             account
@@ -466,7 +466,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
             return 0;
         }
 
-        (bool found, uint256 index) = _groupJoin.accountIndexByGroupIdByRound(
+        (bool found, uint256 index) = _groupJoin.accountIndexByGroupId(
             extension,
             groupId,
             account,
@@ -501,7 +501,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         );
         if (originScoreVal == 0) return 0;
 
-        uint256 amount = _groupJoin.joinedAmountByAccountByRound(
+        uint256 amount = _groupJoin.joinedAmountByAccount(
             extension,
             round,
             account
@@ -812,7 +812,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 length = originScores.length;
         for (uint256 i = 0; i < length; i++) {
             if (originScores[i] > MAX_ORIGIN_SCORE) revert ScoreExceedsMax();
-            address account = _groupJoin.accountsByGroupIdByRoundAtIndex(
+            address account = _groupJoin.accountsByGroupIdAtIndex(
                 extension,
                 currentRound,
                 groupId,
@@ -830,7 +830,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
 
             totalScore +=
                 originScores[i] *
-                _groupJoin.joinedAmountByAccountByRound(
+                _groupJoin.joinedAmountByAccount(
                     extension,
                     currentRound,
                     account
@@ -857,7 +857,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
     ) internal view returns (uint256) {
         uint256 verifiedCapacity = 0;
         for (uint256 i = 0; i < verifiedGroupIds_.length; i++) {
-            verifiedCapacity += _groupJoin.totalJoinedAmountByGroupIdByRound(
+            verifiedCapacity += _groupJoin.totalJoinedAmountByGroupId(
                 extension,
                 round,
                 verifiedGroupIds_[i]
@@ -878,7 +878,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         }
 
         uint256 currentGroupCapacity = _groupJoin
-            .totalJoinedAmountByGroupIdByRound(
+            .totalJoinedAmountByGroupId(
                 extension,
                 round,
                 currentGroupId
@@ -910,7 +910,7 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 round,
         uint256 groupId
     ) internal view returns (uint256) {
-        uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupIdByRound(
+        uint256 groupAmount = _groupJoin.totalJoinedAmountByGroupId(
             extension,
             round,
             groupId

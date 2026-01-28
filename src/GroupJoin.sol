@@ -256,7 +256,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _emitExit(extension, groupId, account, provider, amount, currentRound);
     }
 
-    function joinInfoByRound(
+    function joinInfo(
         address extension,
         uint256 round,
         address account
@@ -279,7 +279,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         provider = _trialProviderByAccount[extension][account];
     }
 
-    function groupIdByAccountByRound(
+    function groupIdByAccount(
         address extension,
         uint256 round,
         address account
@@ -287,7 +287,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _groupIdHistoryByAccount[extension][account].value(round);
     }
 
-    function totalJoinedAmountByGroupIdByRound(
+    function totalJoinedAmountByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
@@ -296,14 +296,14 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _totalJoinedAmountHistoryByGroupId[extension][groupId].value(round);
     }
 
-    function joinedAmountByRound(
+    function joinedAmount(
         address extension,
         uint256 round
     ) external view returns (uint256) {
         return _totalJoinedAmountHistory[extension].value(round);
     }
 
-    function accountsByGroupIdByRound(
+    function accountsByGroupId(
         address extension,
         uint256 round,
         uint256 groupId
@@ -311,7 +311,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _accountsHistory[extension][groupId].valuesByRound(round);
     }
 
-    function accountsByGroupIdByRoundCount(
+    function accountsByGroupIdCount(
         address extension,
         uint256 round,
         uint256 groupId
@@ -319,7 +319,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _accountsHistory[extension][groupId].countByRound(round);
     }
 
-    function accountsByGroupIdByRoundAtIndex(
+    function accountsByGroupIdAtIndex(
         address extension,
         uint256 round,
         uint256 groupId,
@@ -329,7 +329,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             _accountsHistory[extension][groupId].atIndexByRound(index, round);
     }
 
-    function joinedAmountByAccountByRound(
+    function joinedAmountByAccount(
         address extension,
         uint256 round,
         address account
@@ -337,7 +337,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         return _amountHistoryByAccount[extension][account].value(round);
     }
 
-    function accountIndexByGroupIdByRound(
+    function accountIndexByGroupId(
         address extension,
         uint256 groupId,
         address account,

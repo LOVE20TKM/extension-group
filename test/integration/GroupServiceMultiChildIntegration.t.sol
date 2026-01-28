@@ -413,7 +413,7 @@ contract GroupServiceMultiChildIntegrationTest is BaseGroupFlowTest {
                         ? MEMBERS_PER_GROUP_1
                         : (g == 1 ? MEMBERS_PER_GROUP_2 : MEMBERS_PER_GROUP_3);
                     assertEq(
-                        groupJoin.accountsByGroupIdByRoundCount(
+                        groupJoin.accountsByGroupIdCount(
                             actionExt,
                             h.joinContract().currentRound(),
                             children[i].owners[g].groupId
