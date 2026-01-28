@@ -724,14 +724,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (joinedGroupId != 0) revert AlreadyJoined();
         if (provider == address(0)) revert TrialProviderMismatch();
 
-        if (
-            !_trialAccountsWaiting[extension][groupId][provider].contains(
-                msg.sender
-            )
-        ) {
-            revert TrialAccountNotInWaitingList();
-        }
-
         trialAmount = _trialAccountsWaitingAmount[extension][groupId][provider][
             msg.sender
         ];
@@ -1100,10 +1092,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             extension,
             owner
         );
-        for (uint256 i = 0; i < ownerGroupIds.length; i++) {
+        for (uint256 i = 0; i < ownerGroupIds.length; ) {
             total += _totalJoinedAmountHistoryByGroupId[extension][
                 ownerGroupIds[i]
             ].latestValue();
+            unchecked {
+                ++i;
+            }
         }
         return total;
     }

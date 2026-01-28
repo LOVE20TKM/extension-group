@@ -60,7 +60,6 @@ interface IGroupJoinErrors {
     error AlreadyJoined();
     error TrialAlreadyJoined();
     error TrialArrayLengthMismatch();
-    error TrialAccountNotInWaitingList();
     error TrialAccountIsProvider();
     error TrialAccountZero();
     error TrialAmountZero();

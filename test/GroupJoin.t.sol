@@ -1683,7 +1683,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         vm.prank(user1);
-        vm.expectRevert(IGroupJoinErrors.TrialAccountNotInWaitingList.selector);
+        vm.expectRevert(IGroupJoinErrors.TrialAmountZero.selector);
         groupJoin.trialJoin(
             address(groupAction),
             groupId1,
