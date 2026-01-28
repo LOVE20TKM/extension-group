@@ -93,8 +93,9 @@ interface IGroupJoin is IGroupJoinEvents, IGroupJoinErrors {
 
     function trialExit(address extension, address account) external;
 
-    function joinInfo(
+    function joinInfoByRound(
         address extension,
+        uint256 round,
         address account
     )
         external

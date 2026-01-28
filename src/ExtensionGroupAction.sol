@@ -83,16 +83,17 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         returns (uint256)
     {
         return
-            _groupJoin.joinedAmountByRound(
-                address(this),
-                _join.currentRound()
-            );
+            _groupJoin.joinedAmountByRound(address(this), _join.currentRound());
     }
 
     function joinedAmountByAccount(
         address account
     ) external view override(ExtensionBase) returns (uint256) {
-        (, uint256 amount, , ) = _groupJoin.joinInfo(address(this), account);
+        (, uint256 amount, , ) = _groupJoin.joinInfoByRound(
+            address(this),
+            _join.currentRound(),
+            account
+        );
         return amount;
     }
 

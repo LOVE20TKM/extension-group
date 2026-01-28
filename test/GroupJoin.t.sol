@@ -178,8 +178,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
         assertTrue(joinedRound > 0, "Should be joined");
@@ -211,8 +212,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
         assertTrue(joinedRound > 0, "Should be joined");
@@ -434,8 +436,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             maxCapacity,
             "total joined should equal maxCapacity"
         );
-        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfo(
+        (uint256 joinedRound, uint256 amount, , ) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
         assertTrue(joinedRound > 0, "should be joined");
@@ -739,9 +742,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
     }
 
-    // ============ joinInfo Tests ============
+    // ============ joinInfoByRound Tests ============
 
-    /// @notice Test: joinInfo returns correct latest values after join
+    /// @notice Test: joinInfoByRound at current round returns correct values after join
     /// @dev View function validation: verifies join state is correctly stored
     function test_joinInfo_AfterJoin_ReturnsCorrectValues() public {
         uint256 joinAmount = 10e18;
@@ -764,11 +767,156 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address provider
-        ) = groupJoin.joinInfo(address(groupAction), user1);
+        ) = groupJoin.joinInfoByRound(
+            address(groupAction),
+            join.currentRound(),
+            user1
+        );
         assertEq(joinedRound, expectedRound, "joinedRound should match");
         assertEq(amount, expectedAmount, "amount should match");
         assertEq(groupId, expectedGroupId, "groupId should match");
         assertEq(provider, address(0), "provider should be zero");
+    }
+
+    /// @notice Test: joinInfoByRound returns correct values at join round
+    function test_joinInfoByRound_AtJoinRound_ReturnsCorrectValues() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        uint256 r = join.currentRound();
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        (
+            uint256 joinedRound,
+            uint256 amount,
+            uint256 groupId,
+            address provider
+        ) = groupJoin.joinInfoByRound(address(groupAction), r, user1);
+        assertEq(joinedRound, r, "joinedRound at join round");
+        assertEq(amount, joinAmount, "amount at join round");
+        assertEq(groupId, groupId1, "groupId at join round");
+        assertEq(provider, address(0), "provider");
+    }
+
+    /// @notice Test: joinInfoByRound after increase amount keeps joinedRound
+    function test_joinInfoByRound_AfterIncrease_JoinedRoundUnchanged() public {
+        uint256 joinAmount1 = 10e18;
+        uint256 joinAmount2 = 5e18;
+        setupUser(user1, joinAmount1 + joinAmount2, address(groupJoin));
+
+        uint256 r1 = join.currentRound();
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount1,
+            new string[](0)
+        );
+
+        advanceRound();
+        uint256 r2 = join.currentRound();
+        vote.setVotedActionIds(address(token), r2, ACTION_ID);
+        vote.setVotesNum(address(token), r2, 10000e18);
+        vote.setVotesNumByActionId(address(token), r2, ACTION_ID, 10000e18);
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount2,
+            new string[](0)
+        );
+
+        (
+            uint256 joinedRound1,
+            uint256 amount1,
+            ,
+        ) = groupJoin.joinInfoByRound(address(groupAction), r1, user1);
+        assertEq(joinedRound1, r1, "joinedRound at r1");
+        assertEq(amount1, joinAmount1, "amount at r1");
+
+        (
+            uint256 joinedRound2,
+            uint256 amount2,
+            ,
+        ) = groupJoin.joinInfoByRound(address(groupAction), r2, user1);
+        assertEq(joinedRound2, r1, "joinedRound at r2 still r1");
+        assertEq(amount2, joinAmount1 + joinAmount2, "amount at r2");
+    }
+
+    /// @notice Test: joinInfoByRound at round 0 or before join returns zeros
+    function test_joinInfoByRound_BeforeJoin_ReturnsZeros() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        uint256 r = join.currentRound();
+        (
+            uint256 joinedRound,
+            uint256 amount,
+            uint256 groupId,
+        ) = groupJoin.joinInfoByRound(address(groupAction), r, user1);
+        assertEq(joinedRound, 0, "joinedRound before join");
+        assertEq(amount, 0, "amount before join");
+        assertEq(groupId, 0, "groupId before join");
+
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+        (joinedRound, amount, groupId, ) = groupJoin.joinInfoByRound(
+            address(groupAction),
+            r,
+            user1
+        );
+        assertEq(joinedRound, r, "joinedRound at r after join");
+        assertEq(amount, joinAmount, "amount at r");
+        assertEq(groupId, groupId1, "groupId at r");
+    }
+
+    /// @notice Test: joinInfoByRound at round after exit returns zeros
+    function test_joinInfoByRound_AfterExit_ReturnsZerosAtLaterRound() public {
+        uint256 joinAmount = 10e18;
+        setupUser(user1, joinAmount, address(groupJoin));
+
+        uint256 r1 = join.currentRound();
+        vm.prank(user1);
+        groupJoin.join(
+            address(groupAction),
+            groupId1,
+            joinAmount,
+            new string[](0)
+        );
+
+        advanceRound();
+        uint256 r2 = join.currentRound();
+        vm.prank(user1);
+        groupJoin.exit(address(groupAction));
+
+        (
+            uint256 joinedRound2,
+            uint256 amount2,
+            uint256 gIdAtR2,
+        ) = groupJoin.joinInfoByRound(address(groupAction), r2, user1);
+        assertEq(joinedRound2, 0, "joinedRound at r2 after exit");
+        assertEq(amount2, 0, "amount at r2 after exit");
+        assertEq(gIdAtR2, 0, "groupId at r2 after exit");
+
+        (
+            uint256 joinedRound1,
+            uint256 amount1,
+            uint256 groupId1AtR1,
+        ) = groupJoin.joinInfoByRound(address(groupAction), r1, user1);
+        assertEq(joinedRound1, r1, "joinedRound at r1 still r1");
+        assertEq(amount1, joinAmount, "amount at r1 unchanged");
+        assertEq(groupId1AtR1, groupId1, "groupId at r1 unchanged");
     }
 
     // ============ Round History Tests ============
@@ -1048,7 +1196,11 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         groupJoin.exit(address(groupAction));
 
         (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
-            .joinInfo(address(groupAction), user1);
+            .joinInfoByRound(
+                address(groupAction),
+                join.currentRound(),
+                user1
+            );
         uint256 expectedJoinedRound = 0;
         uint256 expectedAmount = 0;
         uint256 expectedGroupId = 0;
@@ -1125,7 +1277,11 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
-            .joinInfo(address(groupAction), user1);
+            .joinInfoByRound(
+                address(groupAction),
+                join.currentRound(),
+                user1
+            );
         assertTrue(joinedRound > 0, "should be joined after rejoin");
         assertEq(amount, joinAmount2, "amount should be second join amount");
         assertEq(groupId, groupId1, "groupId should match");
@@ -1310,12 +1466,14 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (uint256 r1, uint256 amt1, uint256 g1, ) = groupJoin.joinInfo(
+        (uint256 r1, uint256 amt1, uint256 g1, ) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
-        (uint256 r2, uint256 amt2, uint256 g2, ) = groupJoin.joinInfo(
+        (uint256 r2, uint256 amt2, uint256 g2, ) = groupJoin.joinInfoByRound(
             address(groupAction2),
+            join.currentRound(),
             user1
         );
         assertTrue(r1 > 0 && r2 > 0, "joined both extensions");
@@ -1631,8 +1789,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             userBalanceBeforeExit,
             "trial user should not receive refund"
         );
-        (, , , address clearedProvider) = groupJoin.joinInfo(
+        (, , , address clearedProvider) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
         assertEq(
@@ -1718,8 +1877,9 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             providerBalanceBeforeExit + trialAmount,
             "provider balance should be refunded"
         );
-        (, , , address exitProvider) = groupJoin.joinInfo(
+        (, , , address exitProvider) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
         assertEq(exitProvider, address(0), "trial provider should be cleared");
@@ -1873,7 +2033,11 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address prov
-        ) = groupJoin.joinInfo(address(groupAction), user1);
+        ) = groupJoin.joinInfoByRound(
+            address(groupAction),
+            join.currentRound(),
+            user1
+        );
         assertTrue(joinedRound > 0, "should be joined");
         assertEq(amount, maxJoinAmount, "amount should equal group max");
         assertEq(groupId, groupId1, "groupId should match");
@@ -1915,7 +2079,11 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 amount,
             uint256 groupId,
             address provider
-        ) = groupJoin.joinInfo(address(groupAction), account);
+        ) = groupJoin.joinInfoByRound(
+            address(groupAction),
+            join.currentRound(),
+            account
+        );
         assertEq(joinedRound, expectedRound, "joinedRound should match");
         assertEq(amount, expectedAmount, "amount should match");
         assertEq(groupId, expectedGroupId, "groupId should match");

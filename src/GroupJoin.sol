@@ -46,9 +46,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     ILOVE20Join internal _join;
 
     bool internal _initialized;
-    // extension => account => joinedRound
-    mapping(address => mapping(address => uint256))
-        internal _joinedRoundByAccount;
+    // extension => account => joinedRound history
+    mapping(address => mapping(address => RoundHistoryUint256.History))
+        internal _joinedRoundHistoryByAccount;
     // extension => account => groupId
     mapping(address => mapping(address => RoundHistoryUint256.History))
         internal _groupIdHistoryByAccount;
@@ -256,8 +256,9 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         _emitExit(extension, groupId, account, provider, amount, currentRound);
     }
 
-    function joinInfo(
+    function joinInfoByRound(
         address extension,
+        uint256 round,
         address account
     )
         external
@@ -269,12 +270,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             address provider
         )
     {
-        return (
-            _joinedRoundByAccount[extension][account],
-            _amountHistoryByAccount[extension][account].latestValue(),
-            _groupIdHistoryByAccount[extension][account].latestValue(),
-            _trialProviderByAccount[extension][account]
-        );
+        amount = _amountHistoryByAccount[extension][account].value(round);
+        groupId = _groupIdHistoryByAccount[extension][account].value(round);
+        joinedRound =
+            amount == 0
+                ? 0
+                : _joinedRoundHistoryByAccount[extension][account].value(round);
+        provider = _trialProviderByAccount[extension][account];
     }
 
     function groupIdByAccountByRound(
@@ -551,7 +553,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         amount = _amountHistoryByAccount[extension][account].latestValue();
 
         // 1. Update account participation info
-        delete _joinedRoundByAccount[extension][account];
+        _joinedRoundHistoryByAccount[extension][account].record(
+            currentRound,
+            0
+        );
         _amountHistoryByAccount[extension][account].record(currentRound, 0);
         _groupIdHistoryByAccount[extension][account].record(currentRound, 0);
 
@@ -633,7 +638,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 actionId = ext.actionId();
 
         // 1. Update account participation info
-        _joinedRoundByAccount[extension][msg.sender] = currentRound;
+        _joinedRoundHistoryByAccount[extension][msg.sender].record(
+            currentRound,
+            currentRound
+        );
         _groupIdHistoryByAccount[extension][msg.sender].record(
             currentRound,
             groupId

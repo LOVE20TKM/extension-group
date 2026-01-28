@@ -141,8 +141,9 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         IGroupJoin groupJoin = IGroupJoin(
             h.groupActionFactory().GROUP_JOIN_ADDRESS()
         );
-        (uint256 joinedRound, , , ) = groupJoin.joinInfo(
+        (uint256 joinedRound, , , ) = groupJoin.joinInfoByRound(
             bobGroup1.groupActionAddress,
+            h.joinContract().currentRound(),
             member1().userAddress
         );
         assertTrue(joinedRound > 0, "Should be joined");
@@ -151,8 +152,9 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         h.group_exit(m1, bobGroup1);
 
         // Verify exited
-        (joinedRound, , , ) = groupJoin.joinInfo(
+        (joinedRound, , , ) = groupJoin.joinInfoByRound(
             bobGroup1.groupActionAddress,
+            h.joinContract().currentRound(),
             member1().userAddress
         );
         assertEq(joinedRound, 0, "Should not be joined after exit");
@@ -163,8 +165,9 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         // Verify rejoined
         uint256 amount;
-        (joinedRound, amount, , ) = groupJoin.joinInfo(
+        (joinedRound, amount, , ) = groupJoin.joinInfoByRound(
             bobGroup1.groupActionAddress,
+            h.joinContract().currentRound(),
             member1().userAddress
         );
         assertTrue(joinedRound > 0, "Should be joined after rejoin");

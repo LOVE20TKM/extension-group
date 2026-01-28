@@ -529,8 +529,9 @@ contract ExtensionGroupActionTest is BaseGroupTest {
                 address(groupAction),
                 join.currentRound()
             ), joinAmount);
-        (, , uint256 groupId, ) = groupJoin.joinInfo(
+        (, , uint256 groupId, ) = groupJoin.joinInfoByRound(
             address(groupAction),
+            join.currentRound(),
             user1
         );
         assertEq(groupId, groupId2);
