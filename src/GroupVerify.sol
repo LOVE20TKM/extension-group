@@ -258,9 +258,6 @@ contract GroupVerify is IGroupVerify {
 
         // 1. Prepare data
         address groupOwner = _group.ownerOf(groupId);
-        uint256[] memory verifiedGroupIds_ = _groupIdsByVerifier[extension][
-            currentRound
-        ][groupOwner];
 
         // 2. Record verifier information
         _verifierByGroupId[extension][currentRound][groupId] = groupOwner;
@@ -271,31 +268,19 @@ contract GroupVerify is IGroupVerify {
             _verifiers[extension][currentRound].push(groupOwner);
         }
 
-        // 3. Update group lists
-        _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
-        _verifiedGroupIds[extension][currentRound].push(groupId);
-
-        // 4. Record actionId for verifier (with deduplication)
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
-        _actionIdsByVerifier[tokenAddress][currentRound][groupOwner].add(
-            actionId
-        );
-
-        // 5. Record total account score by groupId
+        // 3. Record total account score by groupId
         _totalAccountScore[extension][currentRound][groupId] = _batchTotalScore[
             extension
         ][currentRound][groupId];
 
-        // 6. Calculate and update group score
+        // 4. Calculate and update group score (before push so _calculateCapacityDecay sees existing groups only)
         _capacityDecayRateByGroupId[extension][currentRound][
             groupId
         ] = _calculateCapacityDecay(
             extension,
             currentRound,
             groupOwner,
-            groupId,
-            verifiedGroupIds_
+            groupId
         );
         uint256 calculatedGroupScore = _calculateGroupScore(
             extension,
@@ -304,6 +289,17 @@ contract GroupVerify is IGroupVerify {
         );
         _groupScore[extension][currentRound][groupId] = calculatedGroupScore;
         _totalGroupScore[extension][currentRound] += calculatedGroupScore;
+
+        // 5. Update group lists
+        _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
+        _verifiedGroupIds[extension][currentRound].push(groupId);
+
+        // 6. Record actionId for verifier (with deduplication)
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
+        _actionIdsByVerifier[tokenAddress][currentRound][groupOwner].add(
+            actionId
+        );
     }
 
     function _emitSubmitOriginScores(
@@ -844,9 +840,11 @@ contract GroupVerify is IGroupVerify {
         address extension,
         uint256 round,
         address groupOwner,
-        uint256 currentGroupId,
-        uint256[] memory verifiedGroupIds_
+        uint256 currentGroupId
     ) internal view returns (uint256) {
+        uint256[] storage verifiedGroupIds_ = _groupIdsByVerifier[extension][
+            round
+        ][groupOwner];
         uint256 verifiedCapacity = 0;
         for (uint256 i = 0; i < verifiedGroupIds_.length; i++) {
             verifiedCapacity += _groupJoin.totalJoinedAmountByGroupId(
