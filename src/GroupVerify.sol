@@ -6,8 +6,7 @@ import {IGroupJoin} from "./interface/IGroupJoin.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
-import {IGroupManager} from "./interface/IGroupManager.sol";
-import {IGroupManagerErrors} from "./interface/IGroupManager.sol";
+import {IGroupManager, IGroupManagerErrors} from "./interface/IGroupManager.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
 import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
 import {IExtension} from "@extension/src/interface/IExtension.sol";
@@ -16,15 +15,11 @@ import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import {
     EnumerableSet
 } from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-using EnumerableSet for EnumerableSet.UintSet;
-
-contract GroupVerify is IGroupVerify, ReentrancyGuard {
+contract GroupVerify is IGroupVerify {
+    using EnumerableSet for EnumerableSet.UintSet;
     uint256 public constant MAX_ORIGIN_SCORE = 100;
     uint256 public constant PRECISION = 1e18;
 
@@ -901,8 +896,8 @@ contract GroupVerify is IGroupVerify, ReentrancyGuard {
         uint256 oneMinusDistrust = PRECISION - distrustRate_;
         uint256 oneMinusDecay = PRECISION - capacityDecayRate_;
         return
-            ((groupAmount * oneMinusDistrust * oneMinusDecay) / PRECISION) /
-            PRECISION;
+            (groupAmount * oneMinusDistrust * oneMinusDecay) /
+            (PRECISION * PRECISION);
     }
 
     function _calculateGroupScore(
