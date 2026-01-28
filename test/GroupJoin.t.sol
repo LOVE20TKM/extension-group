@@ -1743,6 +1743,33 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
     }
 
+    /// @notice Test: trialAccountsWaitingRemove reverts when account is not in waiting list
+    function test_trialAccountsWaitingRemove_WhenAccountNotInWaitingList_Reverts()
+        public
+    {
+        uint256 trialAmount = 10e18;
+        address provider = user2;
+        setupUser(provider, trialAmount, address(groupJoin));
+        _setTrialAccounts(provider, trialAmount, user1);
+
+        address notInList = user3;
+        address[] memory toRemove = new address[](1);
+        toRemove[0] = notInList;
+
+        vm.prank(provider);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IGroupJoinErrors.TrialAccountNotInWaitingList.selector,
+                notInList
+            )
+        );
+        groupJoin.trialAccountsWaitingRemove(
+            address(groupAction),
+            groupId1,
+            toRemove
+        );
+    }
+
     /// @notice Test: trial join with amount exactly equal to group max succeeds
     /// @dev Trial account: boundary when trialAmount == group maxJoinAmount
     function test_trialJoin_AmountEqualsGroupMax_Succeeds() public {

@@ -430,24 +430,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address[] memory trialAccounts
     ) external override nonReentrant onlyValidExtension(extension) {
-        uint256 length = trialAccounts.length;
-        if (length == 0) return;
-
-        uint256 totalRefund;
-        for (uint256 i; i < length; ) {
-            totalRefund += _removeTrialAccountFromWaitingList(
-                extension,
-                groupId,
-                trialAccounts[i],
-                msg.sender
-            );
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        _refundTrialAmount(extension, msg.sender, totalRefund);
+        if (trialAccounts.length == 0) return;
+        _removeTrialAccountsFromWaitingList(
+            extension,
+            groupId,
+            trialAccounts,
+            msg.sender
+        );
     }
 
     function trialAccountsWaitingRemoveAll(
@@ -457,22 +446,33 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address[] memory accounts = _trialAccountsWaiting[extension][groupId][
             msg.sender
         ].values();
-        uint256 totalRefund;
+        _removeTrialAccountsFromWaitingList(
+            extension,
+            groupId,
+            accounts,
+            msg.sender
+        );
+    }
 
+    function _removeTrialAccountsFromWaitingList(
+        address extension,
+        uint256 groupId,
+        address[] memory accounts,
+        address provider
+    ) internal {
+        uint256 totalRefund;
         for (uint256 i; i < accounts.length; ) {
             totalRefund += _removeTrialAccountFromWaitingList(
                 extension,
                 groupId,
                 accounts[i],
-                msg.sender
+                provider
             );
-
             unchecked {
                 ++i;
             }
         }
-
-        _refundTrialAmount(extension, msg.sender, totalRefund);
+        _refundTrialAmount(extension, provider, totalRefund);
     }
 
     function trialAccountsWaiting(
@@ -772,7 +772,7 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
                 account
             )
         ) {
-            return 0;
+            revert TrialAccountNotInWaitingList(account);
         }
 
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
@@ -1009,45 +1009,45 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 newTotal
     ) internal view {
         // Fetch group info once
-        IGroupManager.GroupInfo memory info = _groupManager.groupInfo(
+        IGroupManager.GroupInfo memory groupInfo = _groupManager.groupInfo(
             extension,
             groupId
         );
 
         // Validate group status
-        if (!info.isActive) {
+        if (!groupInfo.isActive) {
             revert CannotJoinInactiveGroup();
         }
 
         // Check group-specific account limit
-        if (info.maxJoinAmount > 0 && newTotal > info.maxJoinAmount) {
+        if (groupInfo.maxJoinAmount > 0 && newTotal > groupInfo.maxJoinAmount) {
             revert ExceedsGroupMaxJoinAmount();
         }
 
         // Validate first join specific rules
         if (isFirstJoin) {
             // Check if group has reached max accounts
-            if (info.maxAccounts > 0) {
+            if (groupInfo.maxAccounts > 0) {
                 uint256 currentAccountCount = _accountsHistory[extension][
                     groupId
                 ].count();
-                if (currentAccountCount >= info.maxAccounts) {
+                if (currentAccountCount >= groupInfo.maxAccounts) {
                     revert GroupAccountsFull();
                 }
             }
 
             // Check minimum join amount
-            if (amount < info.minJoinAmount) {
+            if (amount < groupInfo.minJoinAmount) {
                 revert AmountBelowMinimum();
             }
         }
 
         // Validate group capacity
-        if (info.maxCapacity > 0) {
+        if (groupInfo.maxCapacity > 0) {
             uint256 currentGroupTotal = _totalJoinedAmountHistoryByGroupId[
                 extension
             ][groupId].latestValue();
-            if (currentGroupTotal + amount > info.maxCapacity) {
+            if (currentGroupTotal + amount > groupInfo.maxCapacity) {
                 revert GroupCapacityExceeded();
             }
         }
