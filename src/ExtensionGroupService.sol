@@ -7,11 +7,9 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {IGroupService} from "./interface/IGroupService.sol";
-import {ILOVE20Launch} from "@core/interfaces/ILOVE20Launch.sol";
 import {
     ExtensionBaseRewardJoin
 } from "@extension/src/ExtensionBaseRewardJoin.sol";
-import {ExtensionBaseReward} from "@extension/src/ExtensionBaseReward.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {IReward} from "@extension/src/interface/IReward.sol";
 import {
@@ -27,9 +25,6 @@ import {
 import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
@@ -121,16 +116,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         ratios = _ratiosHistory[groupOwner][actionId_][groupId].values(round);
     }
 
-    function recipientsLatest(
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId
-    ) external view returns (address[] memory addrs, uint256[] memory ratios) {
-        addrs = _recipientsHistory[groupOwner][actionId_][groupId]
-            .latestValues();
-        ratios = _ratiosHistory[groupOwner][actionId_][groupId].latestValues();
-    }
-
     function actionIdsWithRecipients(
         address account,
         uint256 round
@@ -176,7 +161,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             return groupReward - distributed;
         }
 
-        for (uint256 i; i < addrs.length; ) {
+        uint256 len = addrs.length;
+        for (uint256 i; i < len; ) {
             if (addrs[i] == recipient) {
                 return (groupReward * ratios[i]) / PRECISION;
             }
@@ -370,8 +356,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         address[] memory addrs,
         uint256[] memory ratios
     ) internal pure returns (uint256[] memory amounts, uint256 distributed) {
-        amounts = new uint256[](addrs.length);
-        for (uint256 i; i < addrs.length; ) {
+        uint256 len = addrs.length;
+        amounts = new uint256[](len);
+        for (uint256 i; i < len; ) {
             amounts[i] = (groupReward * ratios[i]) / PRECISION;
             distributed += amounts[i];
             unchecked {
@@ -527,8 +514,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             ratios
         );
 
+        uint256 len = addrs.length;
         IERC20 token = IERC20(TOKEN_ADDRESS);
-        for (uint256 i; i < addrs.length; ) {
+        for (uint256 i; i < len; ) {
             if (amounts[i] > 0) {
                 token.safeTransfer(addrs[i], amounts[i]);
                 distributed += amounts[i];

@@ -453,27 +453,6 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         assertEq(points2[0], 4e17);
     }
 
-    function test_RecipientsLatest() public {
-        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
-
-        vm.prank(groupOwner1);
-        groupService.join(new string[](0));
-
-        address[] memory recipients = new address[](1);
-        recipients[0] = address(0x100);
-        uint256[] memory ratios = new uint256[](1);
-        ratios[0] = 3e17;
-
-        vm.prank(groupOwner1);
-        groupService.setRecipients(ACTION_ID, groupId1, recipients, ratios);
-
-        (address[] memory addrs, uint256[] memory points) = groupService
-            .recipientsLatest(groupOwner1, ACTION_ID, groupId1);
-        assertEq(addrs.length, 1);
-        assertEq(addrs[0], address(0x100));
-        assertEq(points[0], 3e17);
-    }
-
     // ============ rewardByRecipient Tests ============
 
     function test_RewardByRecipient_ForRecipient() public {

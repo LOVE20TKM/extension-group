@@ -70,12 +70,6 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
         uint256 round
     ) external view returns (address[] memory addrs, uint256[] memory ratios);
 
-    function recipientsLatest(
-        address groupOwner,
-        uint256 actionId,
-        uint256 groupId
-    ) external view returns (address[] memory addrs, uint256[] memory ratios);
-
     function rewardByRecipient(
         uint256 round,
         address groupOwner,
