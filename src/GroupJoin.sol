@@ -77,8 +77,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     // extension => groupId => provider => trial accounts in use
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.AddressSet)))
         internal _trialAccountsJoined;
-    // extension => account => provider
-    mapping(address => mapping(address => address))
+    // extension => account => provider history (queryable by round)
+    mapping(address => mapping(address => RoundHistoryAddress.History))
         internal _trialProviderByAccount;
 
     // Global state variables
@@ -203,7 +203,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             groupId,
             provider,
             msg.sender,
-            trialAmount
+            trialAmount,
+            currentRound
         );
 
         _emitJoin(
@@ -226,8 +227,15 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             msg.sender,
             currentRound
         );
-        address provider = _trialProviderByAccount[extension][msg.sender];
-        _updateTrialExitState(extension, groupId, provider, msg.sender);
+        address provider = _trialProviderByAccount[extension][msg.sender]
+            .latestValue();
+        _updateTrialExitState(
+            extension,
+            groupId,
+            provider,
+            msg.sender,
+            currentRound
+        );
         _transferExitToken(extension, msg.sender, amount, provider);
         _emitExit(
             extension,
@@ -250,8 +258,15 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             account,
             currentRound
         );
-        address provider = _trialProviderByAccount[extension][account];
-        _updateTrialExitState(extension, groupId, provider, account);
+        address provider = _trialProviderByAccount[extension][account]
+            .latestValue();
+        _updateTrialExitState(
+            extension,
+            groupId,
+            provider,
+            account,
+            currentRound
+        );
         _transferExitToken(extension, account, amount, provider);
         _emitExit(extension, groupId, account, provider, amount, currentRound);
     }
@@ -272,11 +287,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
     {
         amount = _amountHistoryByAccount[extension][account].value(round);
         groupId = _groupIdHistoryByAccount[extension][account].value(round);
-        joinedRound =
-            amount == 0
-                ? 0
-                : _joinedRoundHistoryByAccount[extension][account].value(round);
-        provider = _trialProviderByAccount[extension][account];
+        joinedRound = amount == 0
+            ? 0
+            : _joinedRoundHistoryByAccount[extension][account].value(round);
+        provider = _trialProviderByAccount[extension][account].value(round);
     }
 
     function groupIdByAccount(
@@ -537,7 +551,8 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address account,
         address expectedProvider
     ) internal view {
-        address provider = _trialProviderByAccount[extension][account];
+        address provider = _trialProviderByAccount[extension][account]
+            .latestValue();
         if (provider != expectedProvider) revert TrialProviderMismatch();
     }
 
@@ -900,12 +915,16 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         address extension,
         uint256 groupId,
         address provider,
-        address account
+        address account,
+        uint256 currentRound
     ) internal {
         if (provider == address(0)) {
             return;
         }
-        _trialProviderByAccount[extension][account] = address(0);
+        _trialProviderByAccount[extension][account].record(
+            currentRound,
+            address(0)
+        );
         _trialAccountsJoined[extension][groupId][provider].remove(account);
     }
 
@@ -914,9 +933,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 groupId,
         address provider,
         address account,
-        uint256 trialAmount
+        uint256 trialAmount,
+        uint256 currentRound
     ) internal {
-        _trialProviderByAccount[extension][account] = provider;
+        _trialProviderByAccount[extension][account].record(
+            currentRound,
+            provider
+        );
         _trialAccountsJoined[extension][groupId][provider].add(account);
         _trialAccountsWaiting[extension][groupId][provider].remove(account);
         delete _trialAccountsWaitingAmount[extension][groupId][provider][
@@ -964,7 +987,10 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         uint256 amount
     ) internal view {
         if (amount == 0) revert JoinAmountZero();
-        if (_trialProviderByAccount[extension][msg.sender] != address(0)) {
+        if (
+            _trialProviderByAccount[extension][msg.sender].latestValue() !=
+            address(0)
+        ) {
             revert TrialAlreadyJoined();
         }
 
