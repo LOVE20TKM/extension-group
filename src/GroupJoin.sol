@@ -286,10 +286,13 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         )
     {
         amount = _amountHistoryByAccount[extension][account].value(round);
+        if (amount == 0) {
+            return (0, 0, 0, address(0));
+        }
+        joinedRound = _joinedRoundHistoryByAccount[extension][account].value(
+            round
+        );
         groupId = _groupIdHistoryByAccount[extension][account].value(round);
-        joinedRound = amount == 0
-            ? 0
-            : _joinedRoundHistoryByAccount[extension][account].value(round);
         provider = _trialProviderByAccount[extension][account].value(round);
     }
 
