@@ -77,6 +77,8 @@ contract GroupVerify is IGroupVerify {
     // tokenAddress => round => verifier => set of actionIds
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.UintSet)))
         internal _actionIdsByVerifier;
+    // tokenAddress => round => set of actionIds with at least one verified group
+    mapping(address => mapping(uint256 => EnumerableSet.UintSet)) internal _actionIds;
 
     // extension => round => groupId => capacity decay rate
     mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
@@ -291,12 +293,15 @@ contract GroupVerify is IGroupVerify {
         _totalGroupScore[extension][currentRound] += calculatedGroupScore;
 
         // 5. Update group lists
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 actionId = IExtension(extension).actionId();
+        if (_verifiedGroupIds[extension][currentRound].length == 0) {
+            _actionIds[tokenAddress][currentRound].add(actionId);
+        }
         _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
         _verifiedGroupIds[extension][currentRound].push(groupId);
 
         // 6. Record actionId for verifier (with deduplication)
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 actionId = IExtension(extension).actionId();
         _actionIdsByVerifier[tokenAddress][currentRound][groupOwner].add(
             actionId
         );
@@ -690,6 +695,28 @@ contract GroupVerify is IGroupVerify {
         uint256 index
     ) external view returns (uint256) {
         return _actionIdsByVerifier[tokenAddress][round][verifier].at(index);
+    }
+
+    function actionIds(
+        address tokenAddress,
+        uint256 round
+    ) external view returns (uint256[] memory) {
+        return _actionIds[tokenAddress][round].values();
+    }
+
+    function actionIdsCount(
+        address tokenAddress,
+        uint256 round
+    ) external view returns (uint256) {
+        return _actionIds[tokenAddress][round].length();
+    }
+
+    function actionIdsAtIndex(
+        address tokenAddress,
+        uint256 round,
+        uint256 index
+    ) external view returns (uint256) {
+        return _actionIds[tokenAddress][round].at(index);
     }
 
     function verifiedGroupIds(

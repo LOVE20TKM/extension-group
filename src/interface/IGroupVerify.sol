@@ -195,6 +195,22 @@ interface IGroupVerify is IGroupVerifyEvents, IGroupVerifyErrors {
         uint256 index
     ) external view returns (uint256);
 
+    function actionIds(
+        address tokenAddress,
+        uint256 round
+    ) external view returns (uint256[] memory);
+
+    function actionIdsCount(
+        address tokenAddress,
+        uint256 round
+    ) external view returns (uint256);
+
+    function actionIdsAtIndex(
+        address tokenAddress,
+        uint256 round,
+        uint256 index
+    ) external view returns (uint256);
+
     function verifiedGroupIds(
         address extension,
         uint256 round

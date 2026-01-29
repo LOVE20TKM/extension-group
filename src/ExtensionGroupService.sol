@@ -3,6 +3,7 @@ pragma solidity =0.8.17;
 
 import {IGroupManager} from "./interface/IGroupManager.sol";
 import {IGroupAction} from "./interface/IGroupAction.sol";
+import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
@@ -39,6 +40,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     IGroupManager internal immutable _groupManager;
     IERC721Enumerable internal immutable _group;
+    IGroupVerify internal immutable _groupVerify;
     IExtensionGroupActionFactory internal immutable _actionFactory;
 
     // owner => actionId => groupId => recipients
@@ -68,6 +70,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
         _groupManager = IGroupManager(_actionFactory.GROUP_MANAGER_ADDRESS());
         _group = IERC721Enumerable(_actionFactory.GROUP_ADDRESS());
+        _groupVerify = IGroupVerify(_actionFactory.GROUP_VERIFY_ADDRESS());
     }
 
     function join(
@@ -243,13 +246,20 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 round,
         address verifier
     ) public view override returns (uint256 amount) {
-        (, address[] memory exts) = _actionFactory.votedGroupActions(
+        uint256[] memory actionIds_ = _groupVerify.actionIdsByVerifier(
             GROUP_ACTION_TOKEN_ADDRESS,
-            round
+            round,
+            verifier
         );
-        for (uint256 i; i < exts.length; ) {
-            IGroupAction ga = IGroupAction(exts[i]);
-            amount += ga.generatedActionRewardByVerifier(round, verifier);
+        for (uint256 i; i < actionIds_.length; ) {
+            address ext = _center.extension(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionIds_[i]
+            );
+            amount += IGroupAction(ext).generatedActionRewardByVerifier(
+                round,
+                verifier
+            );
             unchecked {
                 ++i;
             }
@@ -259,13 +269,17 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function generatedActionReward(
         uint256 round
     ) public view returns (uint256) {
-        (, address[] memory exts) = _actionFactory.votedGroupActions(
+        uint256[] memory actionIds_ = _groupVerify.actionIds(
             GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
         uint256 totalReward;
-        for (uint256 i; i < exts.length; ) {
-            totalReward += IReward(address(exts[i])).reward(round);
+        for (uint256 i; i < actionIds_.length; ) {
+            address ext = _center.extension(
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionIds_[i]
+            );
+            totalReward += IReward(ext).reward(round);
             unchecked {
                 ++i;
             }
