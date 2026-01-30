@@ -211,17 +211,17 @@ interface IGroupVerify is IGroupVerifyEvents, IGroupVerifyErrors {
         uint256 index
     ) external view returns (uint256);
 
-    function verifiedGroupIds(
+    function groupIds(
         address extension,
         uint256 round
     ) external view returns (uint256[] memory);
 
-    function verifiedGroupIdsCount(
+    function groupIdsCount(
         address extension,
         uint256 round
     ) external view returns (uint256);
 
-    function verifiedGroupIdsAtIndex(
+    function groupIdsAtIndex(
         address extension,
         uint256 round,
         uint256 index

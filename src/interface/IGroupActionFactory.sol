@@ -23,12 +23,4 @@ interface IGroupActionFactory is IGroupActionFactoryErrors {
         uint256 maxJoinAmountRatio_,
         uint256 maxVerifyCapacityFactor_
     ) external returns (address extension);
-
-    function votedGroupActions(
-        address tokenAddress,
-        uint256 round
-    )
-        external
-        view
-        returns (uint256[] memory actionIds_, address[] memory extensions);
 }

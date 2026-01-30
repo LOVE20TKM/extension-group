@@ -109,19 +109,4 @@ contract MockExtensionGroupActionFactory is
     ) external {
         _registerExtension(extension, tokenAddress);
     }
-
-    // ============ VotedGroupActions Implementation ============
-
-    /// @notice Mock implementation of votedGroupActions
-    /// @dev Returns empty arrays for mock factory
-    function votedGroupActions(
-        address,
-        uint256
-    )
-        external
-        pure
-        returns (uint256[] memory actionIds_, address[] memory extensions)
-    {
-        return (actionIds_, extensions);
-    }
 }

@@ -44,11 +44,11 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         uint256 round,
         uint256 totalReward
     ) internal view override returns (uint256) {
-        uint256[] memory verifiedGroupIds = _groupVerify.verifiedGroupIds(
+        uint256[] memory groupIds_ = _groupVerify.groupIds(
             address(this),
             round
         );
-        if (verifiedGroupIds.length > 0) {
+        if (groupIds_.length > 0) {
             return 0;
         }
         return totalReward;

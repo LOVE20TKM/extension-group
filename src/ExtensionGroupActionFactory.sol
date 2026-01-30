@@ -5,8 +5,6 @@ import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
 import {ExtensionGroupAction} from "./ExtensionGroupAction.sol";
-import {ILOVE20Vote} from "@core/interfaces/ILOVE20Vote.sol";
-import {ILOVE20Submit, ActionInfo} from "@core/interfaces/ILOVE20Submit.sol";
 import {ExtensionFactoryBase} from "@extension/src/ExtensionFactoryBase.sol";
 import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 import {TokenLib} from "@extension/src/lib/TokenLib.sol";
@@ -61,51 +59,6 @@ contract ExtensionGroupActionFactory is
         );
 
         _registerExtension(extension, tokenAddress_);
-    }
-
-    function votedGroupActions(
-        address tokenAddress,
-        uint256 round
-    )
-        external
-        view
-        returns (uint256[] memory actionIds_, address[] memory extensions)
-    {
-        IExtensionCenter center_ = IExtensionCenter(CENTER_ADDRESS);
-        ILOVE20Vote vote = ILOVE20Vote(center_.voteAddress());
-        ILOVE20Submit submit = ILOVE20Submit(center_.submitAddress());
-
-        uint256 count = vote.votedActionIdsCount(tokenAddress, round);
-        if (count == 0) return (actionIds_, extensions);
-
-        extensions = new address[](count);
-        actionIds_ = new uint256[](count);
-        uint256 validCount;
-
-        for (uint256 i; i < count; ) {
-            uint256 aid = vote.votedActionIdsAtIndex(tokenAddress, round, i);
-            ActionInfo memory actionInfo = submit.actionInfo(tokenAddress, aid);
-            address ext = actionInfo.body.whiteListAddress;
-
-            if (ext != address(0) && _isExtension[ext]) {
-                extensions[validCount] = ext;
-                actionIds_[validCount] = aid;
-                unchecked {
-                    ++validCount;
-                }
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        if (validCount == 0) return (actionIds_, extensions);
-
-        assembly {
-            mstore(extensions, validCount)
-            mstore(actionIds_, validCount)
-        }
-        return (actionIds_, extensions);
     }
 
     function _validateJoinToken(

@@ -62,7 +62,7 @@ contract GroupVerify is IGroupVerify {
         internal _isVerified;
     // extension => round => list of verified group ids
     mapping(address => mapping(uint256 => uint256[]))
-        internal _verifiedGroupIds;
+        internal _groupIds;
     // extension => round => groupId => verifier address
     mapping(address => mapping(uint256 => mapping(uint256 => address)))
         internal _verifierByGroupId;
@@ -295,11 +295,11 @@ contract GroupVerify is IGroupVerify {
         // 5. Update group lists
         address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
         uint256 actionId = IExtension(extension).actionId();
-        if (_verifiedGroupIds[extension][currentRound].length == 0) {
+        if (_groupIds[extension][currentRound].length == 0) {
             _actionIds[tokenAddress][currentRound].add(actionId);
         }
         _groupIdsByVerifier[extension][currentRound][groupOwner].push(groupId);
-        _verifiedGroupIds[extension][currentRound].push(groupId);
+        _groupIds[extension][currentRound].push(groupId);
 
         // 6. Record actionId for verifier (with deduplication)
         _actionIdsByVerifier[tokenAddress][currentRound][groupOwner].add(
@@ -719,26 +719,26 @@ contract GroupVerify is IGroupVerify {
         return _actionIds[tokenAddress][round].at(index);
     }
 
-    function verifiedGroupIds(
+    function groupIds(
         address extension,
         uint256 round
     ) external view returns (uint256[] memory) {
-        return _verifiedGroupIds[extension][round];
+        return _groupIds[extension][round];
     }
 
-    function verifiedGroupIdsCount(
+    function groupIdsCount(
         address extension,
         uint256 round
     ) external view returns (uint256) {
-        return _verifiedGroupIds[extension][round].length;
+        return _groupIds[extension][round].length;
     }
 
-    function verifiedGroupIdsAtIndex(
+    function groupIdsAtIndex(
         address extension,
         uint256 round,
         uint256 index
     ) external view returns (uint256) {
-        return _verifiedGroupIds[extension][round][index];
+        return _groupIds[extension][round][index];
     }
 
     function distrustVotesByGroupOwner(
@@ -954,7 +954,7 @@ contract GroupVerify is IGroupVerify {
         uint256 round,
         address verifier
     ) internal {
-        uint256[] storage groupIds = _groupIdsByVerifier[extension][round][
+        uint256[] storage groupIds_ = _groupIdsByVerifier[extension][round][
             verifier
         ];
         uint256 totalGroupScore_ = _totalGroupScore[extension][round];
@@ -962,8 +962,8 @@ contract GroupVerify is IGroupVerify {
             round
         ];
 
-        for (uint256 i = 0; i < groupIds.length; i++) {
-            uint256 groupId = groupIds[i];
+        for (uint256 i = 0; i < groupIds_.length; i++) {
+            uint256 groupId = groupIds_[i];
             uint256 oldScore = scoreMap[groupId];
             uint256 newScore = _calculateGroupScore(extension, round, groupId);
             scoreMap[groupId] = newScore;
