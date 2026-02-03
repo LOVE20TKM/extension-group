@@ -482,7 +482,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         (mintReward, burnReward) = _calculateReward(round, msg.sender);
 
         _claimedByAccount[round][msg.sender] = true;
-        _claimedRewardByAccount[round][msg.sender] = mintReward;
+        _mintedRewardByAccount[round][msg.sender] = mintReward;
         _burnedRewardByAccount[round][msg.sender] = burnReward;
 
         // Burn overflow reward first
