@@ -29,6 +29,13 @@ interface IGroupServiceEvents {
         uint256 distributed,
         uint256 remaining
     );
+    event BurnReward(
+        address indexed tokenAddress,
+        uint256 round,
+        uint256 indexed actionId,
+        address indexed account,
+        uint256 amount
+    );
 }
 
 interface IGroupServiceErrors {
@@ -48,6 +55,7 @@ interface IGroupServiceErrors {
 interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function PRECISION() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
+    function GOV_RATIO_MULTIPLIER() external view returns (uint256);
 
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
@@ -110,4 +118,12 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
         address[] calldata addrs,
         uint256[] calldata ratios
     ) external;
+
+    function rewardInfoByAccount(
+        uint256 round,
+        address account
+    )
+        external
+        view
+        returns (uint256 mintReward, uint256 burnReward, bool isClaimed);
 }

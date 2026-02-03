@@ -33,7 +33,6 @@ interface IGroupVerifyErrors {
     error OriginScoresEmpty();
     error NotVerifier();
     error ScoreExceedsMax();
-    error NoRemainingVerifyCapacity();
     error AlreadyVerified();
     error InvalidStartIndex();
     error ScoresExceedAccountCount();
@@ -281,12 +280,6 @@ interface IGroupVerify is IGroupVerifyEvents, IGroupVerifyErrors {
         uint256 round,
         uint256 index
     ) external view returns (address);
-
-    function capacityDecayRateByGroupId(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256);
 
     function distrustRateByGroupId(
         address extension,

@@ -28,7 +28,7 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
 
         // Register extension

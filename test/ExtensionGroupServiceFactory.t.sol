@@ -17,7 +17,9 @@ import {GroupVerify} from "../src/GroupVerify.sol";
 import {IGroupManager} from "../src/interface/IGroupManager.sol";
 import {IGroupJoin} from "../src/interface/IGroupJoin.sol";
 import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
-import {IGroupServiceFactoryErrors} from "../src/interface/IGroupServiceFactory.sol";
+import {
+    IGroupServiceFactoryErrors
+} from "../src/interface/IGroupServiceFactory.sol";
 import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {MockGroupToken} from "./mocks/MockGroupToken.sol";
 
@@ -96,7 +98,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         assertTrue(extension != address(0));
@@ -108,7 +111,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         assertEq(factory.extensionsCount(), 1);
@@ -125,7 +129,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -138,7 +143,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         ExtensionGroupService groupService = ExtensionGroupService(extension);
@@ -152,7 +158,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         ExtensionGroupService groupService = ExtensionGroupService(extension);
@@ -166,11 +173,23 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
     function test_CreateExtension_MultipleExtensions() public {
         token.approve(address(factory), 3e18);
 
-        address ext1 = factory.createExtension(address(token), address(token));
+        address ext1 = factory.createExtension(
+            address(token),
+            address(token),
+            0
+        );
 
-        address ext2 = factory.createExtension(address(token), address(token));
+        address ext2 = factory.createExtension(
+            address(token),
+            address(token),
+            0
+        );
 
-        address ext3 = factory.createExtension(address(token), address(token));
+        address ext3 = factory.createExtension(
+            address(token),
+            address(token),
+            0
+        );
 
         assertEq(factory.extensionsCount(), 3);
         assertTrue(factory.exists(ext1));
@@ -185,7 +204,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         ExtensionGroupService ext = ExtensionGroupService(extension);
@@ -204,7 +224,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         assertTrue(factory.exists(extension));
@@ -232,7 +253,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         assertEq(extension, expectedExtension);
@@ -249,8 +271,10 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         address invalidToken = address(0x123);
         launch.setLOVE20Token(invalidToken, false);
 
-        vm.expectRevert(IGroupServiceFactoryErrors.InvalidGroupActionTokenAddress.selector);
-        factory.createExtension(address(token), invalidToken);
+        vm.expectRevert(
+            IGroupServiceFactoryErrors.InvalidGroupActionTokenAddress.selector
+        );
+        factory.createExtension(address(token), invalidToken, 0);
     }
 
     function test_CreateExtension_InvalidGroupActionToken_WrongParent() public {
@@ -262,8 +286,10 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         MockLOVE20Token childToken = new MockLOVE20Token(address(otherParent));
         launch.setLOVE20Token(address(childToken), true);
 
-        vm.expectRevert(IGroupServiceFactoryErrors.InvalidGroupActionTokenAddress.selector);
-        factory.createExtension(address(token), address(childToken));
+        vm.expectRevert(
+            IGroupServiceFactoryErrors.InvalidGroupActionTokenAddress.selector
+        );
+        factory.createExtension(address(token), address(childToken), 0);
     }
 
     function test_CreateExtension_ValidGroupActionToken_SameAsTokenAddress()
@@ -274,7 +300,8 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         // Should succeed when groupActionTokenAddress equals tokenAddress
         address extension = factory.createExtension(
             address(token),
-            address(token)
+            address(token),
+            0
         );
 
         assertTrue(extension != address(0));
@@ -293,13 +320,17 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         // Should succeed when groupActionTokenAddress is a valid child token
         address extension = factory.createExtension(
             address(token),
-            address(childToken)
+            address(childToken),
+            0
         );
 
         assertTrue(extension != address(0));
         assertTrue(factory.exists(extension));
 
         ExtensionGroupService groupService = ExtensionGroupService(extension);
-        assertEq(groupService.GROUP_ACTION_TOKEN_ADDRESS(), address(childToken));
+        assertEq(
+            groupService.GROUP_ACTION_TOKEN_ADDRESS(),
+            address(childToken)
+        );
     }
 }

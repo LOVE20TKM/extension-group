@@ -101,6 +101,9 @@ contract GroupManager is IGroupManager {
     ) external onlyGroupOwner(groupId) onlyValidExtension(extension) {
         IExtension(extension).initializeIfNeeded();
 
+        // Check min gov ratio for activation
+        _validateMinGovRatioForActivation(extension);
+
         uint256 currentRound = _join.currentRound();
 
         _activateGroup(
@@ -114,17 +117,17 @@ contract GroupManager is IGroupManager {
             currentRound
         );
 
-        IGroupAction ext = IGroupAction(extension);
-        uint256 stakeAmount = ext.ACTIVATION_STAKE_AMOUNT();
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 stakeAmount = IGroupAction(extension).ACTIVATION_STAKE_AMOUNT();
 
-        IERC20(IExtension(extension).TOKEN_ADDRESS()).safeTransferFrom(
+        IERC20(tokenAddress).safeTransferFrom(
             msg.sender,
             address(this),
             stakeAmount
         );
 
         emit ActivateGroup({
-            tokenAddress: IExtension(extension).TOKEN_ADDRESS(),
+            tokenAddress: tokenAddress,
             actionId: IExtension(extension).actionId(),
             round: currentRound,
             groupId: groupId,
@@ -376,22 +379,6 @@ contract GroupManager is IGroupManager {
         return (baseAmount * voteRate) / PRECISION;
     }
 
-    function maxVerifyCapacityByOwner(
-        address extension,
-        address owner
-    ) public view returns (uint256) {
-        IGroupAction ext = IGroupAction(extension);
-        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
-        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, owner);
-        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
-        if (totalGovVotes == 0) return 0;
-
-        uint256 totalMinted = IERC20(ext.JOIN_TOKEN_ADDRESS()).totalSupply();
-
-        uint256 baseCapacity = (totalMinted * ownerGovVotes) / totalGovVotes;
-        return (baseCapacity * ext.MAX_VERIFY_CAPACITY_FACTOR()) / PRECISION;
-    }
-
     function stakedByOwner(
         address extension,
         address owner
@@ -555,5 +542,23 @@ contract GroupManager is IGroupManager {
         _extensionsByActivatedGroupId[tokenAddress][groupId].add(extension);
         _extensionsWithGroupActivation[tokenAddress].add(extension);
         _tokenAddressesByGroupId[groupId].add(tokenAddress);
+    }
+
+    function _validateMinGovRatioForActivation(
+        address extension
+    ) internal view {
+        uint256 minGovRatio = IGroupAction(extension)
+            .ACTIVATION_MIN_GOV_RATIO();
+        if (minGovRatio == 0) return; // Skip check if no minimum required
+
+        address tokenAddress = IExtension(extension).TOKEN_ADDRESS();
+        uint256 totalGovVotes = _stake.govVotesNum(tokenAddress);
+        if (totalGovVotes == 0) revert NoGovVotes();
+
+        uint256 ownerGovVotes = _stake.validGovVotes(tokenAddress, msg.sender);
+        uint256 ownerGovRatio = (ownerGovVotes * PRECISION) / totalGovVotes;
+
+        if (ownerGovRatio < minGovRatio)
+            revert InsufficientGovRatioForActivation();
     }
 }

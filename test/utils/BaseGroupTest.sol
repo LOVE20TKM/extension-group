@@ -87,7 +87,7 @@ abstract contract BaseGroupTest is Test {
     // Group configuration constants
     uint256 constant GROUP_ACTIVATION_STAKE_AMOUNT = 1000e18;
     uint256 constant MAX_JOIN_AMOUNT_RATIO = 1e16; // 1% (1e16 / 1e18 = 0.01)
-    uint256 constant CAPACITY_FACTOR = 1e18; // 100%
+    uint256 constant ACTIVATION_MIN_GOV_RATIO = 0; // 0 = no minimum required
 
     // ============ Setup Functions ============
 
@@ -173,14 +173,14 @@ abstract contract BaseGroupTest is Test {
             address joinTokenAddress,
             uint256 activationStakeAmount,
             uint256 maxJoinAmountRatio,
-            uint256 maxVerifyCapacityFactor
+            uint256 minGovRatioForActivation
         )
     {
         return (
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
     }
 
@@ -219,17 +219,19 @@ abstract contract BaseGroupTest is Test {
         uint256 actionId
     ) internal {
         submit.setActionInfo(tokenAddr, actionId, extensionAddress);
-        
+
         // Set action author to match extension creator
         // Try to get creator from factory, default to address(this) if not found
         address author = address(this);
-        try mockGroupActionFactory.extensionCreator(extensionAddress) returns (address creator) {
+        try mockGroupActionFactory.extensionCreator(extensionAddress) returns (
+            address creator
+        ) {
             if (creator != address(0)) {
                 author = creator;
             }
         } catch {}
         submit.setActionAuthor(tokenAddr, actionId, author);
-        
+
         uint256 round = join.currentRound();
         vote.setVotedActionIds(tokenAddr, round, actionId);
         // Set default votes: 10000e18 total votes, 10000e18 for this action (100% vote rate)
@@ -296,7 +298,10 @@ abstract contract BaseGroupTest is Test {
      * @param extensionAddress The extension address
      * @param groupId The group ID
      */
-    function _assertGroupActive(address extensionAddress, uint256 groupId) internal view {
+    function _assertGroupActive(
+        address extensionAddress,
+        uint256 groupId
+    ) internal view {
         assertTrue(
             groupManager.isGroupActive(extensionAddress, groupId),
             "Group should be active"
@@ -308,7 +313,10 @@ abstract contract BaseGroupTest is Test {
      * @param extensionAddress The extension address
      * @param groupId The group ID
      */
-    function _assertGroupInactive(address extensionAddress, uint256 groupId) internal view {
+    function _assertGroupInactive(
+        address extensionAddress,
+        uint256 groupId
+    ) internal view {
         assertFalse(
             groupManager.isGroupActive(extensionAddress, groupId),
             "Group should be inactive"
@@ -329,7 +337,7 @@ abstract contract BaseGroupTest is Test {
     ) internal returns (uint256 groupId) {
         groupId = setupGroupOwner(owner, 10000e18, groupName);
         setupUser(owner, GROUP_ACTIVATION_STAKE_AMOUNT, address(groupManager));
-        
+
         vm.prank(owner, owner);
         groupManager.activateGroup(
             extensionAddress,
@@ -348,7 +356,10 @@ abstract contract BaseGroupTest is Test {
      * @param maxAmount The maximum join amount (0 = no limit)
      * @return A valid join amount
      */
-    function _generateValidJoinAmount(uint256 minAmount, uint256 maxAmount) internal pure returns (uint256) {
+    function _generateValidJoinAmount(
+        uint256 minAmount,
+        uint256 maxAmount
+    ) internal pure returns (uint256) {
         if (maxAmount == 0) {
             return minAmount > 0 ? minAmount : 1e18;
         }
@@ -361,7 +372,10 @@ abstract contract BaseGroupTest is Test {
      * @param baseScore The base score value
      * @return scores Array of scores
      */
-    function _generateValidScores(uint256 count, uint256 baseScore) internal pure returns (uint256[] memory scores) {
+    function _generateValidScores(
+        uint256 count,
+        uint256 baseScore
+    ) internal pure returns (uint256[] memory scores) {
         scores = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
             scores[i] = baseScore + i;

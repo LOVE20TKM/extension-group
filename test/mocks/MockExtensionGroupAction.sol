@@ -17,7 +17,7 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     address public immutable override JOIN_TOKEN_ADDRESS;
     uint256 public immutable override ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable override MAX_JOIN_AMOUNT_RATIO;
-    uint256 public immutable override MAX_VERIFY_CAPACITY_FACTOR;
+    uint256 public immutable override ACTIVATION_MIN_GOV_RATIO;
 
     constructor(
         address factory_,
@@ -25,12 +25,12 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
-        uint256 maxVerifyCapacityFactor_
+        uint256 activationMinGovRatio_
     ) ExtensionBaseReward(factory_, tokenAddress_) {
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;
-        MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
+        ACTIVATION_MIN_GOV_RATIO = activationMinGovRatio_;
     }
 
     /// @dev Test helper to simulate initialization without going through _doInitialize

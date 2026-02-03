@@ -88,7 +88,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         groupAction = ExtensionGroupAction(groupActionAddress);
 
@@ -98,7 +98,8 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             address(serviceFactory),
             address(token),
             address(token), // groupActionTokenAddress
-            address(actionFactory)
+            address(actionFactory),
+            0 // govRatioMultiplier = 0 means no cap
         );
         serviceFactory.registerExtension(address(groupService), address(token));
 
@@ -627,7 +628,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         submit.setActionInfo(address(token), actionId2, groupAction2Address);
         address action2Author = actionFactory.extensionCreator(
@@ -694,7 +695,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         submit.setActionInfo(address(token), actionId2, groupAction2Address);
         address action2Author = actionFactory.extensionCreator(
@@ -1737,7 +1738,7 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             address(token), // joinTokenAddress
             stakeAmount,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         groupAction = ExtensionGroupAction(groupActionAddress);
 
@@ -1747,7 +1748,8 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             address(serviceFactory),
             address(token),
             address(token),
-            address(actionFactory)
+            address(actionFactory),
+            0 // govRatioMultiplier = 0 means no cap
         );
         serviceFactory.registerExtension(address(groupService), address(token));
 

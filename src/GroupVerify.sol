@@ -61,8 +61,7 @@ contract GroupVerify is IGroupVerify {
     mapping(address => mapping(uint256 => mapping(uint256 => bool)))
         internal _isVerified;
     // extension => round => list of verified group ids
-    mapping(address => mapping(uint256 => uint256[]))
-        internal _groupIds;
+    mapping(address => mapping(uint256 => uint256[])) internal _groupIds;
     // extension => round => groupId => verifier address
     mapping(address => mapping(uint256 => mapping(uint256 => address)))
         internal _verifierByGroupId;
@@ -78,11 +77,8 @@ contract GroupVerify is IGroupVerify {
     mapping(address => mapping(uint256 => mapping(address => EnumerableSet.UintSet)))
         internal _actionIdsByVerifier;
     // tokenAddress => round => set of actionIds with at least one verified group
-    mapping(address => mapping(uint256 => EnumerableSet.UintSet)) internal _actionIds;
-
-    // extension => round => groupId => capacity decay rate
-    mapping(address => mapping(uint256 => mapping(uint256 => uint256)))
-        internal _capacityDecayRateByGroupId;
+    mapping(address => mapping(uint256 => EnumerableSet.UintSet))
+        internal _actionIds;
 
     // extension => round => groupOwner => total distrust votes
     mapping(address => mapping(uint256 => mapping(address => uint256)))
@@ -275,15 +271,7 @@ contract GroupVerify is IGroupVerify {
             extension
         ][currentRound][groupId];
 
-        // 4. Calculate and update group score (before push so _calculateCapacityDecay sees existing groups only)
-        _capacityDecayRateByGroupId[extension][currentRound][
-            groupId
-        ] = _calculateCapacityDecay(
-            extension,
-            currentRound,
-            groupOwner,
-            groupId
-        );
+        // 4. Calculate and update group score
         uint256 calculatedGroupScore = _calculateGroupScore(
             extension,
             currentRound,
@@ -508,14 +496,6 @@ contract GroupVerify is IGroupVerify {
         uint256 groupId
     ) external view returns (uint256) {
         return _groupScore[extension][round][groupId];
-    }
-
-    function capacityDecayRateByGroupId(
-        address extension,
-        uint256 round,
-        uint256 groupId
-    ) external view returns (uint256) {
-        return _capacityDecayRateByGroupId[extension][round][groupId];
     }
 
     function distrustRateByGroupId(
@@ -854,71 +834,12 @@ contract GroupVerify is IGroupVerify {
         return totalScore;
     }
 
-    /// @notice Calculates capacity decay rate for a group based on owner's verification capacity
-    /// @dev Returns 0 (no decay) if remaining capacity >= group capacity
-    ///      Returns (1 - remainingCapacity / groupCapacity) * PRECISION if partial
-    ///      Reverts if no remaining capacity
-    /// @param extension The extension address
-    /// @param round The round number
-    /// @param groupOwner The owner of the group (verifier)
-    /// @param currentGroupId The group ID to calculate decay for
-    /// @return Capacity decay rate (0 = no decay, PRECISION = 100% decay)
-    function _calculateCapacityDecay(
-        address extension,
-        uint256 round,
-        address groupOwner,
-        uint256 currentGroupId
-    ) internal view returns (uint256) {
-        uint256[] storage verifiedGroupIds_ = _groupIdsByVerifier[extension][
-            round
-        ][groupOwner];
-        uint256 verifiedCapacity = 0;
-        for (uint256 i = 0; i < verifiedGroupIds_.length; i++) {
-            verifiedCapacity += _groupJoin.totalJoinedAmountByGroupId(
-                extension,
-                round,
-                verifiedGroupIds_[i]
-            );
-        }
-
-        uint256 maxVerifyCapacity = _groupManager.maxVerifyCapacityByOwner(
-            extension,
-            groupOwner
-        );
-
-        uint256 remainingCapacity = maxVerifyCapacity > verifiedCapacity
-            ? maxVerifyCapacity - verifiedCapacity
-            : 0;
-
-        if (remainingCapacity == 0) {
-            revert NoRemainingVerifyCapacity();
-        }
-
-        uint256 currentGroupCapacity = _groupJoin.totalJoinedAmountByGroupId(
-            extension,
-            round,
-            currentGroupId
-        );
-
-        if (remainingCapacity >= currentGroupCapacity) {
-            return 0;
-        }
-
-        return
-            ((currentGroupCapacity - remainingCapacity) * PRECISION) /
-            currentGroupCapacity;
-    }
-
     function _computeGroupScore(
         uint256 groupAmount,
-        uint256 distrustRate_,
-        uint256 capacityDecayRate_
+        uint256 distrustRate_
     ) internal pure returns (uint256) {
         uint256 oneMinusDistrust = PRECISION - distrustRate_;
-        uint256 oneMinusDecay = PRECISION - capacityDecayRate_;
-        return
-            (groupAmount * oneMinusDistrust * oneMinusDecay) /
-            (PRECISION * PRECISION);
+        return (groupAmount * oneMinusDistrust) / PRECISION;
     }
 
     function _calculateGroupScore(
@@ -936,12 +857,8 @@ contract GroupVerify is IGroupVerify {
             round,
             groupId
         );
-        uint256 capacityDecayRate_ = _capacityDecayRateByGroupId[extension][
-            round
-        ][groupId];
 
-        return
-            _computeGroupScore(groupAmount, distrustRate_, capacityDecayRate_);
+        return _computeGroupScore(groupAmount, distrustRate_);
     }
 
     /// @notice Updates group scores for all groups owned by a verifier when distrust votes change

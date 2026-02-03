@@ -1023,9 +1023,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
         if (newTotal > extensionMaxJoinAmount) {
             revert ExceedsActionMaxJoinAmount();
         }
-
-        // Owner-level constraints (not based on GroupInfo)
-        _validateOwnerConstraints(extension, groupId, amount);
     }
 
     // All validations based on GroupInfo: fetch once and validate all constraints
@@ -1078,30 +1075,6 @@ contract GroupJoin is IGroupJoin, ReentrancyGuard {
             if (currentGroupTotal + amount > groupInfo.maxCapacity) {
                 revert GroupCapacityExceeded();
             }
-        }
-    }
-
-    // Owner-level validation: owner's total capacity across all groups
-    function _validateOwnerConstraints(
-        address extension,
-        uint256 groupId,
-        uint256 amount
-    ) internal view {
-        address groupOwner = _group.ownerOf(groupId);
-        if (groupOwner == address(0)) {
-            revert InvalidGroupId();
-        }
-        uint256 ownerTotalJoined = _totalJoinedAmountByGroupOwner(
-            extension,
-            groupOwner
-        );
-        uint256 ownerMaxCapacity = _groupManager.maxVerifyCapacityByOwner(
-            extension,
-            groupOwner
-        );
-
-        if (ownerTotalJoined + amount > ownerMaxCapacity) {
-            revert OwnerCapacityExceeded();
         }
     }
 

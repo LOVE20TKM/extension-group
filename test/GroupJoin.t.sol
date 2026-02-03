@@ -29,7 +29,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
 
         token.mint(address(this), 1e18);
@@ -445,40 +445,6 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         assertEq(amount, joinAmount, "amount should match");
     }
 
-    /// @notice Test: join when owner capacity is exceeded should revert
-    /// @dev Capacity validation: owner's verify capacity limit enforcement
-    function test_join_WhenOwnerCapacityExceeded_Reverts() public {
-        stake.setValidGovVotes(address(token), groupOwner1, 1);
-
-        uint256 ownerMaxCapacity = groupManager.maxVerifyCapacityByOwner(
-            address(groupAction),
-            groupOwner1
-        );
-        uint256 joinAmount = ownerMaxCapacity + 1;
-
-        vm.prank(groupOwner1);
-        groupManager.updateGroupInfo(
-            address(groupAction),
-            groupId1,
-            "Group1",
-            0,
-            1,
-            0,
-            0
-        );
-
-        setupUser(user1, joinAmount, address(groupJoin));
-
-        vm.prank(user1);
-        vm.expectRevert(IGroupJoinErrors.OwnerCapacityExceeded.selector);
-        groupJoin.join(
-            address(groupAction),
-            groupId1,
-            joinAmount,
-            new string[](0)
-        );
-    }
-
     /// @notice Test: join when extension account cap is exceeded should revert
     /// @dev Capacity validation: extension-level max join amount limit
     function test_join_WhenExtensionAccountCapExceeded_Reverts() public {
@@ -768,10 +734,10 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 groupId,
             address provider
         ) = groupJoin.joinInfo(
-            address(groupAction),
-            join.currentRound(),
-            user1
-        );
+                address(groupAction),
+                join.currentRound(),
+                user1
+            );
         assertEq(joinedRound, expectedRound, "joinedRound should match");
         assertEq(amount, expectedAmount, "amount should match");
         assertEq(groupId, expectedGroupId, "groupId should match");
@@ -832,19 +798,19 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             new string[](0)
         );
 
-        (
-            uint256 joinedRound1,
-            uint256 amount1,
-            ,
-        ) = groupJoin.joinInfo(address(groupAction), r1, user1);
+        (uint256 joinedRound1, uint256 amount1, , ) = groupJoin.joinInfo(
+            address(groupAction),
+            r1,
+            user1
+        );
         assertEq(joinedRound1, r1, "joinedRound at r1");
         assertEq(amount1, joinAmount1, "amount at r1");
 
-        (
-            uint256 joinedRound2,
-            uint256 amount2,
-            ,
-        ) = groupJoin.joinInfo(address(groupAction), r2, user1);
+        (uint256 joinedRound2, uint256 amount2, , ) = groupJoin.joinInfo(
+            address(groupAction),
+            r2,
+            user1
+        );
         assertEq(joinedRound2, r1, "joinedRound at r2 still r1");
         assertEq(amount2, joinAmount1 + joinAmount2, "amount at r2");
     }
@@ -855,11 +821,8 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         setupUser(user1, joinAmount, address(groupJoin));
 
         uint256 r = join.currentRound();
-        (
-            uint256 joinedRound,
-            uint256 amount,
-            uint256 groupId,
-        ) = groupJoin.joinInfo(address(groupAction), r, user1);
+        (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
+            .joinInfo(address(groupAction), r, user1);
         assertEq(joinedRound, 0, "joinedRound before join");
         assertEq(amount, 0, "amount before join");
         assertEq(groupId, 0, "groupId before join");
@@ -900,11 +863,8 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        (
-            uint256 joinedRound2,
-            uint256 amount2,
-            uint256 gIdAtR2,
-        ) = groupJoin.joinInfo(address(groupAction), r2, user1);
+        (uint256 joinedRound2, uint256 amount2, uint256 gIdAtR2, ) = groupJoin
+            .joinInfo(address(groupAction), r2, user1);
         assertEq(joinedRound2, 0, "joinedRound at r2 after exit");
         assertEq(amount2, 0, "amount at r2 after exit");
         assertEq(gIdAtR2, 0, "groupId at r2 after exit");
@@ -913,6 +873,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 joinedRound1,
             uint256 amount1,
             uint256 groupId1AtR1,
+
         ) = groupJoin.joinInfo(address(groupAction), r1, user1);
         assertEq(joinedRound1, r1, "joinedRound at r1 still r1");
         assertEq(amount1, joinAmount, "amount at r1 unchanged");
@@ -1196,11 +1157,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         groupJoin.exit(address(groupAction));
 
         (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
-            .joinInfo(
-                address(groupAction),
-                join.currentRound(),
-                user1
-            );
+            .joinInfo(address(groupAction), join.currentRound(), user1);
         uint256 expectedJoinedRound = 0;
         uint256 expectedAmount = 0;
         uint256 expectedGroupId = 0;
@@ -1277,11 +1234,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         (uint256 joinedRound, uint256 amount, uint256 groupId, ) = groupJoin
-            .joinInfo(
-                address(groupAction),
-                join.currentRound(),
-                user1
-            );
+            .joinInfo(address(groupAction), join.currentRound(), user1);
         assertTrue(joinedRound > 0, "should be joined after rejoin");
         assertEq(amount, joinAmount2, "amount should be second join amount");
         assertEq(groupId, groupId1, "groupId should match");
@@ -1339,11 +1292,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         );
 
         assertEq(
-            groupJoin.groupIdByAccount(
-                address(groupAction),
-                round0,
-                user1
-            ),
+            groupJoin.groupIdByAccount(address(groupAction), round0, user1),
             expectedGroupIdByAccount,
             "groupIdByAccountByRound at round 0 for non-joined account should be 0"
         );
@@ -1423,7 +1372,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             address(token2),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         token2.approve(address(mockGroupActionFactory), type(uint256).max);
         mockGroupActionFactory.registerExtensionForTesting(
@@ -1525,7 +1474,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         ExtensionGroupAction groupAction3 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
@@ -1533,7 +1482,7 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             address(token),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         token.approve(address(mockGroupActionFactory), type(uint256).max);
         mockGroupActionFactory.registerExtensionForTesting(
@@ -2034,10 +1983,10 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 groupId,
             address prov
         ) = groupJoin.joinInfo(
-            address(groupAction),
-            join.currentRound(),
-            user1
-        );
+                address(groupAction),
+                join.currentRound(),
+                user1
+            );
         assertTrue(joinedRound > 0, "should be joined");
         assertEq(amount, maxJoinAmount, "amount should equal group max");
         assertEq(groupId, groupId1, "groupId should match");
@@ -2080,10 +2029,10 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
             uint256 groupId,
             address provider
         ) = groupJoin.joinInfo(
-            address(groupAction),
-            join.currentRound(),
-            account
-        );
+                address(groupAction),
+                join.currentRound(),
+                account
+            );
         assertEq(joinedRound, expectedRound, "joinedRound should match");
         assertEq(amount, expectedAmount, "amount should match");
         assertEq(groupId, expectedGroupId, "groupId should match");

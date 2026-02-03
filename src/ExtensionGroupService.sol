@@ -26,6 +26,8 @@ import {
 import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
+import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 
 contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
@@ -37,11 +39,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
+    uint256 public immutable GOV_RATIO_MULTIPLIER;
 
     IGroupManager internal immutable _groupManager;
     IERC721Enumerable internal immutable _group;
     IGroupVerify internal immutable _groupVerify;
     IExtensionGroupActionFactory internal immutable _actionFactory;
+    ILOVE20Stake internal immutable _stake;
 
     // owner => actionId => groupId => recipients
     mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
@@ -55,15 +59,20 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     // owner => actionId => groupIds
     mapping(address => mapping(uint256 => RoundHistoryUint256Array.History))
         internal _groupIdsByActionIdWithRecipients;
+    // round => account => burned reward
+    mapping(uint256 => mapping(address => uint256))
+        internal _burnedRewardByAccount;
 
     constructor(
         address factory_,
         address tokenAddress_,
         address groupActionTokenAddress_,
-        address groupActionFactoryAddress_
+        address groupActionFactoryAddress_,
+        uint256 govRatioMultiplier_
     ) ExtensionBaseRewardJoin(factory_, tokenAddress_) {
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
+        GOV_RATIO_MULTIPLIER = govRatioMultiplier_;
 
         _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_
@@ -71,6 +80,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         _groupManager = IGroupManager(_actionFactory.GROUP_MANAGER_ADDRESS());
         _group = IERC721Enumerable(_actionFactory.GROUP_ADDRESS());
         _groupVerify = IGroupVerify(_actionFactory.GROUP_VERIFY_ADDRESS());
+        _stake = ILOVE20Stake(_center.stakeAddress());
     }
 
     function join(
@@ -392,10 +402,10 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         totalActionReward = generatedActionReward(round);
     }
 
-    function _calculateReward(
+    function _calculateRewardBreakdown(
         uint256 round,
         address account
-    ) internal view override returns (uint256) {
+    ) internal view returns (uint256 mintReward, uint256 burnReward) {
         if (
             !_center.isAccountJoinedByRound(
                 TOKEN_ADDRESS,
@@ -403,21 +413,54 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 account,
                 round
             )
-        ) return 0;
+        ) return (0, 0);
 
         (
             uint256 totalServiceReward,
             uint256 totalActionReward
         ) = _getRewardContext(round);
-        if (totalServiceReward == 0 || totalActionReward == 0) return 0;
+        if (totalServiceReward == 0 || totalActionReward == 0) return (0, 0);
 
         uint256 generatedByVerifier = generatedActionRewardByVerifier(
             round,
             account
         );
-        if (generatedByVerifier == 0) return 0;
+        if (generatedByVerifier == 0) return (0, 0);
 
-        return (totalServiceReward * generatedByVerifier) / totalActionReward;
+        // Calculate theoretical reward (mint share)
+        uint256 mintShare = (generatedByVerifier * PRECISION) /
+            totalActionReward;
+        uint256 theoreticalReward = (totalServiceReward * mintShare) /
+            PRECISION;
+
+        // If GOV_RATIO_MULTIPLIER = 0, no cap applied
+        if (GOV_RATIO_MULTIPLIER == 0) {
+            return (theoreticalReward, 0);
+        }
+
+        // Calculate gov ratio cap
+        uint256 totalGovVotes = _stake.govVotesNum(TOKEN_ADDRESS);
+        if (totalGovVotes == 0) {
+            return (0, theoreticalReward);
+        }
+        uint256 govVotes = _stake.validGovVotes(TOKEN_ADDRESS, account);
+        uint256 cappedGov = (govVotes * PRECISION * GOV_RATIO_MULTIPLIER) /
+            totalGovVotes;
+
+        // Take minimum of mint share and capped gov ratio
+        uint256 effectiveRatio = mintShare < cappedGov ? mintShare : cappedGov;
+        mintReward = (totalServiceReward * effectiveRatio) / PRECISION;
+        burnReward = theoreticalReward - mintReward;
+
+        return (mintReward, burnReward);
+    }
+
+    function _calculateReward(
+        uint256 round,
+        address account
+    ) internal view override returns (uint256) {
+        (uint256 mintReward, ) = _calculateRewardBreakdown(round, account);
+        return mintReward;
     }
 
     function _calculateRewardByGroupId(
@@ -443,12 +486,31 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _claimReward(
         uint256 round
     ) internal override returns (uint256 amount) {
-        bool claimed;
-        (amount, claimed) = rewardByAccount(round, msg.sender);
-        if (claimed) revert AlreadyClaimed();
+        if (_claimedByAccount[round][msg.sender]) {
+            revert AlreadyClaimed();
+        }
+
+        (uint256 mintReward, uint256 burnReward) = _calculateRewardBreakdown(
+            round,
+            msg.sender
+        );
+        amount = mintReward;
 
         _claimedByAccount[round][msg.sender] = true;
         _claimedRewardByAccount[round][msg.sender] = amount;
+        _burnedRewardByAccount[round][msg.sender] = burnReward;
+
+        // Burn overflow reward first
+        if (burnReward > 0) {
+            ILOVE20Token(TOKEN_ADDRESS).burn(burnReward);
+            emit BurnReward({
+                tokenAddress: TOKEN_ADDRESS,
+                round: round,
+                actionId: actionId,
+                account: msg.sender,
+                amount: burnReward
+            });
+        }
 
         uint256 distributed;
         uint256 remaining;
@@ -475,6 +537,26 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             distributed: distributed,
             remaining: remaining
         });
+    }
+
+    function rewardInfoByAccount(
+        uint256 round,
+        address account
+    )
+        external
+        view
+        returns (uint256 mintReward, uint256 burnReward, bool isClaimed)
+    {
+        if (_claimedByAccount[round][account]) {
+            return (
+                _claimedRewardByAccount[round][account],
+                _burnedRewardByAccount[round][account],
+                true
+            );
+        }
+
+        (mintReward, burnReward) = _calculateRewardBreakdown(round, account);
+        return (mintReward, burnReward, false);
     }
 
     /// @notice Distributes rewards to all configured recipients for the caller
@@ -562,15 +644,22 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             round
         );
 
-        uint256 participatedReward;
+        // If any account has non-zero mintReward or burnReward, return 0
+        // (burning handled per-account during claim)
         for (uint256 i; i < accounts.length; ) {
-            (uint256 accountReward, ) = rewardByAccount(round, accounts[i]);
-            participatedReward += accountReward;
+            (
+                uint256 mintReward,
+                uint256 burnReward
+            ) = _calculateRewardBreakdown(round, accounts[i]);
+            if (mintReward > 0 || burnReward > 0) {
+                return 0;
+            }
             unchecked {
                 ++i;
             }
         }
 
-        return totalReward - participatedReward;
+        // No one participated, burn all
+        return totalReward;
     }
 }

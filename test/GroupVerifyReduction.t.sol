@@ -7,7 +7,7 @@ import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionTest
-/// @notice Unit tests for capacityDecayRateByGroupId and distrustRate functions
+/// @notice Unit tests for distrustRate functions
 /// @dev Integration tests are in test/integration/GroupVerifyReductionIntegration.t.sol
 contract GroupVerifyReductionTest is BaseGroupFlowTest {
     uint256 constant PRECISION = 1e18;

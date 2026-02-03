@@ -59,7 +59,7 @@ contract MockExtensionGroupActionFactory is
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
-        uint256 maxVerifyCapacityFactor_
+        uint256 activationMinGovRatio_
     ) external returns (address extension) {
         _validateJoinToken(tokenAddress_, joinTokenAddress_);
 
@@ -70,7 +70,7 @@ contract MockExtensionGroupActionFactory is
                 joinTokenAddress_,
                 activationStakeAmount_,
                 maxJoinAmountRatio_,
-                maxVerifyCapacityFactor_
+                activationMinGovRatio_
             )
         );
 

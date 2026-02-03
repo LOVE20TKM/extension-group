@@ -312,7 +312,6 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         // Calculate group rewards based on business rules (no contract view methods)
         // Assumptions for this test:
         // - No distrust votes
-        // - Capacity decay rate = 0 (within capacity)
         // So groupScore == groupAmount, and totalGroupScore == sum(groupAmount)
         uint256 g1TotalJoin = 10e18 + 20e18 + 15e18;
         uint256 g2TotalJoin = 25e18 + 30e18 + 12e18;
@@ -568,93 +567,5 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
         uint256 alicePercent = 100 - bobPercent;
         emit log_named_uint("Bob's groups reward %", bobPercent);
         emit log_named_uint("Alice's group reward %", alicePercent);
-    }
-
-    /// @notice Test that capacity decay rate is 0 when within capacity
-    function test_capacityDecay_NoDecayInNormalFlow() public {
-        // Setup: Create extension and action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        // Both bob groups use same extension
-        bobGroup2.groupActionAddress = extensionAddr;
-        bobGroup2.flow.actionId = actionId;
-        bobGroup2.groupActionId = actionId;
-
-        // Vote
-        h.vote(bobGroup1.flow);
-
-        // Join phase
-        h.next_phase();
-        h.group_activate(bobGroup1);
-        h.group_activate(bobGroup2);
-
-        // Members join both groups
-        GroupUserParams memory m1;
-        m1.flow = member1();
-        m1.joinAmount = 10e18;
-        m1.groupActionAddress = extensionAddr;
-        h.group_join(m1, bobGroup1);
-
-        GroupUserParams memory m2;
-        m2.flow = member2();
-        m2.joinAmount = 15e18;
-        m2.groupActionAddress = extensionAddr;
-        h.group_join(m2, bobGroup2);
-
-        // Verify phase
-        h.next_phase();
-        uint256 verifyRound = h.verifyContract().currentRound();
-
-        // Submit scores for both groups
-        uint256[] memory scores1 = new uint256[](1);
-        scores1[0] = 100;
-        h.group_submit_score(bobGroup1, scores1);
-
-        uint256[] memory scores2 = new uint256[](1);
-        scores2[0] = 100;
-        h.group_submit_score(bobGroup2, scores2);
-
-        // Verify capacity decay rates
-        // Both groups should have no decay (0) since join amounts are small
-        IGroupVerify groupVerifyContract2 = IGroupVerify(
-            h.groupActionFactory().GROUP_VERIFY_ADDRESS()
-        );
-        uint256 decayRate1 = groupVerifyContract2.capacityDecayRateByGroupId(
-            bobGroup1.groupActionAddress,
-            verifyRound,
-            bobGroup1.groupId
-        );
-        uint256 decayRate2 = groupVerifyContract2.capacityDecayRateByGroupId(
-            bobGroup1.groupActionAddress,
-            verifyRound,
-            bobGroup2.groupId
-        );
-
-        assertEq(decayRate1, 0, "Group1 should have no capacity decay");
-        assertEq(decayRate2, 0, "Group2 should have no capacity decay");
-
-        // Verify group scores match joined amounts (no reduction applied)
-        assertEq(
-            groupVerifyContract2.groupScore(
-                bobGroup1.groupActionAddress,
-                verifyRound,
-                bobGroup1.groupId
-            ),
-            10e18,
-            "Group1 score should equal joined amount"
-        );
-        assertEq(
-            groupVerifyContract2.groupScore(
-                bobGroup1.groupActionAddress,
-                verifyRound,
-                bobGroup2.groupId
-            ),
-            15e18,
-            "Group2 score should equal joined amount"
-        );
     }
 }

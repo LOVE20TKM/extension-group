@@ -38,6 +38,8 @@ interface IGroupManagerErrors {
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
     error NotRegisteredExtensionInFactory();
+    error InsufficientGovRatioForActivation();
+    error NoGovVotes();
 }
 
 interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
@@ -117,11 +119,6 @@ interface IGroupManager is IGroupManagerEvents, IGroupManagerErrors {
     ) external view returns (bool);
 
     function maxJoinAmount(address extension) external view returns (uint256);
-
-    function maxVerifyCapacityByOwner(
-        address extension,
-        address owner
-    ) external view returns (uint256);
 
     function stakedByOwner(
         address extension,

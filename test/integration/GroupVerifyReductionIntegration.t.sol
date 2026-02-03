@@ -7,7 +7,7 @@ import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionIntegrationTest
-/// @notice Integration tests for capacityDecayRateByGroupId and distrustRate functions
+/// @notice Integration tests for distrustRate functions
 contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
     uint256 constant PRECISION = 1e18;
 
@@ -129,8 +129,8 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
         );
     }
 
-    /// @notice Test capacityDecayRateByGroupId and distrustRate work together
-    function test_capacityAndDistrustRate_Integration() public {
+    /// @notice Test distrustRate affects group score calculation
+    function test_distrustRate_AffectsGroupScore() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
         bobGroup1.groupActionAddress = extensionAddr;
@@ -198,46 +198,32 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
             "Test reason"
         );
 
-        // Get both rates
-        uint256 capacityDecayRate = groupVerify.capacityDecayRateByGroupId(
-            extensionAddr,
-            round,
-            bobGroup1.groupId
-        );
+        // Get distrust rate
         uint256 distrustRate = groupVerify.distrustRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
-        // Verify both are set correctly
-        assertTrue(
-            capacityDecayRate >= 0 && capacityDecayRate <= PRECISION,
-            "capacityDecayRateByGroupId should be between 0 and PRECISION"
-        );
+        // Verify distrust rate is set correctly
         assertTrue(
             distrustRate >= 0 && distrustRate <= PRECISION,
             "distrustRate should be between 0 and PRECISION"
         );
 
-        // Verify group score calculation uses both
+        // Verify group score calculation uses distrust rate
         uint256 groupScore = groupVerify.groupScore(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
-        // Group score should be: groupAmount * (1 - distrustRate) * (1 - capacityDecayRateByGroupId) / PRECISION^2
+        // Group score should be: groupAmount * (1 - distrustRate) / PRECISION
         uint256 groupAmount = 10e18;
 
         // Verify group score is calculated correctly
-        // Group score = groupAmount * (1 - distrustRate) * (1 - capacityDecayRateByGroupId) / PRECISION^2
-        // Note: There may be small rounding differences due to division order
         uint256 oneMinusDistrust = PRECISION - distrustRate;
-        uint256 oneMinusDecay = PRECISION - capacityDecayRate;
-        uint256 calculatedScore = (groupAmount *
-            oneMinusDistrust *
-            oneMinusDecay) / (PRECISION * PRECISION);
+        uint256 calculatedScore = (groupAmount * oneMinusDistrust) / PRECISION;
 
         // Allow small rounding difference (up to 10 wei)
         uint256 diff = groupScore > calculatedScore
@@ -245,7 +231,7 @@ contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
             : calculatedScore - groupScore;
         assertTrue(
             diff <= 10,
-            "Group score should use both capacity and distrust reductions (with small rounding tolerance)"
+            "Group score should use distrust reduction (with small rounding tolerance)"
         );
     }
 }

@@ -17,7 +17,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     address public immutable JOIN_TOKEN_ADDRESS;
     uint256 public immutable ACTIVATION_STAKE_AMOUNT;
     uint256 public immutable MAX_JOIN_AMOUNT_RATIO;
-    uint256 public immutable MAX_VERIFY_CAPACITY_FACTOR;
+    uint256 public immutable ACTIVATION_MIN_GOV_RATIO;
 
     constructor(
         address factory_,
@@ -25,7 +25,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         address joinTokenAddress_,
         uint256 activationStakeAmount_,
         uint256 maxJoinAmountRatio_,
-        uint256 maxVerifyCapacityFactor_
+        uint256 activationMinGovRatio_
     ) ExtensionBaseReward(factory_, tokenAddress_) {
         IGroupActionFactory factory = IGroupActionFactory(factory_);
         address groupJoinAddress = factory.GROUP_JOIN_ADDRESS();
@@ -37,7 +37,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         JOIN_TOKEN_ADDRESS = joinTokenAddress_;
         ACTIVATION_STAKE_AMOUNT = activationStakeAmount_;
         MAX_JOIN_AMOUNT_RATIO = maxJoinAmountRatio_;
-        MAX_VERIFY_CAPACITY_FACTOR = maxVerifyCapacityFactor_;
+        ACTIVATION_MIN_GOV_RATIO = activationMinGovRatio_;
     }
 
     function _calculateBurnAmount(
@@ -82,8 +82,7 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         override(ExtensionBase)
         returns (uint256)
     {
-        return
-            _groupJoin.joinedAmount(address(this), _join.currentRound());
+        return _groupJoin.joinedAmount(address(this), _join.currentRound());
     }
 
     function joinedAmountByAccount(

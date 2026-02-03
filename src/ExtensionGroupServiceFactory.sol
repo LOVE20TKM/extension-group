@@ -32,7 +32,8 @@ contract ExtensionGroupServiceFactory is
 
     function createExtension(
         address tokenAddress_,
-        address groupActionTokenAddress_
+        address groupActionTokenAddress_,
+        uint256 govRatioMultiplier_
     ) external returns (address extension) {
         _validateGroupActionTokenAddress(
             tokenAddress_,
@@ -44,7 +45,8 @@ contract ExtensionGroupServiceFactory is
                 address(this),
                 tokenAddress_,
                 groupActionTokenAddress_,
-                GROUP_ACTION_FACTORY_ADDRESS
+                GROUP_ACTION_FACTORY_ADDRESS,
+                govRatioMultiplier_
             )
         );
 

@@ -10,6 +10,7 @@ interface IGroupServiceFactory is IGroupServiceFactoryErrors {
 
     function createExtension(
         address tokenAddress_,
-        address groupActionTokenAddress_
+        address groupActionTokenAddress_,
+        uint256 govRatioMultiplier_
     ) external returns (address extension);
 }

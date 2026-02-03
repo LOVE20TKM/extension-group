@@ -84,7 +84,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             address(token), // joinTokenAddress
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
 
         // Register extension in mockGroupActionFactory (not mockFactory)
@@ -165,10 +165,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
 
         // Verify join state
         assertEq(
-            groupJoin.joinedAmount(
-                address(groupAction),
-                join.currentRound()
-            ),
+            groupJoin.joinedAmount(address(groupAction), join.currentRound()),
             joinAmount1 + joinAmount2
         );
         assertEq(
@@ -216,10 +213,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        assertEq(groupJoin.joinedAmount(
-                address(groupAction),
-                join.currentRound()
-            ), joinAmount2);
+        assertEq(
+            groupJoin.joinedAmount(address(groupAction), join.currentRound()),
+            joinAmount2
+        );
         assertEq(
             groupJoin.accountsByGroupIdCount(
                 address(groupAction),
@@ -502,19 +499,19 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupJoin.joinedAmount(
-                address(groupAction),
-                join.currentRound()
-            ), joinAmount);
+        assertEq(
+            groupJoin.joinedAmount(address(groupAction), join.currentRound()),
+            joinAmount
+        );
 
         // Exit
         vm.prank(user1);
         groupJoin.exit(address(groupAction));
 
-        assertEq(groupJoin.joinedAmount(
-                address(groupAction),
-                join.currentRound()
-            ), 0);
+        assertEq(
+            groupJoin.joinedAmount(address(groupAction), join.currentRound()),
+            0
+        );
 
         // Rejoin (possibly different group)
         vm.prank(user1);
@@ -525,10 +522,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
             new string[](0)
         );
 
-        assertEq(groupJoin.joinedAmount(
-                address(groupAction),
-                join.currentRound()
-            ), joinAmount);
+        assertEq(
+            groupJoin.joinedAmount(address(groupAction), join.currentRound()),
+            joinAmount
+        );
         (, , uint256 groupId, ) = groupJoin.joinInfo(
             address(groupAction),
             join.currentRound(),
@@ -623,69 +620,6 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         assertEq(description, newDescription);
         assertEq(minJoin, newMin);
         assertEq(maxJoin, newMax);
-    }
-
-    // ============ Verifier Capacity Tests ============
-
-    function test_VerifierCapacityLimit() public {
-        // Test that verifier capacity is limited by governance votes
-
-        // Get max verify capacity for owner
-        uint256 maxCapacity = groupManager.maxVerifyCapacityByOwner(
-            address(groupAction),
-            groupOwner1
-        );
-        uint256 maxPerAccount = groupManager.maxJoinAmount(
-            address(groupAction)
-        );
-        assertTrue(maxCapacity > 0, "maxCapacity should be > 0");
-        assertTrue(maxPerAccount > 0, "maxPerAccount should be > 0");
-
-        // Use a small amount that's within limits (1e18 is the minStake from submit)
-        uint256 joinAmount = 1e18;
-
-        // Have users join group
-        setupUser(user1, joinAmount, address(groupJoin));
-
-        vm.prank(user1);
-        groupJoin.join(
-            address(groupAction),
-            groupId1,
-            joinAmount,
-            new string[](0)
-        );
-
-        // Verify join was successful
-        assertEq(
-            groupJoin.accountsByGroupIdCount(
-                address(groupAction),
-                join.currentRound(),
-                groupId1
-            ),
-            1
-        );
-
-        // Capacity check is done during submitOriginScores, so let's test that path
-        advanceRound();
-        uint256 round = verify.currentRound();
-        vote.setVotedActionIds(address(token), round, ACTION_ID);
-        // Set votes for this round
-        vote.setVotesNum(address(token), round, 10000e18);
-        vote.setVotesNumByActionId(address(token), round, ACTION_ID, 10000e18);
-
-        uint256[] memory scores = new uint256[](1);
-        scores[0] = 80;
-
-        // This should succeed since we're within capacity
-        vm.prank(groupOwner1);
-        groupVerify.submitOriginScores(
-            address(groupAction),
-            groupId1,
-            0,
-            scores
-        );
-
-        assertEq(groupVerify.verifiersCount(address(groupAction), round), 1);
     }
 
     // ============ Cross-Round Tests ============
@@ -1175,7 +1109,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             invalidToken, // invalid joinToken
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
     }
 
@@ -1195,7 +1129,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(badLp), // LP doesn't contain token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
     }
 
@@ -1206,7 +1140,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(token), // joinToken = token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         ExtensionGroupAction action = ExtensionGroupAction(extension);
 
@@ -1230,7 +1164,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(lpToken), // LP containing token
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         ExtensionGroupAction action = ExtensionGroupAction(extension);
 
@@ -1249,7 +1183,7 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
             address(lpToken),
             GROUP_ACTIVATION_STAKE_AMOUNT,
             MAX_JOIN_AMOUNT_RATIO,
-            CAPACITY_FACTOR
+            ACTIVATION_MIN_GOV_RATIO
         );
         ExtensionGroupAction action = ExtensionGroupAction(extension);
 

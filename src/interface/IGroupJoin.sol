@@ -50,7 +50,6 @@ interface IGroupJoinErrors {
     error AmountBelowMinimum();
     error ExceedsActionMaxJoinAmount();
     error ExceedsGroupMaxJoinAmount();
-    error OwnerCapacityExceeded();
     error GroupCapacityExceeded();
     error GroupAccountsFull();
     error CannotJoinInactiveGroup();
