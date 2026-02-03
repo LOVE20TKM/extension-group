@@ -424,30 +424,31 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
         if (generatedByVerifier == 0) return (0, 0);
 
-        // Calculate theoretical reward (mint share)
-        uint256 mintShare = (generatedByVerifier * PRECISION) /
+        // reward ratio = served mint / total action reward
+        uint256 rewardRatio = (generatedByVerifier * PRECISION) /
             totalActionReward;
-        uint256 theoreticalReward = (totalServiceReward * mintShare) /
-            PRECISION;
+        // theory reward = total service reward × reward ratio
+        uint256 theoryReward = (totalServiceReward * rewardRatio) / PRECISION;
 
-        // If GOV_RATIO_MULTIPLIER = 0, no cap applied
         if (GOV_RATIO_MULTIPLIER == 0) {
-            return (theoreticalReward, 0);
+            return (theoryReward, 0);
         }
 
-        // Calculate gov ratio cap
-        uint256 totalGovVotes = _stake.govVotesNum(TOKEN_ADDRESS);
-        if (totalGovVotes == 0) {
-            return (0, theoreticalReward);
+        uint256 govTotal = _stake.govVotesNum(TOKEN_ADDRESS);
+        if (govTotal == 0) {
+            return (0, theoryReward);
         }
-        uint256 govVotes = _stake.validGovVotes(TOKEN_ADDRESS, account);
-        uint256 cappedGov = (govVotes * PRECISION * GOV_RATIO_MULTIPLIER) /
-            totalGovVotes;
+        uint256 govValid = _stake.validGovVotes(TOKEN_ADDRESS, account);
+        // gov ratio cap = gov ratio × multiplier
+        uint256 govRatioCap = (govValid * PRECISION * GOV_RATIO_MULTIPLIER) /
+            govTotal;
 
-        // Take minimum of mint share and capped gov ratio
-        uint256 effectiveRatio = mintShare < cappedGov ? mintShare : cappedGov;
+        // effective ratio = MIN(reward ratio, gov ratio cap)
+        uint256 effectiveRatio = rewardRatio < govRatioCap
+            ? rewardRatio
+            : govRatioCap;
         mintReward = (totalServiceReward * effectiveRatio) / PRECISION;
-        burnReward = theoreticalReward - mintReward;
+        burnReward = theoryReward - mintReward;
 
         return (mintReward, burnReward);
     }
