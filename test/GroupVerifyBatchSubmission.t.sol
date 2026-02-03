@@ -25,10 +25,10 @@ contract GroupVerifyBatchSubmissionTest is BaseGroupTest {
         groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         // Register extension

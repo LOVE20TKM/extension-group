@@ -81,10 +81,10 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         // Register extension in mockGroupActionFactory (not mockFactory)
@@ -1106,10 +1106,10 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         );
         mockGroupActionFactory.createExtension(
             address(token),
-            invalidToken, // invalid joinToken
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            invalidToken, // invalid joinToken
+            MAX_JOIN_AMOUNT_RATIO
         );
     }
 
@@ -1126,10 +1126,10 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         );
         mockGroupActionFactory.createExtension(
             address(token),
-            address(badLp), // LP doesn't contain token
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(badLp), // LP doesn't contain token
+            MAX_JOIN_AMOUNT_RATIO
         );
     }
 
@@ -1137,10 +1137,10 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Should not revert
         address extension = mockGroupActionFactory.createExtension(
             address(token),
-            address(token), // joinToken = token
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinToken = token
+            MAX_JOIN_AMOUNT_RATIO
         );
         ExtensionGroupAction action = ExtensionGroupAction(extension);
 
@@ -1161,10 +1161,10 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Should not revert
         address extension = mockGroupActionFactory.createExtension(
             address(token),
-            address(lpToken), // LP containing token
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(lpToken), // LP containing token
+            MAX_JOIN_AMOUNT_RATIO
         );
         ExtensionGroupAction action = ExtensionGroupAction(extension);
 
@@ -1180,10 +1180,10 @@ contract ExtensionGroupActionJoinTokenTest is BaseGroupTest {
         // Deploy action with LP as joinToken
         address extension = mockGroupActionFactory.createExtension(
             address(token),
-            address(lpToken),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(lpToken),
+            MAX_JOIN_AMOUNT_RATIO
         );
         ExtensionGroupAction action = ExtensionGroupAction(extension);
 

@@ -26,16 +26,16 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
             address joinTokenAddress,
             uint256 activationStakeAmount,
             uint256 maxJoinAmountRatio,
-            uint256 minGovRatioForActivation
+            uint256 activationMinGovRatio
         ) = createDefaultConfig();
 
         groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            joinTokenAddress,
+            activationMinGovRatio,
             activationStakeAmount,
-            maxJoinAmountRatio,
-            minGovRatioForActivation
+            joinTokenAddress,
+            maxJoinAmountRatio
         );
 
         // Register extension in mockGroupActionFactory
@@ -238,10 +238,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -625,10 +625,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1332,10 +1332,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1448,10 +1448,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1584,10 +1584,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1672,10 +1672,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token2),
-            address(token2),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token2),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1766,10 +1766,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token2),
-            address(token2),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token2),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1882,10 +1882,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -1970,10 +1970,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -2053,10 +2053,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;
@@ -2144,10 +2144,10 @@ contract GroupJoinGlobalStateTest is BaseGroupTest {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 actionId2 = 1;

@@ -22,10 +22,10 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     constructor(
         address factory_,
         address tokenAddress_,
-        address joinTokenAddress_,
+        uint256 activationMinGovRatio_,
         uint256 activationStakeAmount_,
-        uint256 maxJoinAmountRatio_,
-        uint256 activationMinGovRatio_
+        address joinTokenAddress_,
+        uint256 maxJoinAmountRatio_
     ) ExtensionBaseReward(factory_, tokenAddress_) {
         IGroupActionFactory factory = IGroupActionFactory(factory_);
         address groupJoinAddress = factory.GROUP_JOIN_ADDRESS();

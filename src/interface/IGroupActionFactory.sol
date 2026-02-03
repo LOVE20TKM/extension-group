@@ -17,9 +17,9 @@ interface IGroupActionFactory is IGroupActionFactoryErrors {
 
     function createExtension(
         address tokenAddress_,
-        address joinTokenAddress_,
+        uint256 activationMinGovRatio_,
         uint256 activationStakeAmount_,
-        uint256 maxJoinAmountRatio_,
-        uint256 activationMinGovRatio_
+        address joinTokenAddress_,
+        uint256 maxJoinAmountRatio_
     ) external returns (address extension);
 }

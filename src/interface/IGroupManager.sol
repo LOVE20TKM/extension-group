@@ -38,7 +38,7 @@ interface IGroupManagerErrors {
     error CannotDeactivateInActivatedRound();
     error OnlyGroupOwner();
     error NotRegisteredExtensionInFactory();
-    error InsufficientGovRatioForActivation();
+    error InsufficientActivationMinGovRatio();
     error NoGovVotes();
 }
 

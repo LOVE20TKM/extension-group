@@ -173,7 +173,7 @@ abstract contract BaseGroupTest is Test {
             address joinTokenAddress,
             uint256 activationStakeAmount,
             uint256 maxJoinAmountRatio,
-            uint256 minGovRatioForActivation
+            uint256 activationMinGovRatio
         )
     {
         return (

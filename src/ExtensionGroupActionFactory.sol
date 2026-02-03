@@ -34,10 +34,10 @@ contract ExtensionGroupActionFactory is
 
     function createExtension(
         address tokenAddress_,
-        address joinTokenAddress_,
+        uint256 activationMinGovRatio_,
         uint256 activationStakeAmount_,
-        uint256 maxJoinAmountRatio_,
-        uint256 activationMinGovRatio_
+        address joinTokenAddress_,
+        uint256 maxJoinAmountRatio_
     ) external returns (address extension) {
         if (maxJoinAmountRatio_ == 0 || maxJoinAmountRatio_ > 1e18) {
             revert IGroupActionFactoryErrors.InvalidMaxJoinAmountRatio();
@@ -48,10 +48,10 @@ contract ExtensionGroupActionFactory is
             new ExtensionGroupAction(
                 address(this),
                 tokenAddress_,
-                joinTokenAddress_,
+                activationMinGovRatio_,
                 activationStakeAmount_,
-                maxJoinAmountRatio_,
-                activationMinGovRatio_
+                joinTokenAddress_,
+                maxJoinAmountRatio_
             )
         );
 

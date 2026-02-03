@@ -102,7 +102,7 @@ contract GroupManager is IGroupManager {
         IExtension(extension).initializeIfNeeded();
 
         // Check min gov ratio for activation
-        _validateMinGovRatioForActivation(extension);
+        _validateActivationMinGovRatio(extension);
 
         uint256 currentRound = _join.currentRound();
 
@@ -544,9 +544,7 @@ contract GroupManager is IGroupManager {
         _tokenAddressesByGroupId[groupId].add(tokenAddress);
     }
 
-    function _validateMinGovRatioForActivation(
-        address extension
-    ) internal view {
+    function _validateActivationMinGovRatio(address extension) internal view {
         uint256 minGovRatio = IGroupAction(extension)
             .ACTIVATION_MIN_GOV_RATIO();
         if (minGovRatio == 0) return; // Skip check if no minimum required
@@ -559,6 +557,6 @@ contract GroupManager is IGroupManager {
         uint256 ownerGovRatio = (ownerGovVotes * PRECISION) / totalGovVotes;
 
         if (ownerGovRatio < minGovRatio)
-            revert InsufficientGovRatioForActivation();
+            revert InsufficientActivationMinGovRatio();
     }
 }

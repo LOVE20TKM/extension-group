@@ -26,10 +26,10 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         groupAction = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         token.mint(address(this), 1e18);
@@ -1369,10 +1369,10 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token2),
-            address(token2),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token2),
+            MAX_JOIN_AMOUNT_RATIO
         );
         token2.approve(address(mockGroupActionFactory), type(uint256).max);
         mockGroupActionFactory.registerExtensionForTesting(
@@ -1471,18 +1471,18 @@ contract GroupJoinTest is BaseGroupTest, IGroupJoinEvents {
         ExtensionGroupAction groupAction2 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
         ExtensionGroupAction groupAction3 = new ExtensionGroupAction(
             address(mockGroupActionFactory),
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
         token.approve(address(mockGroupActionFactory), type(uint256).max);
         mockGroupActionFactory.registerExtensionForTesting(

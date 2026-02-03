@@ -85,10 +85,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         token.approve(address(actionFactory), type(uint256).max);
         address groupActionAddress = actionFactory.createExtension(
             address(token), // tokenAddress
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
         groupAction = ExtensionGroupAction(groupActionAddress);
 
@@ -625,10 +625,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         uint256 actionId2 = 1;
         address groupAction2Address = actionFactory.createExtension(
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
         submit.setActionInfo(address(token), actionId2, groupAction2Address);
         address action2Author = actionFactory.extensionCreator(
@@ -692,10 +692,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         uint256 actionId2 = 1;
         address groupAction2Address = actionFactory.createExtension(
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
         submit.setActionInfo(address(token), actionId2, groupAction2Address);
         address action2Author = actionFactory.extensionCreator(
@@ -1738,10 +1738,10 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         token.approve(address(actionFactory), type(uint256).max);
         address groupActionAddress = actionFactory.createExtension(
             address(token), // tokenAddress
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             stakeAmount,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
         groupAction = ExtensionGroupAction(groupActionAddress);
 

@@ -93,10 +93,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         assertTrue(extension != address(0));
@@ -108,10 +108,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         assertEq(factory.extensionsCount(), 1);
@@ -128,10 +128,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         uint256 balanceAfter = token.balanceOf(address(this));
@@ -144,10 +144,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         ExtensionGroupAction groupAction = ExtensionGroupAction(extension);
@@ -172,26 +172,26 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address ext1 = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         address ext2 = factory.createExtension(
             address(token2),
-            address(token2), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token2), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         address ext3 = factory.createExtension(
             address(token3),
-            address(token3), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token3), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         assertEq(factory.extensionsCount(), 3);
@@ -207,10 +207,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         ExtensionGroupAction ext = ExtensionGroupAction(extension);
@@ -233,10 +233,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token), // joinTokenAddress
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token), // joinTokenAddress
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         assertTrue(factory.exists(extension));
@@ -264,10 +264,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            MAX_JOIN_AMOUNT_RATIO,
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
         );
 
         assertEq(extension, expectedExtension);
@@ -283,10 +283,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
         factory.createExtension(
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            0, // maxJoinAmountRatio_ = 0 should revert
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            0 // maxJoinAmountRatio_ = 0 should revert
         );
     }
 
@@ -300,10 +300,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
         );
         factory.createExtension(
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            1e18 + 1, // maxJoinAmountRatio_ > 1e18 should revert
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            1e18 + 1 // maxJoinAmountRatio_ > 1e18 should revert
         );
     }
 
@@ -314,10 +314,10 @@ contract ExtensionGroupActionFactoryTest is BaseGroupTest {
 
         address extension = factory.createExtension(
             address(token),
-            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
             GROUP_ACTIVATION_STAKE_AMOUNT,
-            1e18, // maxJoinAmountRatio_ = 1e18 should pass
-            ACTIVATION_MIN_GOV_RATIO
+            address(token),
+            1e18 // maxJoinAmountRatio_ = 1e18 should pass
         );
 
         assertTrue(extension != address(0));
