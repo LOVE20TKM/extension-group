@@ -31,7 +31,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     using SafeERC20 for IERC20;
 
     uint256 public constant PRECISION = 1e18;
-    uint256 public constant DEFAULT_MAX_RECIPIENTS = 10;
 
     address public immutable GROUP_ACTION_TOKEN_ADDRESS;
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
@@ -107,7 +106,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         if (groupReward == 0) return 0;
 
         (address[] memory addrs, uint256[] memory ratios) = _groupRecipients
-            .recipients(groupOwner, TOKEN_ADDRESS, actionId_, groupId, round);
+            .recipients(
+                groupOwner,
+                GROUP_ACTION_TOKEN_ADDRESS,
+                actionId_,
+                groupId,
+                round
+            );
 
         if (recipient == groupOwner) {
             uint256 distributed;
@@ -155,7 +160,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         (addrs, ratios, amounts, ownerAmount) = _groupRecipients
             .getDistribution(
                 groupOwner,
-                TOKEN_ADDRESS,
+                GROUP_ACTION_TOKEN_ADDRESS,
                 actionId_,
                 groupId,
                 groupReward,
@@ -323,6 +328,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         if (totalServiceReward == 0 || totalActionReward == 0) return 0;
 
         address extension = _checkActionId(actionId_);
+        if (
+            _groupVerify.verifierByGroupId(extension, round, groupId) != claimer
+        ) return 0;
         uint256 groupActionReward = IGroupAction(extension)
             .generatedActionRewardByGroupId(round, groupId);
         if (groupActionReward == 0) return 0;
@@ -406,14 +414,14 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ) internal returns (uint256 distributed) {
         uint256[] memory aids = _groupRecipients.actionIdsWithRecipients(
             msg.sender,
-            TOKEN_ADDRESS,
+            GROUP_ACTION_TOKEN_ADDRESS,
             round
         );
         for (uint256 i; i < aids.length; ) {
             uint256[] memory gids = _groupRecipients
                 .groupIdsByActionIdWithRecipients(
                     msg.sender,
-                    TOKEN_ADDRESS,
+                    GROUP_ACTION_TOKEN_ADDRESS,
                     aids[i],
                     round
                 );
@@ -449,7 +457,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         ) = _groupRecipients.getDistribution(
                 msg.sender,
-                TOKEN_ADDRESS,
+                GROUP_ACTION_TOKEN_ADDRESS,
                 actionId_,
                 groupId,
                 groupReward,

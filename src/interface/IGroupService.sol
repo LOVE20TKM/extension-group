@@ -2,15 +2,6 @@
 pragma solidity =0.8.17;
 
 interface IGroupServiceEvents {
-    event UpdateRecipients(
-        address indexed tokenAddress,
-        uint256 round,
-        uint256 indexed actionId,
-        uint256 indexed groupId,
-        address account,
-        address[] recipients,
-        uint256[] ratios
-    );
     event DistributeRecipient(
         address indexed tokenAddress,
         uint256 round,
@@ -34,21 +25,11 @@ interface IGroupServiceEvents {
 
 interface IGroupServiceErrors {
     error NoActiveGroups();
-    error InvalidRatio();
-    error TooManyRecipients();
-    error ZeroAddress();
-    error ZeroRatio();
-    error ArrayLengthMismatch();
-    error DuplicateAddress();
     error InvalidExtension();
-    error NotGroupOwner();
-    error GroupNotActive();
-    error RecipientCannotBeSelf();
 }
 
 interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function PRECISION() external view returns (uint256);
-    function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
     function GOV_RATIO_MULTIPLIER() external view returns (uint256);
 
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);

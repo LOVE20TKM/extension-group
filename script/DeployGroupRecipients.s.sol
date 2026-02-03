@@ -7,28 +7,33 @@ import {GroupRecipients} from "../src/GroupRecipients.sol";
 /**
  * @title DeployGroupRecipients
  * @notice Script for deploying GroupRecipients singleton contract
- * @dev Requires groupAddress from address.group.params (Group NFT contract). No separate initialize step.
+ * @dev Requires groupActionFactoryAddress from address.extension.group.params
  */
 contract DeployGroupRecipients is BaseScript {
     address public groupRecipientsAddress;
 
     function run() external {
-        address groupAddress = readAddressParamsFile(
-            "address.group.params",
-            "groupAddress"
+        address groupActionFactoryAddress = readAddressParamsFile(
+            "address.extension.group.params",
+            "groupActionFactoryAddress"
         );
         require(
-            groupAddress != address(0),
-            "groupAddress not found in address.group.params"
+            groupActionFactoryAddress != address(0),
+            "groupActionFactoryAddress not found in address.extension.group.params"
         );
 
         vm.startBroadcast();
-        groupRecipientsAddress = address(new GroupRecipients(groupAddress));
+        groupRecipientsAddress = address(
+            new GroupRecipients(groupActionFactoryAddress)
+        );
         vm.stopBroadcast();
 
         if (!hideLogs) {
             console.log("GroupRecipients deployed at:", groupRecipientsAddress);
-            console.log("  GROUP_ADDRESS:", groupAddress);
+            console.log(
+                "  groupActionFactoryAddress:",
+                groupActionFactoryAddress
+            );
         }
 
         updateParamsFile(

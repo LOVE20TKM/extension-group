@@ -393,7 +393,7 @@ contract TestGroupFlowHelper is Test {
         IGroupVerify(address(groupVerify)).initialize(
             address(groupActionFactory)
         );
-        groupRecipients = new GroupRecipients(address(group));
+        groupRecipients = new GroupRecipients(address(groupActionFactory));
         groupServiceFactory = new ExtensionGroupServiceFactory(
             address(groupActionFactory),
             address(groupRecipients)
@@ -922,12 +922,10 @@ contract TestGroupFlowHelper is Test {
         address tokenAddress = ExtensionGroupService(
             groupOwner.groupServiceAddress
         ).TOKEN_ADDRESS();
-        uint256 round = joinContract.currentRound();
 
         vm.prank(groupOwner.flow.userAddress);
         groupRecipients.setRecipients(
             tokenAddress,
-            round,
             groupOwner.groupActionId,
             groupOwner.groupId,
             groupOwner.recipients,

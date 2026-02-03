@@ -11,6 +11,12 @@ import {
 import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
+import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
+import {IGroupActionFactory} from "./interface/IGroupActionFactory.sol";
+import {
+    IExtensionFactory
+} from "@extension/src/interface/IExtensionFactory.sol";
+import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 
 contract GroupRecipients is IGroupRecipients {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
@@ -20,6 +26,7 @@ contract GroupRecipients is IGroupRecipients {
     uint256 public constant DEFAULT_MAX_RECIPIENTS = 10;
 
     address public immutable GROUP_ADDRESS;
+    address public immutable VERIFY_ADDRESS;
 
     // groupOwner => tokenAddress => actionId => groupId => recipients
     mapping(address => mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History))))
@@ -34,9 +41,17 @@ contract GroupRecipients is IGroupRecipients {
     mapping(address => mapping(address => mapping(uint256 => RoundHistoryUint256Array.History)))
         internal _groupIdsByActionIdWithRecipients;
 
-    constructor(address groupAddress_) {
-        if (groupAddress_ == address(0)) revert ZeroAddress();
-        GROUP_ADDRESS = groupAddress_;
+    constructor(address groupActionFactoryAddress_) {
+        if (groupActionFactoryAddress_ == address(0)) revert ZeroAddress();
+        IGroupActionFactory factory = IGroupActionFactory(
+            groupActionFactoryAddress_
+        );
+        GROUP_ADDRESS = factory.GROUP_ADDRESS();
+        VERIFY_ADDRESS = IExtensionCenter(
+            IExtensionFactory(groupActionFactoryAddress_).CENTER_ADDRESS()
+        ).verifyAddress();
+        if (GROUP_ADDRESS == address(0)) revert ZeroAddress();
+        if (VERIFY_ADDRESS == address(0)) revert ZeroAddress();
     }
 
     modifier onlyGroupOwner(uint256 groupId) {
@@ -47,12 +62,12 @@ contract GroupRecipients is IGroupRecipients {
 
     function setRecipients(
         address tokenAddress,
-        uint256 round,
         uint256 actionId,
         uint256 groupId,
         address[] calldata addrs,
         uint256[] calldata ratios
     ) external onlyGroupOwner(groupId) {
+        uint256 round = ILOVE20Verify(VERIFY_ADDRESS).currentRound();
         address owner = msg.sender;
         _validateRecipients(owner, addrs, ratios);
 

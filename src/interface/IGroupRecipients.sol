@@ -28,10 +28,10 @@ interface IGroupRecipients is IGroupRecipientsEvents, IGroupRecipientsErrors {
     function PRECISION() external view returns (uint256);
     function DEFAULT_MAX_RECIPIENTS() external view returns (uint256);
     function GROUP_ADDRESS() external view returns (address);
+    function VERIFY_ADDRESS() external view returns (address);
 
     function setRecipients(
         address tokenAddress,
-        uint256 round,
         uint256 actionId,
         uint256 groupId,
         address[] calldata addrs,

@@ -79,7 +79,9 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         );
 
         // Deploy GroupRecipients and GroupService factory
-        GroupRecipients groupRecipients = new GroupRecipients(address(group));
+        GroupRecipients groupRecipients = new GroupRecipients(
+            address(actionFactory)
+        );
         factory = new ExtensionGroupServiceFactory(
             address(actionFactory),
             address(groupRecipients)
@@ -219,7 +221,6 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
         assertEq(ext.TOKEN_ADDRESS(), address(token));
         assertEq(ext.GROUP_ACTION_TOKEN_ADDRESS(), address(token));
         assertEq(ext.GROUP_ACTION_FACTORY_ADDRESS(), address(actionFactory));
-        assertEq(ext.DEFAULT_MAX_RECIPIENTS(), MAX_RECIPIENTS);
     }
 
     // ============ Exists Tests ============

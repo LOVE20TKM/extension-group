@@ -88,7 +88,7 @@ contract ExtensionGroupServiceTest is
         IGroupVerify(address(newGroupVerify)).initialize(
             address(actionFactory)
         );
-        groupRecipients = new GroupRecipients(address(group));
+        groupRecipients = new GroupRecipients(address(actionFactory));
         serviceFactory = new ExtensionGroupServiceFactory(
             address(actionFactory),
             address(groupRecipients)
@@ -228,7 +228,6 @@ contract ExtensionGroupServiceTest is
             groupService.GROUP_ACTION_FACTORY_ADDRESS(),
             address(actionFactory)
         );
-        assertEq(groupService.DEFAULT_MAX_RECIPIENTS(), MAX_RECIPIENTS);
     }
 
     // ============ join Tests ============
@@ -279,7 +278,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -320,12 +318,10 @@ contract ExtensionGroupServiceTest is
         ratios[0] = 5e17;
 
         // groupOwner2 tries to set recipients for groupId1 (owned by groupOwner1)
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner2);
         vm.expectRevert(IGroupRecipientsErrors.OnlyGroupOwner.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -346,12 +342,10 @@ contract ExtensionGroupServiceTest is
         uint256[] memory ratios = new uint256[](1);
         ratios[0] = 5e17;
 
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupRecipientsErrors.ArrayLengthMismatch.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -373,12 +367,10 @@ contract ExtensionGroupServiceTest is
             ratios[i] = 1e16;
         }
 
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupRecipientsErrors.TooManyRecipients.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -398,12 +390,10 @@ contract ExtensionGroupServiceTest is
         uint256[] memory ratios = new uint256[](1);
         ratios[0] = 5e17;
 
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupRecipientsErrors.ZeroAddress.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -423,12 +413,10 @@ contract ExtensionGroupServiceTest is
         uint256[] memory ratios = new uint256[](1);
         ratios[0] = 0;
 
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupRecipientsErrors.ZeroRatio.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -450,12 +438,10 @@ contract ExtensionGroupServiceTest is
         ratios[0] = 6e17; // 60%
         ratios[1] = 5e17; // 50% - total > 100%
 
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupRecipientsErrors.InvalidRatio.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -476,12 +462,10 @@ contract ExtensionGroupServiceTest is
         uint256[] memory ratios = new uint256[](1);
         ratios[0] = 5e17;
 
-        uint256 round = verify.currentRound();
         vm.prank(groupOwner1);
         vm.expectRevert(IGroupRecipientsErrors.RecipientCannotBeSelf.selector);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -507,7 +491,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round1,
             ACTION_ID,
             groupId1,
             recipients1,
@@ -528,7 +511,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round2,
             ACTION_ID,
             groupId1,
             recipients2,
@@ -579,7 +561,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -618,7 +599,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -634,6 +614,42 @@ contract ExtensionGroupServiceTest is
             groupOwner1
         );
         assertEq(ownerReward, 0); // No reward set
+    }
+
+    function test_RewardByRecipient_ReturnsZero_WhenNotVerifierForGroup()
+        public
+    {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 10e18, 80);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        address[] memory recipients2 = new address[](1);
+        recipients2[0] = address(0x200);
+        uint256[] memory ratios2 = new uint256[](1);
+        ratios2[0] = 3e17;
+        vm.prank(groupOwner2);
+        groupRecipients.setRecipients(
+            address(token),
+            ACTION_ID,
+            groupId2,
+            recipients2,
+            ratios2
+        );
+
+        // groupOwner1 is not the verifier for groupId2 (groupOwner2 is)
+        uint256 rewardAsNonVerifier = groupService.rewardByRecipient(
+            round,
+            groupOwner1,
+            ACTION_ID,
+            groupId2,
+            address(0x200)
+        );
+        assertEq(rewardAsNonVerifier, 0);
     }
 
     // ============ rewardDistribution Tests ============
@@ -656,7 +672,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -682,6 +697,44 @@ contract ExtensionGroupServiceTest is
         assertEq(amounts[0], 0);
         assertEq(amounts[1], 0);
         assertEq(ownerAmount, 0);
+    }
+
+    function test_RewardDistribution_ReturnsZeroAmounts_WhenNotVerifierForGroup()
+        public
+    {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 10e18, 80);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        address[] memory recipients1 = new address[](1);
+        recipients1[0] = address(0x100);
+        uint256[] memory ratios1 = new uint256[](1);
+        ratios1[0] = 3e17;
+        vm.prank(groupOwner1);
+        groupRecipients.setRecipients(
+            address(token),
+            ACTION_ID,
+            groupId1,
+            recipients1,
+            ratios1
+        );
+
+        // groupOwner2 is not the verifier for groupId1 (groupOwner1 is)
+        (, , uint256[] memory amounts, uint256 ownerAmount) = groupService
+            .rewardDistribution(round, groupOwner2, ACTION_ID, groupId1);
+
+        assertEq(ownerAmount, 0);
+        for (uint256 i; i < amounts.length; ) {
+            assertEq(amounts[i], 0);
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     // ============ claimReward Tests ============
@@ -904,7 +957,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -936,7 +988,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients1,
@@ -951,7 +1002,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner2);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId2,
             recipients2,
@@ -995,7 +1045,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -1031,7 +1080,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients1,
@@ -1047,7 +1095,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients2,
@@ -1082,7 +1129,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients,
@@ -1328,7 +1374,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId1,
             recipients1,
@@ -1338,7 +1383,6 @@ contract ExtensionGroupServiceTest is
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
             address(token),
-            round,
             ACTION_ID,
             groupId3,
             recipients3,
@@ -1921,7 +1965,7 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
         IGroupVerify(address(newGroupVerify)).initialize(
             address(actionFactory)
         );
-        groupRecipients = new GroupRecipients(address(group));
+        groupRecipients = new GroupRecipients(address(actionFactory));
         serviceFactory = new ExtensionGroupServiceFactory(
             address(actionFactory),
             address(groupRecipients)
