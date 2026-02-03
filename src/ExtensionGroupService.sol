@@ -7,18 +7,16 @@ import {IGroupVerify} from "./interface/IGroupVerify.sol";
 import {
     IExtensionGroupActionFactory
 } from "./interface/IExtensionGroupActionFactory.sol";
+import {
+    IExtensionGroupServiceFactory
+} from "./interface/IExtensionGroupServiceFactory.sol";
 import {IGroupService} from "./interface/IGroupService.sol";
+import {IGroupRecipients} from "./interface/IGroupRecipients.sol";
 import {
     ExtensionBaseRewardJoin
 } from "@extension/src/ExtensionBaseRewardJoin.sol";
 import {ExtensionBase} from "@extension/src/ExtensionBase.sol";
 import {IReward} from "@extension/src/interface/IReward.sol";
-import {
-    RoundHistoryAddressArray
-} from "@extension/src/lib/RoundHistoryAddressArray.sol";
-import {
-    RoundHistoryUint256Array
-} from "@extension/src/lib/RoundHistoryUint256Array.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {
     SafeERC20
@@ -30,8 +28,6 @@ import {ILOVE20Token} from "@core/interfaces/ILOVE20Token.sol";
 import {ILOVE20Stake} from "@core/interfaces/ILOVE20Stake.sol";
 
 contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
-    using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
-    using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
     using SafeERC20 for IERC20;
 
     uint256 public constant PRECISION = 1e18;
@@ -41,35 +37,30 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
     uint256 public immutable GOV_RATIO_MULTIPLIER;
 
+    IGroupRecipients internal immutable _groupRecipients;
     IGroupManager internal immutable _groupManager;
     IERC721Enumerable internal immutable _group;
     IGroupVerify internal immutable _groupVerify;
     IExtensionGroupActionFactory internal immutable _actionFactory;
     ILOVE20Stake internal immutable _stake;
 
-    // owner => actionId => groupId => recipients
-    mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History)))
-        internal _recipientsHistory;
-    // owner => actionId => groupId => ratios
-    mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryUint256Array.History)))
-        internal _ratiosHistory;
-    // owner => actionIds
-    mapping(address => RoundHistoryUint256Array.History)
-        internal _actionIdsWithRecipients;
-    // owner => actionId => groupIds
-    mapping(address => mapping(uint256 => RoundHistoryUint256Array.History))
-        internal _groupIdsByActionIdWithRecipients;
+    /// @dev round => account => gov ratio at claim time
+    mapping(uint256 => mapping(address => uint256))
+        internal _claimGovRatioByRoundAccount;
 
     constructor(
         address factory_,
+        address groupActionFactoryAddress_,
         address tokenAddress_,
         address groupActionTokenAddress_,
-        address groupActionFactoryAddress_,
         uint256 govRatioMultiplier_
     ) ExtensionBaseRewardJoin(factory_, tokenAddress_) {
         GROUP_ACTION_TOKEN_ADDRESS = groupActionTokenAddress_;
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactoryAddress_;
         GOV_RATIO_MULTIPLIER = govRatioMultiplier_;
+        _groupRecipients = IGroupRecipients(
+            IExtensionGroupServiceFactory(factory_).GROUP_RECIPIENTS_ADDRESS()
+        );
 
         _actionFactory = IExtensionGroupActionFactory(
             groupActionFactoryAddress_
@@ -100,48 +91,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         return extension;
     }
 
-    function setRecipients(
-        uint256 actionId_,
-        uint256 groupId,
-        address[] calldata addrs,
-        uint256[] calldata ratios
-    ) external {
-        address extension = _checkActionId(actionId_);
-        if (_group.ownerOf(groupId) != msg.sender) revert NotGroupOwner();
-        if (!_groupManager.isGroupActive(extension, groupId))
-            revert GroupNotActive();
-
-        _setRecipients(msg.sender, actionId_, groupId, addrs, ratios);
-    }
-
-    function recipients(
-        address groupOwner,
-        uint256 actionId_,
-        uint256 groupId,
-        uint256 round
-    ) external view returns (address[] memory addrs, uint256[] memory ratios) {
-        addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
-            round
-        );
-        ratios = _ratiosHistory[groupOwner][actionId_][groupId].values(round);
-    }
-
-    function actionIdsWithRecipients(
-        address account,
-        uint256 round
-    ) external view returns (uint256[] memory) {
-        return _actionIdsWithRecipients[account].values(round);
-    }
-
-    function groupIdsByActionIdWithRecipients(
-        address account,
-        uint256 actionId_,
-        uint256 round
-    ) external view returns (uint256[] memory) {
-        return
-            _groupIdsByActionIdWithRecipients[account][actionId_].values(round);
-    }
-
     function rewardByRecipient(
         uint256 round,
         address groupOwner,
@@ -149,30 +98,29 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 groupId,
         address recipient
     ) external view returns (uint256) {
-        uint256 groupReward = _calculateRewardByGroupId(
+        uint256 groupReward = _scaledGroupReward(
             round,
+            groupOwner,
             actionId_,
             groupId
         );
         if (groupReward == 0) return 0;
 
-        address[] memory addrs = _recipientsHistory[groupOwner][actionId_][
-            groupId
-        ].values(round);
-        uint256[] memory ratios = _ratiosHistory[groupOwner][actionId_][groupId]
-            .values(round);
+        (address[] memory addrs, uint256[] memory ratios) = _groupRecipients
+            .recipients(groupOwner, TOKEN_ADDRESS, actionId_, groupId, round);
 
         if (recipient == groupOwner) {
-            (, uint256 distributed) = _calculateRecipientAmounts(
-                groupReward,
-                addrs,
-                ratios
-            );
+            uint256 distributed;
+            for (uint256 i; i < addrs.length; ) {
+                distributed += (groupReward * ratios[i]) / PRECISION;
+                unchecked {
+                    ++i;
+                }
+            }
             return groupReward - distributed;
         }
 
-        uint256 len = addrs.length;
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < addrs.length; ) {
             if (addrs[i] == recipient) {
                 return (groupReward * ratios[i]) / PRECISION;
             }
@@ -198,23 +146,21 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             uint256 ownerAmount
         )
     {
-        uint256 groupReward = _calculateRewardByGroupId(
+        uint256 groupReward = _scaledGroupReward(
             round,
+            groupOwner,
             actionId_,
             groupId
         );
-        addrs = _recipientsHistory[groupOwner][actionId_][groupId].values(
-            round
-        );
-        ratios = _ratiosHistory[groupOwner][actionId_][groupId].values(round);
-
-        uint256 distributed;
-        (amounts, distributed) = _calculateRecipientAmounts(
-            groupReward,
-            addrs,
-            ratios
-        );
-        ownerAmount = groupReward - distributed;
+        (addrs, ratios, amounts, ownerAmount) = _groupRecipients
+            .getDistribution(
+                groupOwner,
+                TOKEN_ADDRESS,
+                actionId_,
+                groupId,
+                groupReward,
+                round
+            );
     }
 
     function joinedAmountTokenAddress()
@@ -247,6 +193,13 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     function hasActiveGroups(address owner) public view returns (bool) {
         return _groupManager.hasActiveGroups(GROUP_ACTION_TOKEN_ADDRESS, owner);
+    }
+
+    function claimGovRatioByRound(
+        uint256 round,
+        address account
+    ) external view returns (uint256) {
+        return _claimGovRatioByRoundAccount[round][account];
     }
 
     function generatedActionRewardByVerifier(
@@ -294,100 +247,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         return totalReward;
     }
 
-    function _setRecipients(
-        address account,
-        uint256 actionId_,
-        uint256 groupId,
-        address[] memory addrs,
-        uint256[] memory ratios
-    ) internal {
-        _validateRecipients(account, addrs, ratios);
-
-        uint256 round = _verify.currentRound();
-        _recipientsHistory[account][actionId_][groupId].record(round, addrs);
-        _ratiosHistory[account][actionId_][groupId].record(round, ratios);
-
-        if (addrs.length > 0) {
-            _actionIdsWithRecipients[account].add(round, actionId_);
-            _groupIdsByActionIdWithRecipients[account][actionId_].add(
-                round,
-                groupId
-            );
-        } else if (
-            _groupIdsByActionIdWithRecipients[account][actionId_].remove(
-                round,
-                groupId
-            )
-        ) {
-            if (
-                _groupIdsByActionIdWithRecipients[account][actionId_]
-                    .values(round)
-                    .length == 0
-            ) {
-                _actionIdsWithRecipients[account].remove(round, actionId_);
-            }
-        }
-
-        emit UpdateRecipients({
-            tokenAddress: TOKEN_ADDRESS,
-            round: round,
-            actionId: actionId_,
-            groupId: groupId,
-            account: account,
-            recipients: addrs,
-            ratios: ratios
-        });
-    }
-
-    function _validateRecipients(
-        address account,
-        address[] memory addrs,
-        uint256[] memory ratios
-    ) internal pure {
-        uint256 len = addrs.length;
-        if (len != ratios.length) revert ArrayLengthMismatch();
-        if (len > DEFAULT_MAX_RECIPIENTS) revert TooManyRecipients();
-
-        uint256 totalRatios;
-        for (uint256 i; i < len; ) {
-            if (addrs[i] == address(0)) revert ZeroAddress();
-            if (addrs[i] == account) revert RecipientCannotBeSelf();
-            if (ratios[i] == 0) revert ZeroRatio();
-            totalRatios += ratios[i];
-
-            if (i > 0) {
-                address addr = addrs[i];
-                for (uint256 j; j < i; ) {
-                    if (addrs[j] == addr) revert DuplicateAddress();
-                    unchecked {
-                        ++j;
-                    }
-                }
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
-        if (totalRatios > PRECISION) revert InvalidRatio();
-    }
-
-    function _calculateRecipientAmounts(
-        uint256 groupReward,
-        address[] memory addrs,
-        uint256[] memory ratios
-    ) internal pure returns (uint256[] memory amounts, uint256 distributed) {
-        uint256 len = addrs.length;
-        amounts = new uint256[](len);
-        for (uint256 i; i < len; ) {
-            amounts[i] = (groupReward * ratios[i]) / PRECISION;
-            distributed += amounts[i];
-            unchecked {
-                ++i;
-            }
-        }
-    }
-
     function _getRewardContext(
         uint256 round
     )
@@ -397,6 +256,16 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     {
         totalServiceReward = reward(round);
         totalActionReward = generatedActionReward(round);
+    }
+
+    /// @return Account's gov ratio (1e18): govValid / govTotal; 0 if govTotal==0
+    function _calculateGovRatio(
+        address account
+    ) internal view returns (uint256) {
+        uint256 govTotal = _stake.govVotesNum(TOKEN_ADDRESS);
+        if (govTotal == 0) return 0;
+        uint256 govValid = _stake.validGovVotes(TOKEN_ADDRESS, account);
+        return (govValid * PRECISION) / govTotal;
     }
 
     function _calculateReward(
@@ -424,40 +293,29 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
         if (generatedByVerifier == 0) return (0, 0);
 
-        // reward ratio = served mint / total action reward
         uint256 rewardRatio = (generatedByVerifier * PRECISION) /
             totalActionReward;
-        // theory reward = total service reward × reward ratio
         uint256 theoryReward = (totalServiceReward * rewardRatio) / PRECISION;
-
-        if (GOV_RATIO_MULTIPLIER == 0) {
-            return (theoryReward, 0);
-        }
-
-        uint256 govTotal = _stake.govVotesNum(TOKEN_ADDRESS);
-        if (govTotal == 0) {
-            return (0, theoryReward);
-        }
-        uint256 govValid = _stake.validGovVotes(TOKEN_ADDRESS, account);
-        // gov ratio cap = gov ratio × multiplier
-        uint256 govRatioCap = (govValid * PRECISION * GOV_RATIO_MULTIPLIER) /
-            govTotal;
-
-        // effective ratio = MIN(reward ratio, gov ratio cap)
-        uint256 effectiveRatio = rewardRatio < govRatioCap
+        uint256 govRatioCap = GOV_RATIO_MULTIPLIER == 0
+            ? 0
+            : (_calculateGovRatio(account) * GOV_RATIO_MULTIPLIER) / PRECISION;
+        uint256 effectiveRatio = GOV_RATIO_MULTIPLIER == 0
             ? rewardRatio
-            : govRatioCap;
+            : (rewardRatio < govRatioCap ? rewardRatio : govRatioCap);
         mintReward = (totalServiceReward * effectiveRatio) / PRECISION;
         burnReward = theoryReward - mintReward;
-
         return (mintReward, burnReward);
     }
 
-    function _calculateRewardByGroupId(
+    /// @dev Group reward scaled by claimer's mintReward/theoryReward so distribution does not exceed mint.
+    ///      Uses stored mint/burn when round already claimed by claimer.
+    function _scaledGroupReward(
         uint256 round,
+        address claimer,
         uint256 actionId_,
         uint256 groupId
     ) internal view returns (uint256) {
+        // Theory-based group share (no gov cap): totalServiceReward * groupActionReward / totalActionReward
         (
             uint256 totalServiceReward,
             uint256 totalActionReward
@@ -465,12 +323,26 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         if (totalServiceReward == 0 || totalActionReward == 0) return 0;
 
         address extension = _checkActionId(actionId_);
-
-        uint256 groupReward = IGroupAction(extension)
+        uint256 groupActionReward = IGroupAction(extension)
             .generatedActionRewardByGroupId(round, groupId);
-        if (groupReward == 0) return 0;
+        if (groupActionReward == 0) return 0;
+        uint256 theoryGroupReward = (totalServiceReward * groupActionReward) /
+            totalActionReward;
+        if (theoryGroupReward == 0) return 0;
 
-        return (totalServiceReward * groupReward) / totalActionReward;
+        // Claimer's mint vs theory (use stored if already claimed)
+        uint256 mintReward;
+        uint256 burnReward;
+        if (_claimedByAccount[round][claimer]) {
+            mintReward = _mintedRewardByAccount[round][claimer];
+            burnReward = _burnedRewardByAccount[round][claimer];
+        } else {
+            (mintReward, burnReward) = _calculateReward(round, claimer);
+        }
+        uint256 theoryReward = mintReward + burnReward;
+        if (theoryReward == 0) return 0;
+
+        return (theoryGroupReward * mintReward) / theoryReward;
     }
 
     function _claimReward(
@@ -485,6 +357,9 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         _claimedByAccount[round][msg.sender] = true;
         _mintedRewardByAccount[round][msg.sender] = mintReward;
         _burnedRewardByAccount[round][msg.sender] = burnReward;
+        _claimGovRatioByRoundAccount[round][msg.sender] = _calculateGovRatio(
+            msg.sender
+        );
 
         // Burn overflow reward first
         if (burnReward > 0) {
@@ -529,13 +404,19 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _distributeToRecipients(
         uint256 round
     ) internal returns (uint256 distributed) {
-        uint256[] memory aids = _actionIdsWithRecipients[msg.sender].values(
+        uint256[] memory aids = _groupRecipients.actionIdsWithRecipients(
+            msg.sender,
+            TOKEN_ADDRESS,
             round
         );
         for (uint256 i; i < aids.length; ) {
-            uint256[] memory gids = _groupIdsByActionIdWithRecipients[
-                msg.sender
-            ][aids[i]].values(round);
+            uint256[] memory gids = _groupRecipients
+                .groupIdsByActionIdWithRecipients(
+                    msg.sender,
+                    TOKEN_ADDRESS,
+                    aids[i],
+                    round
+                );
             for (uint256 j; j < gids.length; ) {
                 distributed += _distributeForGroup(round, aids[i], gids[j]);
                 unchecked {
@@ -553,24 +434,27 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 actionId_,
         uint256 groupId
     ) internal returns (uint256 distributed) {
-        uint256 groupReward = _calculateRewardByGroupId(
+        uint256 groupReward = _scaledGroupReward(
             round,
+            msg.sender,
             actionId_,
             groupId
         );
         if (groupReward == 0) return 0;
 
-        address[] memory addrs = _recipientsHistory[msg.sender][actionId_][
-            groupId
-        ].values(round);
-        uint256[] memory ratios = _ratiosHistory[msg.sender][actionId_][groupId]
-            .values(round);
+        (
+            address[] memory addrs,
+            ,
+            uint256[] memory amounts,
 
-        (uint256[] memory amounts, ) = _calculateRecipientAmounts(
-            groupReward,
-            addrs,
-            ratios
-        );
+        ) = _groupRecipients.getDistribution(
+                msg.sender,
+                TOKEN_ADDRESS,
+                actionId_,
+                groupId,
+                groupReward,
+                round
+            );
 
         uint256 len = addrs.length;
         IERC20 token = IERC20(TOKEN_ADDRESS);

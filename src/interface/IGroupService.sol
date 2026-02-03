@@ -54,24 +54,6 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
 
-    function actionIdsWithRecipients(
-        address account,
-        uint256 round
-    ) external view returns (uint256[] memory);
-
-    function groupIdsByActionIdWithRecipients(
-        address account,
-        uint256 actionId,
-        uint256 round
-    ) external view returns (uint256[] memory);
-
-    function recipients(
-        address groupOwner,
-        uint256 actionId,
-        uint256 groupId,
-        uint256 round
-    ) external view returns (address[] memory addrs, uint256[] memory ratios);
-
     function rewardByRecipient(
         uint256 round,
         address groupOwner,
@@ -106,10 +88,9 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
         uint256 round
     ) external view returns (uint256);
 
-    function setRecipients(
-        uint256 actionId,
-        uint256 groupId,
-        address[] calldata addrs,
-        uint256[] calldata ratios
-    ) external;
+    /// @return Gov ratio (1e18) at claim time; 0 if not claimed
+    function claimGovRatioByRound(
+        uint256 round,
+        address account
+    ) external view returns (uint256);
 }

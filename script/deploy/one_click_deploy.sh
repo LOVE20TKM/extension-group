@@ -17,7 +17,7 @@ echo -e "  Network: $network"
 echo -e "=========================================\n"
 
 # ------ Step 1: Initialize environment ------
-echo -e "\n[Step 1/9] Initializing environment..."
+echo -e "\n[Step 1/10] Initializing environment..."
 source 00_init.sh $network
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Failed to initialize environment"
@@ -25,7 +25,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # ------ Step 2: Deploy GroupManager (singleton) ------
-echo -e "\n[Step 2/9] Deploying GroupManager..."
+echo -e "\n[Step 2/10] Deploying GroupManager..."
 source 01_deploy_group_manager.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupManager deployment failed"
@@ -40,7 +40,7 @@ fi
 echo -e "\033[32m✓\033[0m GroupManager deployed at: $groupManagerAddress"
 
 # ------ Step 3: Deploy GroupJoin (singleton) ------
-echo -e "\n[Step 3/9] Deploying GroupJoin..."
+echo -e "\n[Step 3/10] Deploying GroupJoin..."
 source 02_deploy_group_join.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupJoin deployment failed"
@@ -55,7 +55,7 @@ fi
 echo -e "\033[32m✓\033[0m GroupJoin deployed at: $groupJoinAddress"
 
 # ------ Step 4: Deploy GroupVerify (singleton) ------
-echo -e "\n[Step 4/9] Deploying GroupVerify..."
+echo -e "\n[Step 4/10] Deploying GroupVerify..."
 source 03_deploy_group_verify.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupVerify deployment failed"
@@ -70,7 +70,7 @@ fi
 echo -e "\033[32m✓\033[0m GroupVerify deployed at: $groupVerifyAddress"
 
 # ------ Step 5: Deploy GroupActionFactory ------
-echo -e "\n[Step 5/9] Deploying ExtensionGroupActionFactory..."
+echo -e "\n[Step 5/10] Deploying ExtensionGroupActionFactory..."
 source 04_deploy_group_action_factory.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupActionFactory deployment failed"
@@ -84,9 +84,24 @@ if [ -z "$groupActionFactoryAddress" ]; then
 fi
 echo -e "\033[32m✓\033[0m GroupActionFactory deployed at: $groupActionFactoryAddress"
 
-# ------ Step 6: Deploy GroupServiceFactory ------
-echo -e "\n[Step 6/9] Deploying ExtensionGroupServiceFactory..."
-source 05_deploy_group_service_factory.sh
+# ------ Step 6: Deploy GroupRecipients (singleton) ------
+echo -e "\n[Step 6/10] Deploying GroupRecipients..."
+source 05_deploy_group_recipients.sh
+if [ $? -ne 0 ]; then
+    echo -e "\033[31mError:\033[0m GroupRecipients deployment failed"
+    return 1
+fi
+
+source $network_dir/address.extension.group.params
+if [ -z "$groupRecipientsAddress" ]; then
+    echo -e "\033[31mError:\033[0m GroupRecipients address not found"
+    return 1
+fi
+echo -e "\033[32m✓\033[0m GroupRecipients deployed at: $groupRecipientsAddress"
+
+# ------ Step 7: Deploy GroupServiceFactory ------
+echo -e "\n[Step 7/10] Deploying ExtensionGroupServiceFactory..."
+source 06_deploy_group_service_factory.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m GroupServiceFactory deployment failed"
     return 1
@@ -99,9 +114,9 @@ if [ -z "$groupServiceFactoryAddress" ]; then
 fi
 echo -e "\033[32m✓\033[0m GroupServiceFactory deployed at: $groupServiceFactoryAddress"
 
-# ------ Step 7: Initialize Singletons ------
-echo -e "\n[Step 7/9] Initializing GroupManager, GroupJoin, and GroupVerify..."
-echo -e "  (All contracts deployed, now initializing singletons)"
+# ------ Step 8: Initialize Singletons ------
+echo -e "\n[Step 8/10] Initializing GroupManager, GroupJoin, and GroupVerify..."
+echo -e "  (GroupRecipients has no initialize; it uses groupAddress in constructor)"
 source 06_initialize_singletons.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Singletons initialization failed"
@@ -109,12 +124,12 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "\033[32m✓\033[0m Singletons initialized successfully"
 
-# ------ Step 8: Verify contracts (for thinkium70001 networks) ------
-echo -e "\n[Step 8/9] Verifying contracts..."
+# ------ Step 9: Verify contracts (for thinkium70001 networks) ------
+echo -e "\n[Step 9/10] Verifying contracts..."
 source 07_verify.sh
 
-# ------ Step 9: Run deployment checks ------
-echo -e "\n[Step 9/9] Running deployment checks..."
+# ------ Step 10: Run deployment checks ------
+echo -e "\n[Step 10/10] Running deployment checks..."
 source 999_check.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Deployment checks failed"
@@ -128,6 +143,7 @@ echo -e "GroupManager:        $groupManagerAddress"
 echo -e "GroupJoin:           $groupJoinAddress"
 echo -e "GroupVerify:         $groupVerifyAddress"
 echo -e "GroupActionFactory:  $groupActionFactoryAddress"
+echo -e "GroupRecipients:     $groupRecipientsAddress"
 echo -e "GroupServiceFactory: $groupServiceFactoryAddress"
 echo -e "Network: $network"
 echo -e "=========================================\n"

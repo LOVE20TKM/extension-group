@@ -5,6 +5,7 @@ import {BaseGroupTest} from "./utils/BaseGroupTest.sol";
 import {
     ExtensionGroupServiceFactory
 } from "../src/ExtensionGroupServiceFactory.sol";
+import {GroupRecipients} from "../src/GroupRecipients.sol";
 import {IGroupServiceFactory} from "../src/interface/IGroupServiceFactory.sol";
 import {ExtensionGroupService} from "../src/ExtensionGroupService.sol";
 import {IGroupService} from "../src/interface/IGroupService.sol";
@@ -77,8 +78,12 @@ contract ExtensionGroupServiceFactoryTest is BaseGroupTest {
             address(actionFactory)
         );
 
-        // Deploy GroupService factory
-        factory = new ExtensionGroupServiceFactory(address(actionFactory));
+        // Deploy GroupRecipients and GroupService factory
+        GroupRecipients groupRecipients = new GroupRecipients(address(group));
+        factory = new ExtensionGroupServiceFactory(
+            address(actionFactory),
+            address(groupRecipients)
+        );
     }
 
     // ============ Constructor Tests ============

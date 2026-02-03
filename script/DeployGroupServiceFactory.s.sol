@@ -8,34 +8,45 @@ import {
 
 /**
  * @title DeployGroupServiceFactory
- * @notice Script for deploying ExtensionGroupServiceFactory contract
- * @dev Requires extensionCenter contract to be deployed first
+ * @notice Script for deploying ExtensionGroupServiceFactory
+ * @dev Requires GroupRecipients and ExtensionGroupActionFactory to be deployed first (params). GroupRecipients takes groupAddress in constructor at deploy time.
  */
 contract DeployGroupServiceFactory is BaseScript {
     address public groupServiceFactoryAddress;
 
     function run() external {
-        // Read groupActionFactoryAddress from params file
         address groupActionFactoryAddress = readAddressParamsFile(
             "address.extension.group.params",
             "groupActionFactoryAddress"
         );
+        address groupRecipientsAddress = readAddressParamsFile(
+            "address.extension.group.params",
+            "groupRecipientsAddress"
+        );
 
-        // Validate address is not zero
         require(
             groupActionFactoryAddress != address(0),
             "groupActionFactoryAddress not found in params"
         );
-
-        // Validate contract is deployed (has code)
         require(
             groupActionFactoryAddress.code.length > 0,
             "groupActionFactory contract not deployed"
         );
+        require(
+            groupRecipientsAddress != address(0),
+            "groupRecipientsAddress not found in params"
+        );
+        require(
+            groupRecipientsAddress.code.length > 0,
+            "groupRecipients contract not deployed"
+        );
 
         vm.startBroadcast();
         groupServiceFactoryAddress = address(
-            new ExtensionGroupServiceFactory(groupActionFactoryAddress)
+            new ExtensionGroupServiceFactory(
+                groupActionFactoryAddress,
+                groupRecipientsAddress
+            )
         );
         vm.stopBroadcast();
 
@@ -49,6 +60,7 @@ contract DeployGroupServiceFactory is BaseScript {
                 "  groupActionFactoryAddress:",
                 groupActionFactoryAddress
             );
+            console.log("  groupRecipients:", groupRecipientsAddress);
         }
 
         updateParamsFile(

@@ -19,15 +19,18 @@ contract ExtensionGroupServiceFactory is
     IExtensionGroupServiceFactory
 {
     address public immutable GROUP_ACTION_FACTORY_ADDRESS;
+    address public immutable GROUP_RECIPIENTS_ADDRESS;
 
     constructor(
-        address groupActionFactory_
+        address groupActionFactory_,
+        address groupRecipients_
     )
         ExtensionFactoryBase(
             IExtensionFactory(groupActionFactory_).CENTER_ADDRESS()
         )
     {
         GROUP_ACTION_FACTORY_ADDRESS = groupActionFactory_;
+        GROUP_RECIPIENTS_ADDRESS = groupRecipients_;
     }
 
     function createExtension(
@@ -43,9 +46,9 @@ contract ExtensionGroupServiceFactory is
         extension = address(
             new ExtensionGroupService(
                 address(this),
+                GROUP_ACTION_FACTORY_ADDRESS,
                 tokenAddress_,
                 groupActionTokenAddress_,
-                GROUP_ACTION_FACTORY_ADDRESS,
                 govRatioMultiplier_
             )
         );

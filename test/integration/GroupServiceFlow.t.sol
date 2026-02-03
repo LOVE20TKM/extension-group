@@ -259,13 +259,16 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         ExtensionGroupService gs,
         uint256 verifyRound
     ) internal {
-        // Verify recipients configuration
-        (address[] memory addrs, uint256[] memory ratios) = gs.recipients(
-            bobGroup1.flow.userAddress,
-            bobGroup1.groupActionId,
-            bobGroup1.groupId,
-            verifyRound
-        );
+        // Verify recipients configuration via IGroupRecipients (tokenAddress from service)
+        (address[] memory addrs, uint256[] memory ratios) = h
+            .groupRecipients()
+            .recipients(
+                bobGroup1.flow.userAddress,
+                gs.TOKEN_ADDRESS(),
+                bobGroup1.groupActionId,
+                bobGroup1.groupId,
+                verifyRound
+            );
         assertEq(addrs.length, 2, "Should have 2 recipients");
         assertEq(addrs[0], member2().userAddress, "Recipient 0 = member2");
         assertEq(addrs[1], member3().userAddress, "Recipient 1 = member3");

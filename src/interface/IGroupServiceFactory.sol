@@ -7,6 +7,7 @@ interface IGroupServiceFactoryErrors {
 
 interface IGroupServiceFactory is IGroupServiceFactoryErrors {
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
+    function GROUP_RECIPIENTS_ADDRESS() external view returns (address);
 
     function createExtension(
         address tokenAddress_,

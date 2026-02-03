@@ -57,6 +57,11 @@ if [ -n "$groupActionFactoryAddress" ]; then
     verify_contract $groupActionFactoryAddress "ExtensionGroupActionFactory" "src/ExtensionGroupActionFactory.sol"
 fi
 
+# Verify GroupRecipients
+if [ -n "$groupRecipientsAddress" ]; then
+    verify_contract $groupRecipientsAddress "GroupRecipients" "src/GroupRecipients.sol"
+fi
+
 # Verify ExtensionGroupServiceFactory
 if [ -n "$groupServiceFactoryAddress" ]; then
     verify_contract $groupServiceFactoryAddress "ExtensionGroupServiceFactory" "src/ExtensionGroupServiceFactory.sol"

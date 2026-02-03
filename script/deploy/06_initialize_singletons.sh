@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Initialize GroupManager, GroupJoin, and GroupVerify singletons
-# This script must be called after GroupActionFactory is deployed
+# Must be called after GroupActionFactory is deployed (use groupActionFactoryAddress).
+# GroupRecipients has no initialize; it takes groupAddress in constructor at deploy time.
 
 echo "Initializing GroupManager, GroupJoin, and GroupVerify..."
 
@@ -14,7 +15,7 @@ fi
 source $network_dir/address.extension.group.params
 source $network_dir/address.group.params
 
-# Validate addresses
+# Validate addresses for GroupManager, GroupJoin, GroupVerify
 if [ -z "$groupManagerAddress" ] || [ -z "$groupJoinAddress" ] || [ -z "$groupVerifyAddress" ] || [ -z "$groupActionFactoryAddress" ]; then
     echo -e "\033[31mError:\033[0m Required addresses not found in params file"
     echo "  groupManagerAddress: $groupManagerAddress"

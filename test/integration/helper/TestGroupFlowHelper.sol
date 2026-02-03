@@ -52,6 +52,7 @@ import {
 import {
     ExtensionGroupServiceFactory
 } from "../../../src/ExtensionGroupServiceFactory.sol";
+import {GroupRecipients} from "../../../src/GroupRecipients.sol";
 import {ExtensionGroupAction} from "../../../src/ExtensionGroupAction.sol";
 import {ExtensionGroupService} from "../../../src/ExtensionGroupService.sol";
 
@@ -124,6 +125,7 @@ contract TestGroupFlowHelper is Test {
     GroupManager public groupManager;
     ExtensionGroupActionFactory public groupActionFactory;
     ExtensionGroupServiceFactory public groupServiceFactory;
+    GroupRecipients public groupRecipients;
 
     // ============ Constants ============
 
@@ -391,8 +393,10 @@ contract TestGroupFlowHelper is Test {
         IGroupVerify(address(groupVerify)).initialize(
             address(groupActionFactory)
         );
+        groupRecipients = new GroupRecipients(address(group));
         groupServiceFactory = new ExtensionGroupServiceFactory(
-            address(groupActionFactory)
+            address(groupActionFactory),
+            address(groupRecipients)
         );
     }
 
@@ -915,12 +919,15 @@ contract TestGroupFlowHelper is Test {
     function group_service_set_recipients(
         GroupUserParams memory groupOwner
     ) public {
-        ExtensionGroupService groupService = ExtensionGroupService(
+        address tokenAddress = ExtensionGroupService(
             groupOwner.groupServiceAddress
-        );
+        ).TOKEN_ADDRESS();
+        uint256 round = joinContract.currentRound();
 
         vm.prank(groupOwner.flow.userAddress);
-        groupService.setRecipients(
+        groupRecipients.setRecipients(
+            tokenAddress,
+            round,
             groupOwner.groupActionId,
             groupOwner.groupId,
             groupOwner.recipients,
