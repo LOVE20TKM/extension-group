@@ -59,9 +59,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     // owner => actionId => groupIds
     mapping(address => mapping(uint256 => RoundHistoryUint256Array.History))
         internal _groupIdsByActionIdWithRecipients;
-    // round => account => burned reward
-    mapping(uint256 => mapping(address => uint256))
-        internal _burnedRewardByAccount;
 
     constructor(
         address factory_,
@@ -402,10 +399,10 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         totalActionReward = generatedActionReward(round);
     }
 
-    function _calculateRewardBreakdown(
+    function _calculateReward(
         uint256 round,
         address account
-    ) internal view returns (uint256 mintReward, uint256 burnReward) {
+    ) internal view override returns (uint256 mintReward, uint256 burnReward) {
         if (
             !_center.isAccountJoinedByRound(
                 TOKEN_ADDRESS,
@@ -455,14 +452,6 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         return (mintReward, burnReward);
     }
 
-    function _calculateReward(
-        uint256 round,
-        address account
-    ) internal view override returns (uint256) {
-        (uint256 mintReward, ) = _calculateRewardBreakdown(round, account);
-        return mintReward;
-    }
-
     function _calculateRewardByGroupId(
         uint256 round,
         uint256 actionId_,
@@ -485,38 +474,27 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
     function _claimReward(
         uint256 round
-    ) internal override returns (uint256 amount) {
+    ) internal override returns (uint256 mintReward, uint256 burnReward) {
         if (_claimedByAccount[round][msg.sender]) {
             revert AlreadyClaimed();
         }
 
-        (uint256 mintReward, uint256 burnReward) = _calculateRewardBreakdown(
-            round,
-            msg.sender
-        );
-        amount = mintReward;
+        (mintReward, burnReward) = _calculateReward(round, msg.sender);
 
         _claimedByAccount[round][msg.sender] = true;
-        _claimedRewardByAccount[round][msg.sender] = amount;
+        _claimedRewardByAccount[round][msg.sender] = mintReward;
         _burnedRewardByAccount[round][msg.sender] = burnReward;
 
         // Burn overflow reward first
         if (burnReward > 0) {
             ILOVE20Token(TOKEN_ADDRESS).burn(burnReward);
-            emit BurnReward({
-                tokenAddress: TOKEN_ADDRESS,
-                round: round,
-                actionId: actionId,
-                account: msg.sender,
-                amount: burnReward
-            });
         }
 
         uint256 distributed;
         uint256 remaining;
-        if (amount > 0) {
+        if (mintReward > 0) {
             distributed = _distributeToRecipients(round);
-            remaining = amount - distributed;
+            remaining = mintReward - distributed;
             if (remaining > 0)
                 IERC20(TOKEN_ADDRESS).safeTransfer(msg.sender, remaining);
         }
@@ -526,37 +504,20 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             round: round,
             actionId: actionId,
             account: msg.sender,
-            amount: amount
+            mintAmount: mintReward,
+            burnAmount: burnReward
         });
         emit ClaimRewardDistribution({
             tokenAddress: TOKEN_ADDRESS,
             round: round,
             actionId: actionId,
             account: msg.sender,
-            amount: amount,
+            mintAmount: mintReward,
+            burnAmount: burnReward,
             distributed: distributed,
             remaining: remaining
         });
-    }
-
-    function rewardInfoByAccount(
-        uint256 round,
-        address account
-    )
-        external
-        view
-        returns (uint256 mintReward, uint256 burnReward, bool isClaimed)
-    {
-        if (_claimedByAccount[round][account]) {
-            return (
-                _claimedRewardByAccount[round][account],
-                _burnedRewardByAccount[round][account],
-                true
-            );
-        }
-
-        (mintReward, burnReward) = _calculateRewardBreakdown(round, account);
-        return (mintReward, burnReward, false);
+        return (mintReward, burnReward);
     }
 
     /// @notice Distributes rewards to all configured recipients for the caller
@@ -630,36 +591,5 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 ++i;
             }
         }
-    }
-
-    function _calculateBurnAmount(
-        uint256 round,
-        uint256 totalReward
-    ) internal view override returns (uint256) {
-        if (totalReward == 0) return 0;
-
-        address[] memory accounts = _center.accountsByRound(
-            TOKEN_ADDRESS,
-            actionId,
-            round
-        );
-
-        // If any account has non-zero mintReward or burnReward, return 0
-        // (burning handled per-account during claim)
-        for (uint256 i; i < accounts.length; ) {
-            (
-                uint256 mintReward,
-                uint256 burnReward
-            ) = _calculateRewardBreakdown(round, accounts[i]);
-            if (mintReward > 0 || burnReward > 0) {
-                return 0;
-            }
-            unchecked {
-                ++i;
-            }
-        }
-
-        // No one participated, burn all
-        return totalReward;
     }
 }

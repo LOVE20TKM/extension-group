@@ -25,16 +25,10 @@ interface IGroupServiceEvents {
         uint256 round,
         uint256 indexed actionId,
         address indexed account,
-        uint256 amount,
+        uint256 mintAmount,
+        uint256 burnAmount,
         uint256 distributed,
         uint256 remaining
-    );
-    event BurnReward(
-        address indexed tokenAddress,
-        uint256 round,
-        uint256 indexed actionId,
-        address indexed account,
-        uint256 amount
     );
 }
 
@@ -118,12 +112,4 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
         address[] calldata addrs,
         uint256[] calldata ratios
     ) external;
-
-    function rewardInfoByAccount(
-        uint256 round,
-        address account
-    )
-        external
-        view
-        returns (uint256 mintReward, uint256 burnReward, bool isClaimed);
 }

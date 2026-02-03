@@ -70,16 +70,16 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
         public
         pure
         override(ExtensionBaseReward)
-        returns (uint256 reward, bool isMinted)
+        returns (uint256 mintReward, uint256 burnReward, bool claimed)
     {
-        return (0, false);
+        return (0, 0, false);
     }
 
     function _calculateReward(
         uint256 /*round*/,
         address /*account*/
-    ) internal pure override returns (uint256) {
-        return 0;
+    ) internal pure override returns (uint256 mintReward, uint256 burnReward) {
+        return (0, 0);
     }
 
     function exit() external pure {

@@ -108,32 +108,33 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     function _calculateReward(
         uint256 round,
         address account
-    ) internal view override returns (uint256) {
+    ) internal view override returns (uint256 mintReward, uint256 burnReward) {
         uint256 groupId = _groupJoin.groupIdByAccount(
             address(this),
             round,
             account
         );
-        if (groupId == 0) return 0;
+        if (groupId == 0) return (0, 0);
 
         uint256 accountScore = _groupVerify.accountScore(
             address(this),
             round,
             account
         );
-        if (accountScore == 0) return 0;
+        if (accountScore == 0) return (0, 0);
 
         uint256 groupTotalScore = _groupVerify.totalAccountScore(
             address(this),
             round,
             groupId
         );
-        if (groupTotalScore == 0) return 0;
+        if (groupTotalScore == 0) return (0, 0);
 
         uint256 groupReward = _calculateRewardByGroupId(round, groupId);
-        if (groupReward == 0) return 0;
+        if (groupReward == 0) return (0, 0);
 
-        return (groupReward * accountScore) / groupTotalScore;
+        mintReward = (groupReward * accountScore) / groupTotalScore;
+        return (mintReward, 0); // No burn for group action
     }
 
     function _calculateRewardByGroupId(

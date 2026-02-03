@@ -407,7 +407,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             );
 
             // Verify contract's view method matches expected (as additional check)
-            (uint256 contractReward, ) = ga.rewardByAccount(
+            (uint256 contractReward, , ) = ga.rewardByAccount(
                 verifyRound,
                 members[i].flow.userAddress
             );
@@ -449,7 +449,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             );
 
             // Verify contract's view method matches expected (as additional check)
-            (uint256 contractReward, ) = ga.rewardByAccount(
+            (uint256 contractReward, , ) = ga.rewardByAccount(
                 verifyRound,
                 members[i].flow.userAddress
             );
@@ -491,7 +491,7 @@ contract MultiGroupFlowTest is BaseGroupFlowTest {
             );
 
             // Verify contract's view method matches expected (as additional check)
-            (uint256 contractReward, ) = ga.rewardByAccount(
+            (uint256 contractReward, , ) = ga.rewardByAccount(
                 verifyRound,
                 members[i].flow.userAddress
             );

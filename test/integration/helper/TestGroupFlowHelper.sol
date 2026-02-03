@@ -1015,7 +1015,7 @@ contract TestGroupFlowHelper is Test {
         );
 
         vm.prank(member.flow.userAddress);
-        reward = groupAction.claimReward(round);
+        (reward, ) = groupAction.claimReward(round);
     }
 
     /// @notice Claim reward for group service provider
@@ -1028,7 +1028,7 @@ contract TestGroupFlowHelper is Test {
         );
 
         vm.prank(groupOwner.flow.userAddress);
-        reward = groupService.claimReward(round);
+        (reward, ) = groupService.claimReward(round);
     }
 
     // ============ View Helpers ============

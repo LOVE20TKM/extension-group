@@ -569,7 +569,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         uint256 expectedReward = 0;
         verify.setCurrentRound(1);
 
-        (uint256 rewardBefore, bool isMintedBefore) = groupService
+        (uint256 rewardBefore, , bool isMintedBefore) = groupService
             .rewardByAccount(targetRound, groupOwner1);
         assertEq(rewardBefore, expectedReward);
         assertFalse(isMintedBefore);
@@ -577,7 +577,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         vm.prank(groupOwner1);
         groupService.claimReward(targetRound);
 
-        (uint256 rewardAfter, bool isMintedAfter) = groupService
+        (uint256 rewardAfter, , bool isMintedAfter) = groupService
             .rewardByAccount(targetRound, groupOwner1);
         assertEq(rewardAfter, expectedReward);
         assertTrue(isMintedAfter);
@@ -1159,7 +1159,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         uint256 round = verify.currentRound();
 
         // user3 has not joined the service in this round
-        (uint256 reward, bool claimed) = groupService.rewardByAccount(
+        (uint256 reward, , bool claimed) = groupService.rewardByAccount(
             round,
             user3
         );
@@ -1185,7 +1185,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
 
         // groupOwner1 joined in round0, but exited in round1
         // Check reward for round1 (should return 0 because exited in round1)
-        (uint256 reward, bool claimed) = groupService.rewardByAccount(
+        (uint256 reward, , bool claimed) = groupService.rewardByAccount(
             round1,
             groupOwner1
         );
@@ -1240,7 +1240,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
 
         // groupOwner1 joined in round0, and remains joined in round1
         // Check reward for round1
-        (uint256 reward, bool claimed) = groupService.rewardByAccount(
+        (uint256 reward, , bool claimed) = groupService.rewardByAccount(
             round1,
             groupOwner1
         );
@@ -1257,7 +1257,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         assertFalse(claimed, "Should not be claimed yet");
 
         // Compare with a non-joined account to verify the difference
-        (uint256 nonJoinedReward, ) = groupService.rewardByAccount(
+        (uint256 nonJoinedReward, , ) = groupService.rewardByAccount(
             round1,
             user3
         );
@@ -1279,7 +1279,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         groupService.join(new string[](0));
 
         // Should be able to query reward (even if 0, should not revert)
-        (, bool claimed) = groupService.rewardByAccount(round, groupOwner1);
+        (, , bool claimed) = groupService.rewardByAccount(round, groupOwner1);
         // Reward may be 0 if no reward is set, but should not revert
         assertFalse(claimed, "Should not be claimed yet");
         // The actual reward value depends on reward distribution, but the key is
@@ -1311,7 +1311,10 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         groupService.join(new string[](0));
 
         // Verify rewards for each round
-        (uint256 reward1, ) = groupService.rewardByAccount(round1, groupOwner1);
+        (uint256 reward1, , ) = groupService.rewardByAccount(
+            round1,
+            groupOwner1
+        );
 
         // Round 0: joined, should be able to query (may be 0 if no reward)
         // Round 1: not joined (exited), should return 0
@@ -1366,7 +1369,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Calculate expected burn amount
-        (uint256 participatedReward, ) = groupService.rewardByAccount(
+        (uint256 participatedReward, , ) = groupService.rewardByAccount(
             round,
             groupOwner1
         );
@@ -1413,7 +1416,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         token.mint(address(groupService), totalServiceReward);
 
         // Calculate expected values
-        (uint256 participatedReward, ) = groupService.rewardByAccount(
+        (uint256 participatedReward, , ) = groupService.rewardByAccount(
             round,
             groupOwner1
         );
@@ -1469,7 +1472,7 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Calculate expected participated reward
-        (uint256 participatedReward, ) = groupService.rewardByAccount(
+        (uint256 participatedReward, , ) = groupService.rewardByAccount(
             round,
             groupOwner1
         );
@@ -1631,11 +1634,11 @@ contract ExtensionGroupServiceTest is BaseGroupTest, IGroupServiceEvents {
         token.mint(address(groupService), totalServiceReward);
 
         // Calculate expected burn amount
-        (uint256 participatedReward1, ) = groupService.rewardByAccount(
+        (uint256 participatedReward1, , ) = groupService.rewardByAccount(
             round,
             groupOwner1
         );
-        (uint256 participatedReward2, ) = groupService.rewardByAccount(
+        (uint256 participatedReward2, , ) = groupService.rewardByAccount(
             round,
             groupOwner2
         );

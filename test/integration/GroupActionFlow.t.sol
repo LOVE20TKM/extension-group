@@ -179,7 +179,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         );
 
         // Verify contract's view method matches expected (as additional check, not primary verification)
-        (uint256 contractValue, ) = _ga.rewardByAccount(
+        (uint256 contractValue, , ) = _ga.rewardByAccount(
             _verifyRound,
             member1().userAddress
         );
@@ -221,7 +221,7 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
         );
 
         // Verify contract's view method matches expected (as additional check, not primary verification)
-        (uint256 contractValue, ) = _ga.rewardByAccount(
+        (uint256 contractValue, , ) = _ga.rewardByAccount(
             _verifyRound,
             member2().userAddress
         );
@@ -255,11 +255,11 @@ contract GroupActionFlowTest is BaseGroupFlowTest {
 
         // Additional verification: verify contract values also match the ratio
         // (This is a secondary check, primary verification uses expected values)
-        (uint256 m1ContractValue, ) = _ga.rewardByAccount(
+        (uint256 m1ContractValue, , ) = _ga.rewardByAccount(
             _verifyRound,
             member1().userAddress
         );
-        (uint256 m2ContractValue, ) = _ga.rewardByAccount(
+        (uint256 m2ContractValue, , ) = _ga.rewardByAccount(
             _verifyRound,
             member2().userAddress
         );
