@@ -25,8 +25,8 @@ contract GroupRecipients is IGroupRecipients {
     uint256 public constant PRECISION = 1e18;
     uint256 public constant DEFAULT_MAX_RECIPIENTS = 10;
 
-    address public immutable GROUP_ADDRESS;
-    address public immutable VERIFY_ADDRESS;
+    IERC721Enumerable internal immutable _group;
+    ILOVE20Verify internal immutable _verify;
 
     // groupOwner => tokenAddress => actionId => groupId => recipients
     mapping(address => mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryAddressArray.History))))
@@ -46,17 +46,19 @@ contract GroupRecipients is IGroupRecipients {
         IGroupActionFactory factory = IGroupActionFactory(
             groupActionFactoryAddress_
         );
-        GROUP_ADDRESS = factory.GROUP_ADDRESS();
-        VERIFY_ADDRESS = IExtensionCenter(
+        address groupAddress = factory.GROUP_ADDRESS();
+        if (groupAddress == address(0)) revert ZeroAddress();
+        _group = IERC721Enumerable(groupAddress);
+
+        address verifyAddress = IExtensionCenter(
             IExtensionFactory(groupActionFactoryAddress_).CENTER_ADDRESS()
         ).verifyAddress();
-        if (GROUP_ADDRESS == address(0)) revert ZeroAddress();
-        if (VERIFY_ADDRESS == address(0)) revert ZeroAddress();
+        if (verifyAddress == address(0)) revert ZeroAddress();
+        _verify = ILOVE20Verify(verifyAddress);
     }
 
     modifier onlyGroupOwner(uint256 groupId) {
-        if (IERC721Enumerable(GROUP_ADDRESS).ownerOf(groupId) != msg.sender)
-            revert OnlyGroupOwner();
+        if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
         _;
     }
 
@@ -67,7 +69,7 @@ contract GroupRecipients is IGroupRecipients {
         address[] calldata addrs,
         uint256[] calldata ratios
     ) external onlyGroupOwner(groupId) {
-        uint256 round = ILOVE20Verify(VERIFY_ADDRESS).currentRound();
+        uint256 round = _verify.currentRound();
         address owner = msg.sender;
         _validateRecipients(owner, addrs, ratios);
 

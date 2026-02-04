@@ -68,9 +68,6 @@ fi
 echo "-------------------- GroupRecipients check --------------------"
 if [ -n "$groupRecipientsAddress" ]; then
     echo "  groupRecipientsAddress: $groupRecipientsAddress"
-    if [ -n "$groupAddress" ]; then
-        check_equal "GroupRecipients: GROUP_ADDRESS" $groupAddress $(cast_call $groupRecipientsAddress "GROUP_ADDRESS()(address)") || ((check_failed++))
-    fi
     check_equal "GroupRecipients: PRECISION" "1000000000000000000" $(cast_call $groupRecipientsAddress "PRECISION()(uint256)") || ((check_failed++))
     check_equal "GroupRecipients: DEFAULT_MAX_RECIPIENTS" "10" $(cast_call $groupRecipientsAddress "DEFAULT_MAX_RECIPIENTS()(uint256)") || ((check_failed++))
 else
