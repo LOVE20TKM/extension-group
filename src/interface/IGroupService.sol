@@ -70,9 +70,8 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
         uint256 round
     ) external view returns (uint256);
 
-    /// @return Gov ratio (1e18) at claim time; 0 if not claimed
-    function claimGovRatioByRound(
+    function govRatio(
         uint256 round,
         address account
-    ) external view returns (uint256);
+    ) external view returns (uint256 ratio, bool claimed);
 }

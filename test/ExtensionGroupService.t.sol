@@ -765,6 +765,84 @@ contract ExtensionGroupServiceTest is
         groupService.claimReward(targetRound);
     }
 
+    // ============ govRatio Tests ============
+
+    /// @notice When not claimed, returns current gov ratio and claimed=false
+    function test_GovRatio_NotClaimed_ReturnsCurrentGovRatioAndClaimedFalse()
+        public
+    {
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 targetRound = 0;
+        verify.setCurrentRound(1);
+
+        // BaseGroupTest: govVotesNum(token)=100_000e18, setupGroupOwner(groupOwner1, 10000e18) -> validGovVotes(token, groupOwner1)=10000e18
+        // Expected govRatio = 10000e18 * 1e18 / 100_000e18 = 0.1e18
+        uint256 govTotal = 100_000e18;
+        uint256 govValid = 10000e18;
+        uint256 expectedGovRatio = (govValid * 1e18) / govTotal;
+
+        (uint256 ratio, bool claimed) = groupService.govRatio(
+            targetRound,
+            groupOwner1
+        );
+        assertEq(ratio, expectedGovRatio, "govRatio should be current ratio");
+        assertFalse(claimed, "claimed should be false");
+    }
+
+    /// @notice When claimed, returns stored gov ratio at claim time and claimed=true; later stake change does not change returned ratio
+    function test_GovRatio_Claimed_ReturnsStoredGovRatioAndClaimedTrue() public {
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 targetRound = 0;
+        verify.setCurrentRound(1);
+
+        uint256 govTotalBefore = 100_000e18;
+        uint256 govValidBefore = 10000e18;
+        uint256 expectedStoredRatio = (govValidBefore * 1e18) / govTotalBefore;
+
+        vm.prank(groupOwner1);
+        groupService.claimReward(targetRound);
+
+        (uint256 ratioAfterClaim, bool claimedAfter) = groupService.govRatio(
+            targetRound,
+            groupOwner1
+        );
+        assertEq(
+            ratioAfterClaim,
+            expectedStoredRatio,
+            "govRatio after claim should be ratio at claim time"
+        );
+        assertTrue(claimedAfter, "claimed should be true");
+
+        // Change stake so current ratio would differ; stored ratio must remain
+        stake.setValidGovVotes(address(token), groupOwner1, 50000e18);
+        stake.setGovVotesNum(address(token), 100_000e18);
+
+        (uint256 ratioLater, bool claimedLater) = groupService.govRatio(
+            targetRound,
+            groupOwner1
+        );
+        assertEq(
+            ratioLater,
+            expectedStoredRatio,
+            "govRatio should stay stored value after stake change"
+        );
+        assertTrue(claimedLater, "claimed should still be true");
+    }
+
+    /// @notice When govTotal is 0, returns govRatio=0 and claimed=false for unclaimed account
+    function test_GovRatio_GovTotalZero_ReturnsZeroRatio() public {
+        stake.setGovVotesNum(address(token), 0);
+        stake.setValidGovVotes(address(token), groupOwner1, 10000e18);
+
+        (uint256 ratio, bool claimed) = groupService.govRatio(0, groupOwner1);
+        assertEq(ratio, 0, "govRatio should be 0 when govTotal is 0");
+        assertFalse(claimed, "claimed should be false");
+    }
+
     // ============ IExtensionJoinedAmount Tests ============
 
     function test_JoinedAmount() public {

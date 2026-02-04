@@ -44,8 +44,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     ILOVE20Stake internal immutable _stake;
 
     /// @dev round => account => gov ratio at claim time
-    mapping(uint256 => mapping(address => uint256))
-        internal _claimGovRatioByRoundAccount;
+    mapping(uint256 => mapping(address => uint256)) internal _govRatio;
 
     constructor(
         address factory_,
@@ -200,11 +199,16 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         return _groupManager.hasActiveGroups(GROUP_ACTION_TOKEN_ADDRESS, owner);
     }
 
-    function claimGovRatioByRound(
+    function govRatio(
         uint256 round,
         address account
-    ) external view returns (uint256) {
-        return _claimGovRatioByRoundAccount[round][account];
+    ) external view returns (uint256 ratio, bool claimed) {
+        claimed = _claimedByAccount[round][account];
+        if (claimed) {
+            ratio = _govRatio[round][account];
+        } else {
+            ratio = _calculateGovRatio(account);
+        }
     }
 
     function generatedActionRewardByVerifier(
@@ -267,9 +271,12 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _calculateGovRatio(
         address account
     ) internal view returns (uint256) {
-        uint256 govTotal = _stake.govVotesNum(TOKEN_ADDRESS);
+        uint256 govTotal = _stake.govVotesNum(GROUP_ACTION_TOKEN_ADDRESS);
         if (govTotal == 0) return 0;
-        uint256 govValid = _stake.validGovVotes(TOKEN_ADDRESS, account);
+        uint256 govValid = _stake.validGovVotes(
+            GROUP_ACTION_TOKEN_ADDRESS,
+            account
+        );
         return (govValid * PRECISION) / govTotal;
     }
 
@@ -365,9 +372,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         _claimedByAccount[round][msg.sender] = true;
         _mintedRewardByAccount[round][msg.sender] = mintReward;
         _burnedRewardByAccount[round][msg.sender] = burnReward;
-        _claimGovRatioByRoundAccount[round][msg.sender] = _calculateGovRatio(
-            msg.sender
-        );
+        _govRatio[round][msg.sender] = _calculateGovRatio(msg.sender);
 
         // Burn overflow reward first
         if (burnReward > 0) {
