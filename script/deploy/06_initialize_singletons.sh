@@ -2,7 +2,7 @@
 
 # Initialize GroupManager, GroupJoin, and GroupVerify singletons
 # Must be called after GroupActionFactory is deployed (use groupActionFactoryAddress).
-# GroupRecipients has no initialize; it takes groupAddress in constructor at deploy time.
+# GroupRecipients has no initialize; it is constructed with the GroupActionFactory address.
 
 echo "Initializing GroupManager, GroupJoin, and GroupVerify..."
 
