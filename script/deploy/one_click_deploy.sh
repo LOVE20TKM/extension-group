@@ -116,7 +116,7 @@ echo -e "\033[32m✓\033[0m GroupServiceFactory deployed at: $groupServiceFactor
 
 # ------ Step 8: Initialize Singletons ------
 echo -e "\n[Step 8/10] Initializing GroupManager, GroupJoin, and GroupVerify..."
-echo -e "  (GroupRecipients has no initialize; it uses groupAddress in constructor)"
+echo -e "  (GroupRecipients has no initialize; it is constructed with the GroupActionFactory address)"
 source 06_initialize_singletons.sh
 if [ $? -ne 0 ]; then
     echo -e "\033[31mError:\033[0m Singletons initialization failed"
