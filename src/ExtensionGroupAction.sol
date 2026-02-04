@@ -62,8 +62,8 @@ contract ExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     }
 
     function generatedActionRewardByVerifier(
-        uint256 round,
-        address verifier
+        address verifier,
+        uint256 round
     ) external view returns (uint256 amount) {
         uint256[] memory groupIds = _groupVerify.groupIdsByVerifier(
             address(this),

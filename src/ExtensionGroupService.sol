@@ -90,15 +90,15 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     }
 
     function rewardByRecipient(
+        address verifier,
         uint256 round,
-        address groupOwner,
         uint256 actionId_,
         uint256 groupId,
         address recipient
     ) external view returns (uint256) {
         uint256 groupReward = _scaledGroupReward(
+            verifier,
             round,
-            groupOwner,
             actionId_,
             groupId
         );
@@ -106,14 +106,14 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         (address[] memory addrs, uint256[] memory ratios) = _groupRecipients
             .recipients(
-                groupOwner,
+                verifier,
                 GROUP_ACTION_TOKEN_ADDRESS,
                 actionId_,
                 groupId,
                 round
             );
 
-        if (recipient == groupOwner) {
+        if (recipient == verifier) {
             uint256 distributed;
             for (uint256 i; i < addrs.length; ) {
                 distributed += (groupReward * ratios[i]) / PRECISION;
@@ -136,8 +136,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     }
 
     function rewardDistribution(
+        address verifier,
         uint256 round,
-        address groupOwner,
         uint256 actionId_,
         uint256 groupId
     )
@@ -151,14 +151,14 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         )
     {
         uint256 groupReward = _scaledGroupReward(
+            verifier,
             round,
-            groupOwner,
             actionId_,
             groupId
         );
         (addrs, ratios, amounts, ownerAmount) = _groupRecipients
             .getDistribution(
-                groupOwner,
+                verifier,
                 GROUP_ACTION_TOKEN_ADDRESS,
                 actionId_,
                 groupId,
@@ -212,8 +212,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     }
 
     function generatedActionRewardByVerifier(
-        uint256 round,
-        address verifier
+        address verifier,
+        uint256 round
     ) public view override returns (uint256 amount) {
         uint256[] memory actionIds_ = _groupVerify.actionIdsByVerifier(
             GROUP_ACTION_TOKEN_ADDRESS,
@@ -226,8 +226,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
                 actionIds_[i]
             );
             amount += IGroupAction(ext).generatedActionRewardByVerifier(
-                round,
-                verifier
+                verifier,
+                round
             );
             unchecked {
                 ++i;
@@ -300,8 +300,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         if (totalServiceReward == 0 || totalActionReward == 0) return (0, 0);
 
         uint256 generatedByVerifier = generatedActionRewardByVerifier(
-            round,
-            account
+            account,
+            round
         );
         if (generatedByVerifier == 0) return (0, 0);
 
@@ -319,11 +319,11 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         return (mintReward, burnReward);
     }
 
-    /// @dev Group reward scaled by claimer's mintReward/theoryReward so distribution does not exceed mint.
-    ///      Uses stored mint/burn when round already claimed by claimer.
+    /// @dev Group reward scaled by verifier's mintReward/theoryReward so distribution does not exceed mint.
+    ///      Uses stored mint/burn when round already claimed by verifier.
     function _scaledGroupReward(
+        address verifier,
         uint256 round,
-        address claimer,
         uint256 actionId_,
         uint256 groupId
     ) internal view returns (uint256) {
@@ -333,8 +333,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         ) = _getRewardContext(round);
         return
             _scaledGroupRewardWithContext(
+                verifier,
                 round,
-                claimer,
                 actionId_,
                 groupId,
                 totalServiceReward,
@@ -343,8 +343,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     }
 
     function _scaledGroupRewardWithContext(
+        address verifier,
         uint256 round,
-        address claimer,
         uint256 actionId_,
         uint256 groupId,
         uint256 totalServiceReward,
@@ -355,7 +355,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         address extension = _checkActionId(actionId_);
         if (
-            _groupVerify.verifierByGroupId(extension, round, groupId) != claimer
+            _groupVerify.verifierByGroupId(extension, round, groupId) != verifier
         ) return 0;
         uint256 groupActionReward = IGroupAction(extension)
             .generatedActionRewardByGroupId(round, groupId);
@@ -364,14 +364,14 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
             totalActionReward;
         if (theoryGroupReward == 0) return 0;
 
-        // Claimer's mint vs theory (use stored if already claimed)
+        // Verifier's mint vs theory (use stored if already claimed)
         uint256 mintReward;
         uint256 burnReward;
-        if (_claimedByAccount[round][claimer]) {
-            mintReward = _mintedRewardByAccount[round][claimer];
-            burnReward = _burnedRewardByAccount[round][claimer];
+        if (_claimedByAccount[round][verifier]) {
+            mintReward = _mintedRewardByAccount[round][verifier];
+            burnReward = _burnedRewardByAccount[round][verifier];
         } else {
-            (mintReward, burnReward) = _calculateReward(round, claimer);
+            (mintReward, burnReward) = _calculateReward(round, verifier);
         }
         uint256 theoryReward = mintReward + burnReward;
         if (theoryReward == 0) return 0;
@@ -486,8 +486,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 totalActionReward
     ) internal returns (uint256 distributed) {
         uint256 groupReward = _scaledGroupRewardWithContext(
-            round,
             msg.sender,
+            round,
             actionId_,
             groupId,
             totalServiceReward,

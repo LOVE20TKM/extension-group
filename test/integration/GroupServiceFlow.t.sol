@@ -227,8 +227,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
 
         // Verify bobGroup1's generated reward (as additional check)
         uint256 bobGeneratedReward = ga.generatedActionRewardByVerifier(
-            verifyRound,
-            bobGroup1.flow.userAddress
+            bobGroup1.flow.userAddress,
+            verifyRound
         );
         assertEq(
             bobGeneratedReward,
@@ -278,8 +278,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         // Verify rewardByRecipient matches expected (calculated independently)
         assertEq(
             gs.rewardByRecipient(
-                verifyRound,
                 bobGroup1.flow.userAddress,
+                verifyRound,
                 bobGroup1.groupActionId,
                 bobGroup1.groupId,
                 member2().userAddress
@@ -289,8 +289,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             gs.rewardByRecipient(
-                verifyRound,
                 bobGroup1.flow.userAddress,
+                verifyRound,
                 bobGroup1.groupActionId,
                 bobGroup1.groupId,
                 member3().userAddress
@@ -300,8 +300,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         );
         assertEq(
             gs.rewardByRecipient(
-                verifyRound,
                 bobGroup1.flow.userAddress,
+                verifyRound,
                 bobGroup1.groupActionId,
                 bobGroup1.groupId,
                 bobGroup1.flow.userAddress
@@ -317,8 +317,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
             uint256[] memory distAmounts,
             uint256 ownerAmt
         ) = gs.rewardDistribution(
-                verifyRound,
                 bobGroup1.flow.userAddress,
+                verifyRound,
                 bobGroup1.groupActionId,
                 bobGroup1.groupId
             );
@@ -680,7 +680,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 round,
         address recipient,
         uint256 balanceBefore,
-        address groupOwner,
+        address verifier,
         uint256 actionId,
         uint256 groupId,
         string memory message
@@ -688,8 +688,8 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         assertEq(
             IERC20(h.firstTokenAddress()).balanceOf(recipient) - balanceBefore,
             ExtensionGroupService(serviceAddr).rewardByRecipient(
+                verifier,
                 round,
-                groupOwner,
                 actionId,
                 groupId,
                 recipient

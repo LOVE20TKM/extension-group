@@ -572,8 +572,8 @@ contract ExtensionGroupServiceTest is
 
         // RewardByRecipient returns 0 if no reward set
         uint256 recipientReward = groupService.rewardByRecipient(
-            round,
             groupOwner1,
+            round,
             ACTION_ID,
             groupId1,
             recipient
@@ -607,8 +607,8 @@ contract ExtensionGroupServiceTest is
 
         // Owner gets remaining (70%)
         uint256 ownerReward = groupService.rewardByRecipient(
-            round,
             groupOwner1,
+            round,
             ACTION_ID,
             groupId1,
             groupOwner1
@@ -643,8 +643,8 @@ contract ExtensionGroupServiceTest is
 
         // groupOwner1 is not the verifier for groupId2 (groupOwner2 is)
         uint256 rewardAsNonVerifier = groupService.rewardByRecipient(
-            round,
             groupOwner1,
+            round,
             ACTION_ID,
             groupId2,
             address(0x200)
@@ -684,8 +684,8 @@ contract ExtensionGroupServiceTest is
             uint256[] memory amounts,
             uint256 ownerAmount
         ) = groupService.rewardDistribution(
-                round,
                 groupOwner1,
+                round,
                 ACTION_ID,
                 groupId1
             );
@@ -726,7 +726,7 @@ contract ExtensionGroupServiceTest is
 
         // groupOwner2 is not the verifier for groupId1 (groupOwner1 is)
         (, , uint256[] memory amounts, uint256 ownerAmount) = groupService
-            .rewardDistribution(round, groupOwner2, ACTION_ID, groupId1);
+            .rewardDistribution(groupOwner2, round, ACTION_ID, groupId1);
 
         assertEq(ownerAmount, 0);
         for (uint256 i; i < amounts.length; ) {
@@ -1270,8 +1270,8 @@ contract ExtensionGroupServiceTest is
 
         uint256 round = verify.currentRound();
         uint256 accountReward = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner1
+            groupOwner1,
+            round
         );
 
         // No reward minted yet
@@ -1283,8 +1283,8 @@ contract ExtensionGroupServiceTest is
 
         uint256 round = verify.currentRound();
         uint256 accountReward = groupService.generatedActionRewardByVerifier(
-            round,
-            user3
+            user3,
+            round
         );
 
         // user3 not joined
@@ -1305,12 +1305,12 @@ contract ExtensionGroupServiceTest is
 
         // Both should return 0 since no reward is distributed yet
         uint256 accountReward1 = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner1
+            groupOwner1,
+            round
         );
         uint256 accountReward2 = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner2
+            groupOwner2,
+            round
         );
 
         assertEq(accountReward1, 0);
@@ -1343,8 +1343,8 @@ contract ExtensionGroupServiceTest is
         // Verify generatedActionReward returns total reward
         uint256 totalReward = groupService.generatedActionReward(round);
         uint256 accountReward = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner1
+            groupOwner1,
+            round
         );
 
         // accountReward should be <= totalReward
@@ -1366,12 +1366,12 @@ contract ExtensionGroupServiceTest is
         // generatedActionReward should return the same value regardless of verifier
         uint256 totalReward = groupService.generatedActionReward(round);
         uint256 accountReward1 = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner1
+            groupOwner1,
+            round
         );
         uint256 accountReward2 = groupService.generatedActionRewardByVerifier(
-            round,
-            groupOwner2
+            groupOwner2,
+            round
         );
 
         // totalReward should be >= any accountReward
@@ -1394,11 +1394,11 @@ contract ExtensionGroupServiceTest is
         // generatedActionReward should be consistent regardless of which verifier we query
         uint256 totalReward = groupService.generatedActionReward(round);
         uint256 accountRewardByOwner1 = groupService
-            .generatedActionRewardByVerifier(round, groupOwner1);
+            .generatedActionRewardByVerifier(groupOwner1, round);
         uint256 accountRewardByOwner2 = groupService
-            .generatedActionRewardByVerifier(round, groupOwner2);
+            .generatedActionRewardByVerifier(groupOwner2, round);
         uint256 accountRewardByUser3 = groupService
-            .generatedActionRewardByVerifier(round, user3);
+            .generatedActionRewardByVerifier(user3, round);
 
         // totalReward should be >= any accountReward
         assertTrue(totalReward >= accountRewardByOwner1);

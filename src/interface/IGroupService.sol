@@ -37,16 +37,16 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function GROUP_ACTION_FACTORY_ADDRESS() external view returns (address);
 
     function rewardByRecipient(
+        address verifier,
         uint256 round,
-        address groupOwner,
         uint256 actionId,
         uint256 groupId,
         address recipient
     ) external view returns (uint256);
 
     function rewardDistribution(
+        address verifier,
         uint256 round,
-        address groupOwner,
         uint256 actionId,
         uint256 groupId
     )
@@ -62,8 +62,8 @@ interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function hasActiveGroups(address owner) external view returns (bool);
 
     function generatedActionRewardByVerifier(
-        uint256 round,
-        address verifier
+        address verifier,
+        uint256 round
     ) external view returns (uint256 amount);
 
     function generatedActionReward(

@@ -96,8 +96,8 @@ contract MockExtensionGroupAction is ExtensionBaseReward, IGroupAction {
     }
 
     function generatedActionRewardByVerifier(
-        uint256 /*round*/,
-        address /*verifier*/
+        address /*verifier*/,
+        uint256 /*round*/
     ) external pure override returns (uint256) {
         return 0;
     }

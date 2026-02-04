@@ -15,7 +15,7 @@ interface IGroupAction is IGroupActionEvents {
     ) external view returns (uint256);
 
     function generatedActionRewardByVerifier(
-        uint256 round,
-        address verifier
+        address verifier,
+        uint256 round
     ) external view returns (uint256);
 }
