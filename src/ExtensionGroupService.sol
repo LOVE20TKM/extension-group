@@ -303,7 +303,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 theoryReward = (totalServiceReward * rewardRatio) / PRECISION;
         uint256 govRatioCap = GOV_RATIO_MULTIPLIER == 0
             ? 0
-            : (_calculateGovRatio(account) * GOV_RATIO_MULTIPLIER) / PRECISION;
+            : _calculateGovRatio(account) * GOV_RATIO_MULTIPLIER;
         uint256 effectiveRatio = GOV_RATIO_MULTIPLIER == 0
             ? rewardRatio
             : (rewardRatio < govRatioCap ? rewardRatio : govRatioCap);

@@ -30,6 +30,7 @@ interface IGroupServiceErrors {
 
 interface IGroupService is IGroupServiceEvents, IGroupServiceErrors {
     function PRECISION() external view returns (uint256);
+
     function GOV_RATIO_MULTIPLIER() external view returns (uint256);
 
     function GROUP_ACTION_TOKEN_ADDRESS() external view returns (address);
