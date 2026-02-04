@@ -327,11 +327,30 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         uint256 actionId_,
         uint256 groupId
     ) internal view returns (uint256) {
-        // Theory-based group share (no gov cap): totalServiceReward * groupActionReward / totalActionReward
         (
             uint256 totalServiceReward,
             uint256 totalActionReward
         ) = _getRewardContext(round);
+        return
+            _scaledGroupRewardWithContext(
+                round,
+                claimer,
+                actionId_,
+                groupId,
+                totalServiceReward,
+                totalActionReward
+            );
+    }
+
+    function _scaledGroupRewardWithContext(
+        uint256 round,
+        address claimer,
+        uint256 actionId_,
+        uint256 groupId,
+        uint256 totalServiceReward,
+        uint256 totalActionReward
+    ) internal view returns (uint256) {
+        // Theory-based group share (no gov cap): totalServiceReward * groupActionReward / totalActionReward
         if (totalServiceReward == 0 || totalActionReward == 0) return 0;
 
         address extension = _checkActionId(actionId_);
@@ -417,21 +436,38 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _distributeToRecipients(
         uint256 round
     ) internal returns (uint256 distributed) {
+        (
+            uint256 totalServiceReward,
+            uint256 totalActionReward
+        ) = _getRewardContext(round);
+        if (totalServiceReward == 0 || totalActionReward == 0) return 0;
+
+        address account = msg.sender;
+        address actionToken = GROUP_ACTION_TOKEN_ADDRESS;
+
         uint256[] memory aids = _groupRecipients.actionIdsWithRecipients(
-            msg.sender,
-            GROUP_ACTION_TOKEN_ADDRESS,
+            account,
+            actionToken,
             round
         );
-        for (uint256 i; i < aids.length; ) {
+        uint256 aidsLength = aids.length;
+        for (uint256 i; i < aidsLength; ) {
             uint256[] memory gids = _groupRecipients
                 .groupIdsByActionIdWithRecipients(
-                    msg.sender,
-                    GROUP_ACTION_TOKEN_ADDRESS,
+                    account,
+                    actionToken,
                     aids[i],
                     round
                 );
-            for (uint256 j; j < gids.length; ) {
-                distributed += _distributeForGroup(round, aids[i], gids[j]);
+            uint256 gidsLength = gids.length;
+            for (uint256 j; j < gidsLength; ) {
+                distributed += _distributeForGroup(
+                    round,
+                    aids[i],
+                    gids[j],
+                    totalServiceReward,
+                    totalActionReward
+                );
                 unchecked {
                     ++j;
                 }
@@ -445,13 +481,17 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
     function _distributeForGroup(
         uint256 round,
         uint256 actionId_,
-        uint256 groupId
+        uint256 groupId,
+        uint256 totalServiceReward,
+        uint256 totalActionReward
     ) internal returns (uint256 distributed) {
-        uint256 groupReward = _scaledGroupReward(
+        uint256 groupReward = _scaledGroupRewardWithContext(
             round,
             msg.sender,
             actionId_,
-            groupId
+            groupId,
+            totalServiceReward,
+            totalActionReward
         );
         if (groupReward == 0) return 0;
 
