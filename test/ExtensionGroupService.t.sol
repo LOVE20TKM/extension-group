@@ -63,7 +63,7 @@ contract ExtensionGroupServiceTest is
     uint256 constant MAX_RECIPIENTS = 10;
     uint256 constant SERVICE_ACTION_ID = 2;
 
-    function setUp() public {
+    function setUp() public virtual {
         setUpBase();
 
         // Create new singleton instances for this test (not using BaseGroupTest's instances)
@@ -201,20 +201,22 @@ contract ExtensionGroupServiceTest is
      * @notice Helper to setup actionIds for current round after advanceRound
      */
     function _setupActionIdsForCurrentRound() internal {
-        uint256 currentRound = verify.currentRound();
-        vote.setVotedActionIds(address(token), currentRound, ACTION_ID);
-        vote.setVotedActionIds(address(token), currentRound, SERVICE_ACTION_ID);
-        // Set votes for this round
-        vote.setVotesNum(address(token), currentRound, 10000e18);
+        _setupActionIdsForRound(verify.currentRound());
+    }
+
+    function _setupActionIdsForRound(uint256 round_) internal {
+        vote.setVotedActionIds(address(token), round_, ACTION_ID);
+        vote.setVotedActionIds(address(token), round_, SERVICE_ACTION_ID);
+        vote.setVotesNum(address(token), round_, 10000e18);
         vote.setVotesNumByActionId(
             address(token),
-            currentRound,
+            round_,
             ACTION_ID,
             10000e18
         );
         vote.setVotesNumByActionId(
             address(token),
-            currentRound,
+            round_,
             SERVICE_ACTION_ID,
             10000e18
         );
@@ -1533,7 +1535,10 @@ contract ExtensionGroupServiceTest is
         assertFalse(claimed, "Should not be claimed");
     }
 
-    function test_RewardByAccount_Works_WhenJoinedInPreviousRound() public {
+    function test_RewardByAccount_Works_WhenJoinedInPreviousRound()
+        public
+        virtual
+    {
         setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
 
         // Join in round 0
@@ -2228,6 +2233,292 @@ contract ExtensionGroupServiceStakeTokenTest is BaseGroupTest {
             joinedVal,
             expectedStaked,
             "JoinedAmount should equal staked amount (no conversion needed)"
+        );
+    }
+}
+
+/**
+ * @title ExtensionGroupServiceGovRatioCapTest
+ * @notice Tests govRatioCap with non-zero govRatioMultiplier (covers bug fix)
+ */
+contract ExtensionGroupServiceGovRatioCapTest is ExtensionGroupServiceTest {
+    /// @dev 1 means cap = govRatio (same 1e18 scale); contract does not divide by PRECISION
+    uint256 constant GOV_RATIO_MULTIPLIER_CAP = 1;
+
+    function setUp() public override {
+        setUpBase();
+
+        newGroupManager = new GroupManager();
+        newGroupJoin = new GroupJoin();
+        newGroupVerify = new GroupVerify();
+
+        actionFactory = new ExtensionGroupActionFactory(
+            address(center),
+            address(newGroupManager),
+            address(newGroupJoin),
+            address(newGroupVerify),
+            address(group)
+        );
+        IGroupManager(address(newGroupManager)).initialize(
+            address(actionFactory)
+        );
+        IGroupJoin(address(newGroupJoin)).initialize(address(actionFactory));
+        IGroupVerify(address(newGroupVerify)).initialize(
+            address(actionFactory)
+        );
+        groupRecipients = new GroupRecipients(address(actionFactory));
+        serviceFactory = new ExtensionGroupServiceFactory(
+            address(actionFactory),
+            address(groupRecipients)
+        );
+
+        token.mint(address(this), 2e18);
+        token.approve(address(actionFactory), type(uint256).max);
+        address groupActionAddress = actionFactory.createExtension(
+            address(token),
+            ACTIVATION_MIN_GOV_RATIO,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(token),
+            MAX_JOIN_AMOUNT_RATIO
+        );
+        groupAction = ExtensionGroupAction(groupActionAddress);
+
+        token.approve(address(serviceFactory), type(uint256).max);
+        address groupServiceAddress = serviceFactory.createExtension(
+            address(token),
+            address(token),
+            GOV_RATIO_MULTIPLIER_CAP
+        );
+        groupService = ExtensionGroupService(groupServiceAddress);
+
+        groupId1 = setupGroupOwner(groupOwner1, 10000e18, "TestGroup1");
+        groupId2 = setupGroupOwner(groupOwner2, 10000e18, "TestGroup2");
+
+        prepareExtensionInit(address(groupAction), address(token), ACTION_ID);
+        prepareExtensionInit(
+            address(groupService),
+            address(token),
+            SERVICE_ACTION_ID
+        );
+
+        setupUser(
+            groupOwner1,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(newGroupManager)
+        );
+        setupUser(
+            groupOwner2,
+            GROUP_ACTIVATION_STAKE_AMOUNT,
+            address(newGroupManager)
+        );
+
+        vm.prank(groupOwner1, groupOwner1);
+        newGroupManager.activateGroup(
+            address(groupAction),
+            groupId1,
+            "Group1",
+            0,
+            1e18,
+            0,
+            0
+        );
+
+        vm.prank(groupOwner2, groupOwner2);
+        newGroupManager.activateGroup(
+            address(groupAction),
+            groupId2,
+            "Group2",
+            0,
+            1e18,
+            0,
+            0
+        );
+    }
+
+    // ============ govRatioCap Tests (govRatioMultiplier != 0) ============
+
+    /// @notice When rewardRatio > govRatioCap, mint is capped to totalServiceReward * govRatioCap / PRECISION
+    function test_GovRatioCap_RewardRatioAboveCap_MintCappedToGovRatio()
+        public
+    {
+        uint256 govTotal = 100_000e18;
+        uint256 govValid = 10_000e18;
+        stake.setGovVotesNum(address(token), govTotal);
+        stake.setValidGovVotes(address(token), groupOwner1, govValid);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        _setupActionIdsForRound(round);
+
+        uint256 totalActionReward = 50e18;
+        uint256 totalServiceReward = 100e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            ACTION_ID,
+            totalActionReward
+        );
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        setupUser(user1, 10e18, address(newGroupJoin));
+        vm.prank(user1);
+        newGroupJoin.join(
+            address(groupAction),
+            groupId1,
+            10e18,
+            new string[](0)
+        );
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+        vm.prank(groupOwner1);
+        newGroupVerify.submitOriginScores(
+            address(groupAction),
+            groupId1,
+            0,
+            scores
+        );
+
+        uint256 govRatio = (govValid * 1e18) / govTotal;
+        uint256 govRatioCap = govRatio * GOV_RATIO_MULTIPLIER_CAP;
+        uint256 expectedMint = (totalServiceReward * govRatioCap) / 1e18;
+
+        (uint256 reward, , ) = groupService.rewardByAccount(
+            round,
+            groupOwner1
+        );
+        assertEq(reward, expectedMint, "mint should be capped by govRatioCap");
+    }
+
+    /// @notice When rewardRatio < govRatioCap, effectiveRatio = rewardRatio (no cap applied)
+    function test_GovRatioCap_RewardRatioBelowCap_NoCapApplied() public {
+        uint256 govTotal = 100_000e18;
+        uint256 govValid = 90_000e18;
+        stake.setGovVotesNum(address(token), govTotal);
+        stake.setValidGovVotes(address(token), groupOwner1, govValid);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+        vm.prank(groupOwner2);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+
+        uint256 totalActionReward = 100e18;
+        uint256 totalServiceReward = 200e18;
+        mint.setActionReward(
+            address(token),
+            round,
+            ACTION_ID,
+            totalActionReward
+        );
+        mint.setActionReward(
+            address(token),
+            round,
+            SERVICE_ACTION_ID,
+            totalServiceReward
+        );
+
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 20);
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 10e18, 80);
+
+        uint256 generatedByVerifier = groupService.generatedActionRewardByVerifier(
+            groupOwner1,
+            round
+        );
+        uint256 rewardRatio = (generatedByVerifier * 1e18) / totalActionReward;
+        uint256 govRatio = (govValid * 1e18) / govTotal;
+        uint256 govRatioCap = govRatio * GOV_RATIO_MULTIPLIER_CAP;
+        assertTrue(
+            rewardRatio < govRatioCap,
+            "rewardRatio should be below cap for this test"
+        );
+        uint256 expectedMint = (totalServiceReward * rewardRatio) / 1e18;
+
+        (uint256 reward, , ) = groupService.rewardByAccount(
+            round,
+            groupOwner1
+        );
+        assertEq(
+            reward,
+            expectedMint,
+            "mint should equal full reward when below cap"
+        );
+    }
+
+    /// @notice With govRatioCap, reward is capped not full serviceReward
+    function test_RewardByAccount_Works_WhenJoinedInPreviousRound()
+        public
+        override
+    {
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        advanceRound();
+        _setupActionIdsForCurrentRound();
+        uint256 round1 = verify.currentRound();
+
+        uint256[] memory scores = new uint256[](1);
+        scores[0] = 80;
+        vm.prank(groupOwner1);
+        newGroupVerify.submitOriginScores(
+            address(groupAction),
+            groupId1,
+            0,
+            scores
+        );
+
+        uint256 serviceReward = 1000e18;
+        uint256 actionReward = 1000e18;
+        mint.setActionReward(
+            address(token),
+            round1,
+            SERVICE_ACTION_ID,
+            serviceReward
+        );
+        mint.setActionReward(address(token), round1, ACTION_ID, actionReward);
+
+        assertTrue(
+            center.isAccountJoinedByRound(
+                address(token),
+                SERVICE_ACTION_ID,
+                groupOwner1,
+                round1
+            ),
+            "Account should be joined in round1 (joined in round0)"
+        );
+
+        (uint256 reward, , bool claimed) = groupService.rewardByAccount(
+            round1,
+            groupOwner1
+        );
+
+        uint256 govTotal = 100_000e18;
+        uint256 govValid = 10000e18;
+        uint256 govRatio = (govValid * 1e18) / govTotal;
+        uint256 govRatioCap = govRatio * GOV_RATIO_MULTIPLIER_CAP;
+        uint256 expectedReward = (serviceReward * govRatioCap) / 1e18;
+        assertEq(reward, expectedReward, "Reward should match capped value");
+        assertFalse(claimed, "Should not be claimed yet");
+
+        (uint256 nonJoinedReward, , ) = groupService.rewardByAccount(
+            round1,
+            user3
+        );
+        assertEq(
+            nonJoinedReward,
+            0,
+            "Non-joined account reward should be 0 (join check fails)"
         );
     }
 }
