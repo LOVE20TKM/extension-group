@@ -7,8 +7,9 @@ import {IGroupVerify} from "../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionTest
-/// @notice Unit tests for distrustRate functions
-/// @dev Integration tests are in test/integration/GroupVerifyReductionIntegration.t.sol
+/// @notice Tests for distrustRate calculation basics: zero cases, numerical correctness, edge cases.
+/// @dev Complements GroupVerifyReductionIntegrationTest (test/integration/GroupVerifyReductionIntegration.t.sol)
+///      which tests higher-level effects: verifier identity at claim time, group score reduction impact.
 contract GroupVerifyReductionTest is BaseGroupFlowTest {
     uint256 constant PRECISION = 1e18;
 
@@ -145,10 +146,8 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
                 extensionAddr
             );
 
-        // Skip test if alice has no verify votes
-        if (aliceVerifyVotes == 0) {
-            return;
-        }
+        // Precondition: alice must have verify votes for this test to be meaningful
+        assertTrue(aliceVerifyVotes > 0, "Test precondition failed: alice should have verify votes");
 
         // Get total votes for calculation
         uint256 totalVotes = h.voteContract().votesNumByActionId(
@@ -194,7 +193,7 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         );
     }
 
-    /// @notice Test distrustRate returns 0 when totalVotes is 0
+    /// @notice Test distrustRate returns 0 when totalVotes is 0 (via mockCall)
     function test_distrustRate_ZeroTotalVotes() public {
         // Setup: Create extension and action
         address extensionAddr = h.group_action_create(bobGroup1);
@@ -204,7 +203,7 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         bobGroup1.groupActionId = actionId;
 
         h.vote(bobGroup1.flow);
-        h.vote(aliceGroup.flow); // Alice also votes so she can verify later
+        h.vote(aliceGroup.flow);
         h.next_phase();
         h.group_activate(bobGroup1);
 
@@ -219,28 +218,45 @@ contract GroupVerifyReductionTest is BaseGroupFlowTest {
         h.next_phase();
         uint256 round = h.verifyContract().currentRound();
 
-        // Submit scores to verify group
+        // Submit scores to verify group (so verifier is recorded, groupOwner != address(0))
         uint256[] memory scores = new uint256[](1);
         scores[0] = 100;
         h.group_submit_score(bobGroup1, scores);
 
-        // Note: In normal flow, totalVotes would be set by vote contract
-        // But if somehow totalVotes is 0, distrustRate should return 0
-        // This test verifies the edge case handling
+        // Confirm totalVotes is non-zero in normal flow
+        uint256 totalVotesBefore = h.voteContract().votesNumByActionId(
+            h.firstTokenAddress(),
+            round,
+            actionId
+        );
+        assertTrue(totalVotesBefore > 0, "totalVotes should be non-zero before mock");
+
+        // Mock votesNumByActionId to return 0, simulating the totalVotes == 0 edge case
+        vm.mockCall(
+            address(h.voteContract()),
+            abi.encodeWithSelector(
+                h.voteContract().votesNumByActionId.selector,
+                h.firstTokenAddress(),
+                round,
+                actionId
+            ),
+            abi.encode(uint256(0))
+        );
+
+        // Verify distrustRate returns 0 when totalVotes == 0
         uint256 distrustRate = groupVerify.distrustRateByGroupId(
             extensionAddr,
             round,
             bobGroup1.groupId
         );
 
-        // If totalVotes is 0, should return 0
-        // Otherwise, should return 0 (no distrust votes)
-        // In normal test flow, totalVotes should be set, so this should be 0
-        // But the function should handle totalVotes == 0 correctly
         assertEq(
             distrustRate,
             0,
-            "distrustRate should return 0 when no distrust votes or totalVotes is 0"
+            "distrustRate should return 0 when totalVotes is 0"
         );
+
+        // Clean up mock
+        vm.clearMockedCalls();
     }
 }

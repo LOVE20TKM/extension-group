@@ -949,7 +949,7 @@ contract ExtensionGroupActionTest is BaseGroupTest {
         (uint256 burnAmount, bool burned) = IReward(address(groupAction))
             .burnInfo(newRound);
         assertEq(burnAmount, 0, "Burn amount should be 0");
-        assertTrue(burned, "Should not be burned");
+        assertTrue(burned, "Should be marked as burned (processed)");
     }
 
     function test_BurnRewardIfNeeded_NoVerifiedGroups() public {

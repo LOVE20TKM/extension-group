@@ -2454,6 +2454,82 @@ contract ExtensionGroupServiceGovRatioCapTest is ExtensionGroupServiceTest {
         );
     }
 
+    /// @notice When rewardRatio == govRatioCap exactly, reward is not truncated
+    function test_GovRatioCap_RewardRatioEqualsCapExactly() public {
+        // govRatio = 10_000e18 / 100_000e18 = 0.1e18, govRatioCap = 0.1e18 * 1 = 0.1e18
+        uint256 govTotal = 100_000e18;
+        uint256 govValid = 10_000e18;
+        stake.setGovVotesNum(address(token), govTotal);
+        stake.setValidGovVotes(address(token), groupOwner1, govValid);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        _setupActionIdsForRound(round);
+
+        // Single verifier => rewardRatio = 1e18 which is > govRatioCap (0.1e18)
+        // To make rewardRatio == govRatioCap, we need two verifiers splitting the reward
+        // verifier1 gets 10% of totalActionReward => rewardRatio = 0.1e18 = govRatioCap
+        uint256 totalActionReward = 100e18;
+        uint256 totalServiceReward = 500e18;
+        mint.setActionReward(address(token), round, ACTION_ID, totalActionReward);
+        mint.setActionReward(address(token), round, SERVICE_ACTION_ID, totalServiceReward);
+
+        // owner1 group: 1 user joining 10e18 with score 10 => accountScore = 100e18
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 10);
+        // owner2 group: 1 user joining 90e18 with score 100 => accountScore = 9000e18
+        setupGroupActionWithScores(groupId2, groupOwner2, user2, 90e18, 100);
+
+        // verifier1 (groupOwner1) generates: groupScore1 / totalGroupScore * totalActionReward
+        // groupScore1 = totalJoinedAmount1 = 10e18 (no distrust)
+        // groupScore2 = totalJoinedAmount2 = 90e18
+        // generatedByVerifier1 = 100e18 * 10e18 / 100e18 = 10e18
+        // rewardRatio = 10e18 * 1e18 / 100e18 = 0.1e18 = govRatioCap
+        uint256 govRatio = (govValid * 1e18) / govTotal;
+        uint256 govRatioCap = govRatio * GOV_RATIO_MULTIPLIER_CAP;
+        uint256 expectedMint = (totalServiceReward * govRatioCap) / 1e18;
+
+        (uint256 reward, , ) = groupService.rewardByAccount(round, groupOwner1);
+        assertEq(reward, expectedMint, "Reward should equal full reward when rewardRatio == govRatioCap");
+    }
+
+    /// @notice Test rounding precision with non-round govRatio
+    function test_GovRatioCap_RoundingPrecision() public {
+        // govRatio = 33_333e18 / 100_000e18 = 0.33333e18 (has rounding)
+        uint256 govTotal = 100_000e18;
+        uint256 govValid = 33_333e18;
+        stake.setGovVotesNum(address(token), govTotal);
+        stake.setValidGovVotes(address(token), groupOwner1, govValid);
+
+        vm.prank(groupOwner1);
+        groupService.join(new string[](0));
+
+        uint256 round = verify.currentRound();
+        _setupActionIdsForRound(round);
+
+        uint256 totalActionReward = 100e18;
+        uint256 totalServiceReward = 777e18;
+        mint.setActionReward(address(token), round, ACTION_ID, totalActionReward);
+        mint.setActionReward(address(token), round, SERVICE_ACTION_ID, totalServiceReward);
+
+        setupGroupActionWithScores(groupId1, groupOwner1, user1, 10e18, 80);
+
+        // Independently calculate expected reward
+        uint256 govRatio = (govValid * 1e18) / govTotal;
+        uint256 govRatioCap = govRatio * GOV_RATIO_MULTIPLIER_CAP;
+        // rewardRatio = 1e18 (single verifier), > govRatioCap, so capped
+        uint256 expectedMint = (totalServiceReward * govRatioCap) / 1e18;
+
+        (uint256 reward, uint256 burn, ) = groupService.rewardByAccount(round, groupOwner1);
+        assertEq(reward, expectedMint, "Reward should match capped value with non-round govRatio");
+        assertTrue(burn > 0, "Burn amount should be non-zero when capped");
+
+        // Verify mint + burn = totalServiceReward * rewardRatio (which is totalServiceReward since single verifier)
+        uint256 theoryReward = totalServiceReward;
+        assertEq(reward + burn, theoryReward, "mint + burn should equal theory reward");
+    }
+
     /// @notice With govRatioCap, reward is capped not full serviceReward
     function test_RewardByAccount_Works_WhenJoinedInPreviousRound()
         public

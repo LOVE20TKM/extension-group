@@ -7,7 +7,9 @@ import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 import {GroupVerify} from "../../src/GroupVerify.sol";
 
 /// @title GroupVerifyReductionIntegrationTest
-/// @notice Integration tests for distrustRate functions
+/// @notice Integration tests for distrustRate higher-level effects: verifier identity and group score impact.
+/// @dev Complements GroupVerifyReductionTest (test/GroupVerifyReduction.t.sol)
+///      which tests distrustRate calculation basics: zero cases, numerical correctness, edge cases.
 contract GroupVerifyReductionIntegrationTest is BaseGroupFlowTest {
     uint256 constant PRECISION = 1e18;
 

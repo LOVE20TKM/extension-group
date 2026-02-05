@@ -10,18 +10,25 @@ import {IGroupVerify} from "../../src/interface/IGroupVerify.sol";
 /// @title GroupBasicOpsTest
 /// @notice Integration tests for basic group operations: deactivation, exit/rejoin, etc.
 contract GroupBasicOpsTest is BaseGroupFlowTest {
+    /// @dev Common setup: create group action, submit, vote, advance phase, activate
+    function _setupAndActivateGroupAction(
+        GroupUserParams storage gup
+    ) internal returns (address extensionAddr, uint256 actionId) {
+        extensionAddr = h.group_action_create(gup);
+        gup.groupActionAddress = extensionAddr;
+        actionId = h.submit_group_action(gup);
+        gup.flow.actionId = actionId;
+        gup.groupActionId = actionId;
+
+        h.vote(gup.flow);
+        h.next_phase();
+        h.group_activate(gup);
+    }
+
     /// @notice Test group deactivation
     function test_group_deactivation() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         assertTrue(
             h.getGroupManager().isGroupActive(
@@ -48,15 +55,8 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test behavior across multiple rounds
     function test_cross_round_behavior() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
+        address extensionAddr = bobGroup1.groupActionAddress;
 
         // 2. Member joins
         GroupUserParams memory m1;
@@ -120,15 +120,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test member exit and rejoin
     function test_member_exit_and_rejoin() public {
         // 1. Setup
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Member joins
         GroupUserParams memory m1;
@@ -177,17 +169,9 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test IExtensionJoinedAmount interface
     function test_joined_amount_calculation() public {
         // 1. Setup
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
+        _setupAndActivateGroupAction(bobGroup1);
 
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
-
-        ExtensionGroupAction groupAction = ExtensionGroupAction(extensionAddr);
+        ExtensionGroupAction groupAction = ExtensionGroupAction(bobGroup1.groupActionAddress);
 
         // Initial joined amount should be 0
         assertEq(
@@ -232,15 +216,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test actionIdsByGroupId with single extension
     function test_actionIdsByGroupId_SingleExtension() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        (, uint256 actionId) = _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Verify actionId is tracked for this groupId
         uint256[] memory actionIds_ = h.getGroupManager().actionIdsByGroupId(
@@ -275,26 +251,10 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test actionIdsByGroupId with multiple extensions
     function test_actionIdsByGroupId_MultipleExtensions() public {
         // 1. Setup first group action
-        address extensionAddr1 = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr1;
-        uint256 actionId1 = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId1;
-        bobGroup1.groupActionId = actionId1;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        (, uint256 actionId1) = _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Setup second group action (different actionId) activating same groupId
-        // Create a new action but activate it with bobGroup1's groupId
-        address extensionAddr2 = h.group_action_create(bobGroup2);
-        bobGroup2.groupActionAddress = extensionAddr2;
-        uint256 actionId2 = h.submit_group_action(bobGroup2);
-        bobGroup2.flow.actionId = actionId2;
-        bobGroup2.groupActionId = actionId2;
-
-        h.vote(bobGroup2.flow);
-        h.next_phase();
+        (, uint256 actionId2) = _setupAndActivateGroupAction(bobGroup2);
         // Activate with bobGroup1's groupId to test multiple extensions for same groupId
         uint256 sharedGroupId = bobGroup1.groupId;
         bobGroup2.groupId = sharedGroupId;
@@ -316,15 +276,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test actionIdsByGroupId after deactivate
     function test_actionIdsByGroupId_AfterDeactivate() public {
         // 1. Setup and activate
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Verify actionId is tracked
         assertEq(
@@ -359,15 +311,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test actionIds with single extension
     function test_actionIds_SingleExtension() public {
         // 1. Setup and activate
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        (, uint256 actionId) = _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Verify actionId is tracked
         uint256[] memory actionIds_ = h.getGroupManager().actionIds(
@@ -394,26 +338,10 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test actionIds with multiple extensions
     function test_actionIds_MultipleExtensions() public {
         // 1. Setup and activate first extension
-        address extensionAddr1 = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr1;
-        uint256 actionId1 = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId1;
-        bobGroup1.groupActionId = actionId1;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        (, uint256 actionId1) = _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Setup and activate second extension
-        address extensionAddr2 = h.group_action_create(bobGroup2);
-        bobGroup2.groupActionAddress = extensionAddr2;
-        uint256 actionId2 = h.submit_group_action(bobGroup2);
-        bobGroup2.flow.actionId = actionId2;
-        bobGroup2.groupActionId = actionId2;
-
-        h.vote(bobGroup2.flow);
-        h.next_phase();
-        h.group_activate(bobGroup2);
+        (, uint256 actionId2) = _setupAndActivateGroupAction(bobGroup2);
 
         // 3. Verify both actionIds are tracked
         uint256[] memory actionIds_ = h.getGroupManager().actionIds(
@@ -430,15 +358,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test actionIds after all deactivated
     function test_actionIds_AfterAllDeactivated() public {
         // 1. Setup and activate
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Verify actionId is tracked
         assertEq(
@@ -466,26 +386,10 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test complex scenario with multiple extensions and groupIds
     function test_ExtensionTracking_ComplexScenario() public {
         // 1. Setup first extension with group1
-        address extensionAddr1 = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr1;
-        uint256 actionId1 = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId1;
-        bobGroup1.groupActionId = actionId1;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Setup second extension with group2
-        address extensionAddr2 = h.group_action_create(bobGroup2);
-        bobGroup2.groupActionAddress = extensionAddr2;
-        uint256 actionId2 = h.submit_group_action(bobGroup2);
-        bobGroup2.flow.actionId = actionId2;
-        bobGroup2.groupActionId = actionId2;
-
-        h.vote(bobGroup2.flow);
-        h.next_phase();
-        h.group_activate(bobGroup2);
+        _setupAndActivateGroupAction(bobGroup2);
 
         // 3. Verify both actionIds are tracked globally
         assertEq(
@@ -557,15 +461,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupId with single member
     function test_accountsByGroupId_SingleMember() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Member joins
         GroupUserParams memory m1;
@@ -591,15 +487,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupId with multiple members
     function test_accountsByGroupId_MultipleMembers() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Multiple members join
         GroupUserParams memory m1;
@@ -648,15 +536,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupId after member exit
     function test_accountsByGroupId_AfterExit() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Members join
         GroupUserParams memory m1;
@@ -707,15 +587,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupIdByRound with single round
     function test_accountsByGroupIdByRound_SingleRound() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         uint256 round1 = h.joinContract().currentRound();
 
@@ -755,15 +627,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupIdByRound across multiple rounds
     function test_accountsByGroupIdByRound_MultipleRounds() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         uint256 round1 = h.joinContract().currentRound();
 
@@ -824,15 +688,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupIdByRound after member exit
     function test_accountsByGroupIdByRound_AfterExit() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         uint256 round1 = h.joinContract().currentRound();
 
@@ -892,15 +748,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupId consistency with accountsByGroupIdAtIndex
     function test_accountsByGroupId_Consistency() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         // 2. Multiple members join
         GroupUserParams memory m1;
@@ -956,15 +804,7 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     /// @notice Test accountsByGroupIdByRound consistency with accountsByGroupIdByRoundAtIndex
     function test_accountsByGroupIdByRound_Consistency() public {
         // 1. Setup group action
-        address extensionAddr = h.group_action_create(bobGroup1);
-        bobGroup1.groupActionAddress = extensionAddr;
-        uint256 actionId = h.submit_group_action(bobGroup1);
-        bobGroup1.flow.actionId = actionId;
-        bobGroup1.groupActionId = actionId;
-
-        h.vote(bobGroup1.flow);
-        h.next_phase();
-        h.group_activate(bobGroup1);
+        _setupAndActivateGroupAction(bobGroup1);
 
         uint256 round1 = h.joinContract().currentRound();
 

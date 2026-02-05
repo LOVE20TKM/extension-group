@@ -163,8 +163,8 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
         );
     }
 
-    /// @notice Test: Same extension with different tokenAddress should revert
-    function test_sameExtensionDifferentTokenAddressReverts() public {
+    /// @notice Test: Same extension can activate multiple groups (tokenAddress and actionId are fixed per extension)
+    function test_sameExtensionCanActivateMultipleGroups() public {
         uint256 groupId1 = setupGroupOwner(groupOwner1, 10000e18, "Group1");
         uint256 groupId2 = setupGroupOwner(groupOwner2, 10000e18, "Group2");
 
@@ -180,58 +180,6 @@ contract GroupManagerTest is BaseGroupTest, IGroupManagerEvents {
         );
 
         // First activation with token
-        vm.prank(groupOwner1, groupOwner1);
-        groupManager.activateGroup(
-            address(extension1),
-            groupId1,
-            "Test Group 1",
-            0,
-            1e18,
-            0,
-            0
-        );
-
-        // Second activation with same extension should succeed (same extension can activate multiple groups)
-        // Extension's tokenAddress and actionId are fixed, so it will use the same (token, ACTION_ID_1)
-        vm.prank(groupOwner2, groupOwner2);
-        groupManager.activateGroup(
-            address(extension1),
-            groupId2,
-            "Test Group 2",
-            0,
-            1e18,
-            0,
-            0
-        );
-
-        // Verify both groups are active
-        assertTrue(
-            groupManager.isGroupActive(address(extension1), groupId1),
-            "Group1 should be active"
-        );
-        assertTrue(
-            groupManager.isGroupActive(address(extension1), groupId2),
-            "Group2 should be active"
-        );
-    }
-
-    /// @notice Test: Same extension with different actionId should revert
-    function test_sameExtensionDifferentActionIdReverts() public {
-        uint256 groupId1 = setupGroupOwner(groupOwner1, 10000e18, "Group1");
-        uint256 groupId2 = setupGroupOwner(groupOwner2, 10000e18, "Group2");
-
-        setupUser(
-            groupOwner1,
-            GROUP_ACTIVATION_STAKE_AMOUNT * 2,
-            address(groupManager)
-        );
-        setupUser(
-            groupOwner2,
-            GROUP_ACTIVATION_STAKE_AMOUNT,
-            address(groupManager)
-        );
-
-        // First activation with ACTION_ID_1
         vm.prank(groupOwner1, groupOwner1);
         groupManager.activateGroup(
             address(extension1),
