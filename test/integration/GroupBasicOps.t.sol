@@ -56,7 +56,6 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
     function test_cross_round_behavior() public {
         // 1. Setup group action
         _setupAndActivateGroupAction(bobGroup1);
-        address extensionAddr = bobGroup1.groupActionAddress;
 
         // 2. Member joins
         GroupUserParams memory m1;
