@@ -170,7 +170,9 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
         // 1. Setup
         _setupAndActivateGroupAction(bobGroup1);
 
-        ExtensionGroupAction groupAction = ExtensionGroupAction(bobGroup1.groupActionAddress);
+        ExtensionGroupAction groupAction = ExtensionGroupAction(
+            bobGroup1.groupActionAddress
+        );
 
         // Initial joined amount should be 0
         assertEq(
@@ -786,13 +788,12 @@ contract GroupBasicOpsTest is BaseGroupFlowTest {
 
         assertEq(accounts.length, count, "Array length should match count");
         for (uint256 i = 0; i < count; i++) {
-            address accountAtIndex = groupJoin
-                .accountsByGroupIdAtIndex(
-                    bobGroup1.groupActionAddress,
-                    joinRound,
-                    bobGroup1.groupId,
-                    i
-                );
+            address accountAtIndex = groupJoin.accountsByGroupIdAtIndex(
+                bobGroup1.groupActionAddress,
+                joinRound,
+                bobGroup1.groupId,
+                i
+            );
             assertTrue(
                 _containsAddress(accounts, accountAtIndex),
                 "Account at index should be in array"
