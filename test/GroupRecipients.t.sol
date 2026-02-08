@@ -94,6 +94,28 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
         return new uint256[](0);
     }
 
+    function _remark(string memory s) internal pure returns (string[] memory arr) {
+        arr = new string[](1);
+        arr[0] = s;
+    }
+
+    function _remarks(string memory a, string memory b) internal pure returns (string[] memory arr) {
+        arr = new string[](2);
+        arr[0] = a;
+        arr[1] = b;
+    }
+
+    function _remarks3(string memory a, string memory b, string memory c) internal pure returns (string[] memory arr) {
+        arr = new string[](3);
+        arr[0] = a;
+        arr[1] = b;
+        arr[2] = c;
+    }
+
+    function _emptyRemarks() internal pure returns (string[] memory) {
+        return new string[](0);
+    }
+
     // ============================================================
     // 1. getDistribution precise numerical tests
     // ============================================================
@@ -106,7 +128,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16) // 50% = 0.5e18
+            _uint(50e16), // 50% = 0.5e18
+            _remark("")
         );
 
         uint256 round = verify.currentRound();
@@ -139,7 +162,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addrs3(user1, user2, user3),
-            _uints3(30e16, 20e16, 10e16)
+            _uints3(30e16, 20e16, 10e16),
+            _remarks3("", "", "")
         );
 
         uint256 round = verify.currentRound();
@@ -173,7 +197,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(ratio)
+            _uint(ratio),
+            _remark("")
         );
 
         uint256 round = verify.currentRound();
@@ -211,7 +236,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(PRECISION)
+            _uint(PRECISION),
+            _remark("")
         );
 
         uint256 round = verify.currentRound();
@@ -240,7 +266,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addrs(user1, user2),
-            _uints(50e16, 50e16)
+            _uints(50e16, 50e16),
+            _remarks("", "")
         );
 
         uint256 round = verify.currentRound();
@@ -275,13 +302,14 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
 
         uint256 round = verify.currentRound();
 
         // Verify recipients are set
-        (address[] memory addrs, ) = groupRecipients.recipients(
+        (address[] memory addrs, , string[] memory remarks) = groupRecipients.recipients(
             groupOwner1,
             address(token),
             ACTION_1,
@@ -289,6 +317,7 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             round
         );
         assertEq(addrs.length, 1, "should have 1 recipient");
+        remarks;
 
         // Clear by setting empty arrays
         vm.prank(groupOwner1);
@@ -297,11 +326,12 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _emptyAddrs(),
-            _emptyUints()
+            _emptyUints(),
+            _emptyRemarks()
         );
 
         // Verify recipients are cleared
-        (address[] memory addrsAfter, ) = groupRecipients.recipients(
+        (address[] memory addrsAfter, , string[] memory remarksAfter) = groupRecipients.recipients(
             groupOwner1,
             address(token),
             ACTION_1,
@@ -309,6 +339,7 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             round
         );
         assertEq(addrsAfter.length, 0, "should have 0 recipients after clear");
+        remarksAfter;
     }
 
     function test_clearThenResetRecipients() public {
@@ -321,7 +352,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
 
         // Clear
@@ -331,7 +363,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _emptyAddrs(),
-            _emptyUints()
+            _emptyUints(),
+            _emptyRemarks()
         );
 
         // Re-set with different recipients
@@ -341,10 +374,11 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addrs(user2, user3),
-            _uints(30e16, 20e16)
+            _uints(30e16, 20e16),
+            _remarks("", "")
         );
 
-        (address[] memory addrs, uint256[] memory ratios) = groupRecipients
+        (address[] memory addrs, uint256[] memory ratios, string[] memory remarks) = groupRecipients
             .recipients(
                 groupOwner1,
                 address(token),
@@ -354,6 +388,7 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             );
 
         assertEq(addrs.length, 2, "should have 2 recipients after re-set");
+        remarks;
         assertEq(addrs[0], user2, "first recipient");
         assertEq(addrs[1], user3, "second recipient");
         assertEq(ratios[0], 30e16, "first ratio");
@@ -373,7 +408,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
 
         // Advance to round 2
@@ -387,11 +423,12 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addrs(user2, user3),
-            _uints(30e16, 20e16)
+            _uints(30e16, 20e16),
+            _remarks("", "")
         );
 
         // Query round 1: should return round 1 recipients
-        (address[] memory addrsR1, uint256[] memory ratiosR1) = groupRecipients
+        (address[] memory addrsR1, uint256[] memory ratiosR1, string[] memory remarksR1) = groupRecipients
             .recipients(
                 groupOwner1,
                 address(token),
@@ -402,9 +439,10 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
         assertEq(addrsR1.length, 1, "round 1: 1 recipient");
         assertEq(addrsR1[0], user1, "round 1: user1");
         assertEq(ratiosR1[0], 50e16, "round 1: 50%");
+        remarksR1;
 
         // Query round 2: should return round 2 recipients
-        (address[] memory addrsR2, uint256[] memory ratiosR2) = groupRecipients
+        (address[] memory addrsR2, uint256[] memory ratiosR2, string[] memory remarksR2) = groupRecipients
             .recipients(
                 groupOwner1,
                 address(token),
@@ -417,6 +455,7 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
         assertEq(addrsR2[1], user3, "round 2: user3");
         assertEq(ratiosR2[0], 30e16, "round 2: 30%");
         assertEq(ratiosR2[1], 20e16, "round 2: 20%");
+        remarksR2;
     }
 
     // ============================================================
@@ -433,7 +472,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
 
         // actionId=1 should be tracked
@@ -467,7 +507,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
 
         // Set recipients for actionId=1, groupId=2
@@ -477,7 +518,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId2,
             _addr(user2),
-            _uint(40e16)
+            _uint(40e16),
+            _remark("")
         );
 
         // Both groupIds tracked
@@ -501,7 +543,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
@@ -509,7 +552,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId2,
             _addr(user2),
-            _uint(40e16)
+            _uint(40e16),
+            _remark("")
         );
 
         // Clear groupId1
@@ -519,7 +563,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _emptyAddrs(),
-            _emptyUints()
+            _emptyUints(),
+            _emptyRemarks()
         );
 
         // groupId2 still tracked
@@ -553,7 +598,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _addr(user1),
-            _uint(50e16)
+            _uint(50e16),
+            _remark("")
         );
         vm.prank(groupOwner1);
         groupRecipients.setRecipients(
@@ -561,7 +607,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId2,
             _addr(user2),
-            _uint(40e16)
+            _uint(40e16),
+            _remark("")
         );
 
         // Clear groupId1
@@ -571,7 +618,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             _emptyAddrs(),
-            _emptyUints()
+            _emptyUints(),
+            _emptyRemarks()
         );
 
         // Clear groupId2
@@ -581,7 +629,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId2,
             _emptyAddrs(),
-            _emptyUints()
+            _emptyUints(),
+            _emptyRemarks()
         );
 
         // No groups tracked
@@ -612,6 +661,7 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
         address[] memory addrs = _addrs(user1, user2);
         uint256[] memory ratios = _uints(30e16, 20e16);
 
+        string[] memory remarks = _remarks("", "");
         vm.expectEmit(true, true, true, true);
         emit SetRecipients({
             tokenAddress: address(token),
@@ -620,7 +670,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             groupId: groupId1,
             account: groupOwner1,
             recipients: addrs,
-            ratios: ratios
+            ratios: ratios,
+            remarks: remarks
         });
 
         vm.prank(groupOwner1);
@@ -629,7 +680,8 @@ contract GroupRecipientsTest is BaseGroupTest, IGroupRecipientsEvents {
             ACTION_1,
             groupId1,
             addrs,
-            ratios
+            ratios,
+            remarks
         );
     }
 }

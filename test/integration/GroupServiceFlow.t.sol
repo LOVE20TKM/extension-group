@@ -126,8 +126,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256[] memory ratios = new uint256[](2);
         ratios[0] = 5e17; // 50%
         ratios[1] = 3e17; // 30%
+        string[] memory remarks = new string[](2);
         bobGroup1.recipients = recipients;
         bobGroup1.ratios = ratios;
+        bobGroup1.remarks = remarks;
         h.group_service_set_recipients(bobGroup1);
     }
 
@@ -260,7 +262,7 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256 verifyRound
     ) internal {
         // Verify recipients configuration via IGroupRecipients (tokenAddress from service)
-        (address[] memory addrs, uint256[] memory ratios) = h
+        (address[] memory addrs, uint256[] memory ratios, ) = h
             .groupRecipients()
             .recipients(
                 bobGroup1.flow.userAddress,
@@ -583,8 +585,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         uint256[] memory ratios1 = new uint256[](2);
         ratios1[0] = 3e17;
         ratios1[1] = 2e17;
+        string[] memory remarks1 = new string[](2);
         bobGroup1.recipients = recipients1;
         bobGroup1.ratios = ratios1;
+        bobGroup1.remarks = remarks1;
         h.group_service_set_recipients(bobGroup1);
 
         // Group2: 60% to member5
@@ -592,8 +596,10 @@ contract GroupServiceFlowTest is BaseGroupFlowTest {
         recipients2[0] = member5().userAddress;
         uint256[] memory ratios2 = new uint256[](1);
         ratios2[0] = 6e17;
+        string[] memory remarks2 = new string[](1);
         bobGroup2.recipients = recipients2;
         bobGroup2.ratios = ratios2;
+        bobGroup2.remarks = remarks2;
         h.group_service_set_recipients(bobGroup2);
 
         // === Verify Phase ===

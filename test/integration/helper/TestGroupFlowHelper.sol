@@ -92,6 +92,7 @@ struct GroupUserParams {
     uint256 scorePercent;
     address[] recipients;
     uint256[] ratios;
+    string[] remarks;
 }
 
 interface IMintable {
@@ -929,7 +930,8 @@ contract TestGroupFlowHelper is Test {
             groupOwner.groupActionId,
             groupOwner.groupId,
             groupOwner.recipients,
-            groupOwner.ratios
+            groupOwner.ratios,
+            groupOwner.remarks
         );
     }
 

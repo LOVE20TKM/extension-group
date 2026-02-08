@@ -9,7 +9,8 @@ interface IGroupRecipientsEvents {
         uint256 indexed groupId,
         address account,
         address[] recipients,
-        uint256[] ratios
+        uint256[] ratios,
+        string[] remarks
     );
 }
 
@@ -33,7 +34,8 @@ interface IGroupRecipients is IGroupRecipientsEvents, IGroupRecipientsErrors {
         uint256 actionId,
         uint256 groupId,
         address[] calldata addrs,
-        uint256[] calldata ratios
+        uint256[] calldata ratios,
+        string[] calldata remarks
     ) external;
 
     function recipients(
@@ -42,7 +44,7 @@ interface IGroupRecipients is IGroupRecipientsEvents, IGroupRecipientsErrors {
         uint256 actionId,
         uint256 groupId,
         uint256 round
-    ) external view returns (address[] memory addrs, uint256[] memory ratios);
+    ) external view returns (address[] memory addrs, uint256[] memory ratios, string[] memory remarks);
 
     function actionIdsWithRecipients(
         address groupOwner,

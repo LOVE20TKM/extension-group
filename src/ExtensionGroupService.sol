@@ -104,7 +104,7 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
         );
         if (groupReward == 0) return 0;
 
-        (address[] memory addrs, uint256[] memory ratios) = _groupRecipients
+        (address[] memory addrs, uint256[] memory ratios, ) = _groupRecipients
             .recipients(
                 verifier,
                 GROUP_ACTION_TOKEN_ADDRESS,
@@ -355,7 +355,8 @@ contract ExtensionGroupService is ExtensionBaseRewardJoin, IGroupService {
 
         address extension = _checkActionId(actionId_);
         if (
-            _groupVerify.verifierByGroupId(extension, round, groupId) != verifier
+            _groupVerify.verifierByGroupId(extension, round, groupId) !=
+            verifier
         ) return 0;
         uint256 groupActionReward = IGroupAction(extension)
             .generatedActionRewardByGroupId(round, groupId);

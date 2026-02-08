@@ -9,6 +9,9 @@ import {
     RoundHistoryUint256Array
 } from "@extension/src/lib/RoundHistoryUint256Array.sol";
 import {
+    RoundHistoryStringArray
+} from "@extension/src/lib/RoundHistoryStringArray.sol";
+import {
     IERC721Enumerable
 } from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol";
 import {ILOVE20Verify} from "@core/interfaces/ILOVE20Verify.sol";
@@ -21,6 +24,7 @@ import {IExtensionCenter} from "@extension/src/interface/IExtensionCenter.sol";
 contract GroupRecipients is IGroupRecipients {
     using RoundHistoryAddressArray for RoundHistoryAddressArray.History;
     using RoundHistoryUint256Array for RoundHistoryUint256Array.History;
+    using RoundHistoryStringArray for RoundHistoryStringArray.History;
 
     uint256 public constant PRECISION = 1e18;
     uint256 public constant DEFAULT_MAX_RECIPIENTS = 10;
@@ -34,6 +38,9 @@ contract GroupRecipients is IGroupRecipients {
     // groupOwner => tokenAddress => actionId => groupId => ratios
     mapping(address => mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryUint256Array.History))))
         internal _ratiosHistory;
+    // groupOwner => tokenAddress => actionId => groupId => remarks
+    mapping(address => mapping(address => mapping(uint256 => mapping(uint256 => RoundHistoryStringArray.History))))
+        internal _remarksHistory;
     // groupOwner => tokenAddress => actionIds
     mapping(address => mapping(address => RoundHistoryUint256Array.History))
         internal _actionIdsWithRecipients;
@@ -67,21 +74,35 @@ contract GroupRecipients is IGroupRecipients {
         uint256 actionId,
         uint256 groupId,
         address[] calldata addrs,
-        uint256[] calldata ratios
+        uint256[] calldata ratios,
+        string[] calldata remarks
     ) external onlyGroupOwner(groupId) {
-        uint256 round = _verify.currentRound();
         address owner = msg.sender;
-        _validateRecipients(owner, addrs, ratios);
-
-        _recipientsHistory[owner][tokenAddress][actionId][groupId].record(
+        uint256 round = _verify.currentRound();
+        _validateRecipients(owner, addrs, ratios, remarks);
+        _recordRecipients(owner, tokenAddress, actionId, groupId, round, addrs, ratios, remarks);
+        _updateTrackingAndEmit(
+            owner,
+            tokenAddress,
+            actionId,
+            groupId,
             round,
-            addrs
+            addrs,
+            ratios,
+            remarks
         );
-        _ratiosHistory[owner][tokenAddress][actionId][groupId].record(
-            round,
-            ratios
-        );
+    }
 
+    function _updateTrackingAndEmit(
+        address owner,
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId,
+        uint256 round,
+        address[] calldata addrs,
+        uint256[] calldata ratios,
+        string[] calldata remarks
+    ) internal {
         if (addrs.length > 0) {
             _actionIdsWithRecipients[owner][tokenAddress].add(round, actionId);
             _groupIdsByActionIdWithRecipients[owner][tokenAddress][actionId]
@@ -101,7 +122,6 @@ contract GroupRecipients is IGroupRecipients {
                 );
             }
         }
-
         emit SetRecipients({
             tokenAddress: tokenAddress,
             round: round,
@@ -109,8 +129,33 @@ contract GroupRecipients is IGroupRecipients {
             groupId: groupId,
             account: owner,
             recipients: addrs,
-            ratios: ratios
+            ratios: ratios,
+            remarks: remarks
         });
+    }
+
+    function _recordRecipients(
+        address owner,
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId,
+        uint256 round,
+        address[] calldata addrs,
+        uint256[] calldata ratios,
+        string[] calldata remarks
+    ) internal {
+        _recipientsHistory[owner][tokenAddress][actionId][groupId].record(
+            round,
+            addrs
+        );
+        _ratiosHistory[owner][tokenAddress][actionId][groupId].record(
+            round,
+            ratios
+        );
+        _remarksHistory[owner][tokenAddress][actionId][groupId].record(
+            round,
+            remarks
+        );
     }
 
     function recipients(
@@ -119,10 +164,20 @@ contract GroupRecipients is IGroupRecipients {
         uint256 actionId,
         uint256 groupId,
         uint256 round
-    ) external view returns (address[] memory addrs, uint256[] memory ratios) {
+    )
+        external
+        view
+        returns (
+            address[] memory addrs,
+            uint256[] memory ratios,
+            string[] memory remarks
+        )
+    {
         addrs = _recipientsHistory[groupOwner][tokenAddress][actionId][groupId]
             .values(round);
         ratios = _ratiosHistory[groupOwner][tokenAddress][actionId][groupId]
+            .values(round);
+        remarks = _remarksHistory[groupOwner][tokenAddress][actionId][groupId]
             .values(round);
     }
 
@@ -179,10 +234,12 @@ contract GroupRecipients is IGroupRecipients {
     function _validateRecipients(
         address account,
         address[] calldata addrs,
-        uint256[] calldata ratios
+        uint256[] calldata ratios,
+        string[] calldata remarks
     ) internal pure {
         uint256 len = addrs.length;
-        if (len != ratios.length) revert ArrayLengthMismatch();
+        if (len != ratios.length || len != remarks.length)
+            revert ArrayLengthMismatch();
         if (len > DEFAULT_MAX_RECIPIENTS) revert TooManyRecipients();
 
         uint256 totalRatios;
