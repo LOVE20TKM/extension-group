@@ -74,9 +74,18 @@ else
     echo "(warning) GroupRecipients not deployed"
 fi
 
+echo "-------------------- GroupNotice check --------------------"
+if [ -n "$groupNoticeAddress" ]; then
+    echo "  groupNoticeAddress: $groupNoticeAddress"
+    check_equal "GroupNotice: MAX_CONTENT_LENGTH" "4096" $(cast_call $groupNoticeAddress "MAX_CONTENT_LENGTH()(uint256)") || ((check_failed++))
+    check_equal "GroupNotice: GROUP_ADDRESS" $groupAddress $(cast_call $groupNoticeAddress "GROUP_ADDRESS()(address)") || ((check_failed++))
+else
+    echo "(warning) GroupNotice not deployed"
+fi
+
 echo "-------------------- address uniqueness check --------------------"
 # Verify all addresses are not zero addresses
-addresses=($groupManagerAddress $groupJoinAddress $groupVerifyAddress $groupActionFactoryAddress $groupRecipientsAddress $groupServiceFactoryAddress)
+addresses=($groupManagerAddress $groupJoinAddress $groupVerifyAddress $groupActionFactoryAddress $groupRecipientsAddress $groupNoticeAddress $groupServiceFactoryAddress)
 for addr in "${addresses[@]}"; do
     if [[ -n "$addr" && "$(echo "$addr" | tr '[:upper:]' '[:lower:]')" == "0x0000000000000000000000000000000000000000" ]]; then
         echo "(failed) Found zero address in deployment: $addr"
