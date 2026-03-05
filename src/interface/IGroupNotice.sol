@@ -7,6 +7,7 @@ interface IGroupNoticeEvents {
         uint256 indexed actionId,
         uint256 indexed groupId,
         address publisher,
+        address delegate,
         uint256 index,
         uint256 blockNumber,
         uint256 timestamp,
@@ -16,14 +17,29 @@ interface IGroupNoticeEvents {
 
 interface IGroupNoticeErrors {
     error OnlyGroupOwner();
+    error OnlyGroupOwnerOrDelegate();
     error ContentTooLong();
     error ContentEmpty();
     error ZeroAddress();
+    error InvalidDelegate();
 }
 
 interface IGroupNotice is IGroupNoticeEvents, IGroupNoticeErrors {
     function MAX_CONTENT_LENGTH() external view returns (uint256);
     function GROUP_ADDRESS() external view returns (address);
+
+    function setDelegate(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId,
+        address delegate
+    ) external;
+
+    function delegate(
+        address tokenAddress,
+        uint256 actionId,
+        uint256 groupId
+    ) external view returns (address);
 
     function publish(
         address tokenAddress,

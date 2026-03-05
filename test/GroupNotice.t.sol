@@ -3,7 +3,11 @@ pragma solidity =0.8.17;
 
 import {Test} from "forge-std/Test.sol";
 import {GroupNotice} from "../src/GroupNotice.sol";
-import {IGroupNotice, IGroupNoticeErrors, IGroupNoticeEvents} from "../src/interface/IGroupNotice.sol";
+import {
+    IGroupNotice,
+    IGroupNoticeErrors,
+    IGroupNoticeEvents
+} from "../src/interface/IGroupNotice.sol";
 import {MockGroup} from "./mocks/MockGroup.sol";
 
 contract GroupNoticeTest is Test, IGroupNoticeEvents {
@@ -54,7 +58,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
 
     function test_Publish_NonOwner_Reverts() public {
         vm.prank(nonOwner);
-        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwner.selector);
+        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwnerOrDelegate.selector);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "content");
     }
 
@@ -103,7 +107,11 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "one");
 
         (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
-            tokenAddr, ACTION_ID, GROUP_ID, 0, type(uint256).max
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            0,
+            type(uint256).max
         );
         assertEq(tc, 1);
         assertEq(c.length, 1);
@@ -114,31 +122,36 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.prank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "only one");
 
-        (
-            string[] memory contents,
-            ,
-            ,
-            ,
-            uint256 totalCount
-        ) = groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 5, 10);
+        (string[] memory contents, , , , uint256 totalCount) = groupNotice
+            .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 5, 10);
 
         assertEq(totalCount, 1);
         assertEq(contents.length, 0);
     }
 
     function test_GetNotices_Pagination_MultiPage() public {
-        string[5] memory contents = ["notice0", "notice1", "notice2", "notice3", "notice4"];
+        string[5] memory contents = [
+            "notice0",
+            "notice1",
+            "notice2",
+            "notice3",
+            "notice4"
+        ];
         vm.startPrank(owner);
         for (uint256 i; i < 5; i++) {
             groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, contents[i]);
         }
         vm.stopPrank();
 
-        uint256 totalCount = groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID);
+        uint256 totalCount = groupNotice.noticeCount(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID
+        );
         assertEq(totalCount, 5);
 
-        (string[] memory c0, , , address[] memory p0, uint256 tc0) =
-            groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 2);
+        (string[] memory c0, , , address[] memory p0, uint256 tc0) = groupNotice
+            .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 2);
         assertEq(tc0, 5);
         assertEq(c0.length, 2);
         assertEq(c0[0], "notice0");
@@ -146,15 +159,25 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(p0[0], owner);
         assertEq(p0[1], owner);
 
-        (string[] memory c1, , , , uint256 tc1) =
-            groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 2, 2);
+        (string[] memory c1, , , , uint256 tc1) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            2,
+            2
+        );
         assertEq(tc1, 5);
         assertEq(c1.length, 2);
         assertEq(c1[0], "notice2");
         assertEq(c1[1], "notice3");
 
-        (string[] memory c2, , , , uint256 tc2) =
-            groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 4, 2);
+        (string[] memory c2, , , , uint256 tc2) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            4,
+            2
+        );
         assertEq(tc2, 5);
         assertEq(c2.length, 1);
         assertEq(c2[0], "notice4");
@@ -168,6 +191,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             actionId: ACTION_ID,
             groupId: GROUP_ID,
             publisher: owner,
+            delegate: address(0),
             index: 0,
             blockNumber: block.number,
             timestamp: block.timestamp,
@@ -182,5 +206,181 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
 
     function test_GroupAddress() public view {
         assertEq(groupNotice.GROUP_ADDRESS(), address(group));
+    }
+
+    // Delegate tests
+    function test_SetDelegate_ByOwner_Succeeds() public {
+        address delegateAddr = address(0x3);
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        assertEq(
+            groupNotice.delegate(tokenAddr, ACTION_ID, GROUP_ID),
+            delegateAddr
+        );
+    }
+
+    function test_SetDelegate_ByNonOwner_Reverts() public {
+        address delegateAddr = address(0x3);
+        vm.prank(nonOwner);
+        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwner.selector);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+    }
+
+    function test_SetDelegate_ToSelf_Reverts() public {
+        vm.prank(owner);
+        vm.expectRevert(IGroupNoticeErrors.InvalidDelegate.selector);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, owner);
+    }
+
+    function test_SetDelegate_DifferentTokenActionGroup_Succeeds() public {
+        address delegateAddr = address(0x3);
+        address tokenAddr2 = address(0x200);
+        uint256 actionId2 = 2;
+        uint256 groupId2 = 2;
+
+        group.mint(owner, "TestGroup2");
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        // Different tokenAddress, actionId, groupId should have no delegate
+        assertEq(
+            groupNotice.delegate(tokenAddr2, actionId2, groupId2),
+            address(0)
+        );
+
+        // Set delegate for another group
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr2, actionId2, groupId2, delegateAddr);
+        assertEq(
+            groupNotice.delegate(tokenAddr2, actionId2, groupId2),
+            delegateAddr
+        );
+    }
+
+    function test_Delegate_NotSet_ReturnsZeroAddress() public view {
+        assertEq(
+            groupNotice.delegate(tokenAddr, ACTION_ID, GROUP_ID),
+            address(0)
+        );
+    }
+
+    function test_Publish_AsDelegate_Succeeds() public {
+        address delegateAddr = address(0x3);
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        vm.prank(delegateAddr);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
+
+        assertEq(groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID), 1);
+
+        // Verify publisher is owner, not delegate
+        (, , , address[] memory publishers, ) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            0,
+            10
+        );
+        assertEq(publishers[0], owner);
+    }
+
+    function test_Publish_AsDelegate_DifferentTokenActionGroup_Reverts()
+        public
+    {
+        address delegateAddr = address(0x3);
+        address tokenAddr2 = address(0x200);
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        // Try to publish with different tokenAddress
+        vm.prank(delegateAddr);
+        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwnerOrDelegate.selector);
+        groupNotice.publish(tokenAddr2, ACTION_ID, GROUP_ID, "content");
+
+        // Try to publish with different actionId
+        vm.prank(delegateAddr);
+        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwnerOrDelegate.selector);
+        groupNotice.publish(tokenAddr, 2, GROUP_ID, "content");
+
+        // Try to publish with different groupId
+        vm.prank(delegateAddr);
+        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwnerOrDelegate.selector);
+        groupNotice.publish(tokenAddr, ACTION_ID, 2, "content");
+    }
+
+    function test_Publish_DelegateAfterOwnerChange_Reverts() public {
+        address delegateAddr = address(0x3);
+        address newOwner = address(0x4);
+
+        // Owner sets delegate
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        // Transfer ownership
+        group.transferFrom(owner, newOwner, GROUP_ID);
+
+        // Original delegate should no longer be able to publish
+        vm.prank(delegateAddr);
+        vm.expectRevert(IGroupNoticeErrors.OnlyGroupOwnerOrDelegate.selector);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "content");
+
+        // New owner can publish
+        vm.prank(newOwner);
+        groupNotice.publish(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            "new owner content"
+        );
+        assertEq(groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID), 1);
+    }
+
+    function test_Delegate_ChangesAfterOwnerTransfer() public {
+        address delegateAddr = address(0x3);
+        address newOwner = address(0x4);
+
+        // Owner sets delegate
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+        assertEq(
+            groupNotice.delegate(tokenAddr, ACTION_ID, GROUP_ID),
+            delegateAddr
+        );
+
+        // Transfer ownership
+        group.transferFrom(owner, newOwner, GROUP_ID);
+
+        // Delegate should return address(0) for new owner
+        assertEq(
+            groupNotice.delegate(tokenAddr, ACTION_ID, GROUP_ID),
+            address(0)
+        );
+    }
+
+    function test_Publish_EventIncludesDelegate() public {
+        address delegateAddr = address(0x3);
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        vm.prank(delegateAddr);
+        vm.expectEmit(true, true, true, true);
+        emit Publish({
+            tokenAddress: tokenAddr,
+            actionId: ACTION_ID,
+            groupId: GROUP_ID,
+            publisher: owner, // publisher is owner, not delegate
+            delegate: delegateAddr,
+            index: 0,
+            blockNumber: block.number,
+            timestamp: block.timestamp,
+            content: "delegate content"
+        });
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
     }
 }
