@@ -46,7 +46,14 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             uint256[] memory blockNumbers,
             address[] memory publishers,
             uint256 totalCount
-        ) = groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 10);
+        ) = groupNotice.getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                0,
+                10,
+                false
+            );
 
         assertEq(totalCount, 1);
         assertEq(contents.length, 1);
@@ -86,20 +93,9 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID), 1);
     }
 
-    function test_GetNotices_EmptyList() public view {
-        (
-            string[] memory contents,
-            uint256[] memory timestamps,
-            uint256[] memory blockNumbers,
-            address[] memory publishers,
-            uint256 totalCount
-        ) = groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 10);
-
-        assertEq(totalCount, 0);
-        assertEq(contents.length, 0);
-        assertEq(timestamps.length, 0);
-        assertEq(blockNumbers.length, 0);
-        assertEq(publishers.length, 0);
+    function test_GetNotices_EmptyList() public {
+        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
+        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 10, false);
     }
 
     function test_GetNotices_LargeLimit_NoOverflow() public {
@@ -111,7 +107,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             ACTION_ID,
             GROUP_ID,
             0,
-            type(uint256).max
+            type(uint256).max,
+            false
         );
         assertEq(tc, 1);
         assertEq(c.length, 1);
@@ -122,11 +119,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.prank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "only one");
 
-        (string[] memory contents, , , , uint256 totalCount) = groupNotice
-            .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 5, 10);
-
-        assertEq(totalCount, 1);
-        assertEq(contents.length, 0);
+        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
+        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 5, 10, false);
     }
 
     function test_GetNotices_Pagination_MultiPage() public {
@@ -151,7 +145,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(totalCount, 5);
 
         (string[] memory c0, , , address[] memory p0, uint256 tc0) = groupNotice
-            .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 2);
+            .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 2, false);
         assertEq(tc0, 5);
         assertEq(c0.length, 2);
         assertEq(c0[0], "notice0");
@@ -164,7 +158,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             ACTION_ID,
             GROUP_ID,
             2,
-            2
+            2,
+            false
         );
         assertEq(tc1, 5);
         assertEq(c1.length, 2);
@@ -176,7 +171,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             ACTION_ID,
             GROUP_ID,
             4,
-            2
+            2,
+            false
         );
         assertEq(tc2, 5);
         assertEq(c2.length, 1);
@@ -283,7 +279,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             ACTION_ID,
             GROUP_ID,
             0,
-            10
+            10,
+            false
         );
         assertEq(publishers[0], owner);
     }
@@ -382,5 +379,128 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             content: "delegate content"
         });
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
+    }
+
+    // Reverse pagination tests
+    function test_GetNotices_Reverse_Basic() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice2");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice3");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice4");
+        vm.stopPrank();
+
+        // Get latest 2 in reverse order
+        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            0,
+            2,
+            true
+        );
+        assertEq(tc, 5);
+        assertEq(c.length, 2);
+        assertEq(c[0], "notice4"); // latest first
+        assertEq(c[1], "notice3");
+    }
+
+    function test_GetNotices_Reverse_WithOffset() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice2");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice3");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice4");
+        vm.stopPrank();
+
+        // Skip latest 1, get next 2 in reverse order
+        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            1,
+            2,
+            true
+        );
+        assertEq(tc, 5);
+        assertEq(c.length, 2);
+        assertEq(c[0], "notice3");
+        assertEq(c[1], "notice2");
+    }
+
+    function test_GetNotices_Reverse_LessThanLimit() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
+        vm.stopPrank();
+
+        // Get all in reverse order with larger limit
+        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            0,
+            10,
+            true
+        );
+        assertEq(tc, 2);
+        assertEq(c.length, 2);
+        assertEq(c[0], "notice1");
+        assertEq(c[1], "notice0");
+    }
+
+    // Boundary tests for validation
+    function test_GetNotices_LimitZero_Reverts() public {
+        vm.expectRevert(IGroupNoticeErrors.LimitZero.selector);
+        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 0, false);
+    }
+
+    function test_GetNotices_Reverse_LimitZero_Reverts() public {
+        vm.expectRevert(IGroupNoticeErrors.LimitZero.selector);
+        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 0, true);
+    }
+
+    function test_GetNotices_Reverse_OffsetEqualsTotal_Reverts() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        vm.stopPrank();
+
+        // offset == totalCount should revert
+        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
+        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 1, 10, true);
+    }
+
+    function test_GetNotices_Reverse_OffsetGreaterThanTotal_Reverts() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
+        vm.stopPrank();
+
+        // offset > totalCount should revert
+        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
+        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 3, 10, true);
+    }
+
+    function test_GetNotices_Reverse_ValidOffset_ReturnsCorrect() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice2");
+        vm.stopPrank();
+
+        // offset = 2 (third from end), should get only notice0
+        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+            tokenAddr,
+            ACTION_ID,
+            GROUP_ID,
+            2,
+            10,
+            true
+        );
+        assertEq(tc, 3);
+        assertEq(c.length, 1);
+        assertEq(c[0], "notice0");
     }
 }

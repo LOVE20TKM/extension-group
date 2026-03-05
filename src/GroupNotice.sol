@@ -108,7 +108,8 @@ contract GroupNotice is IGroupNotice {
         uint256 actionId,
         uint256 groupId,
         uint256 offset,
-        uint256 limit
+        uint256 limit,
+        bool reverse
     )
         external
         view
@@ -120,19 +121,27 @@ contract GroupNotice is IGroupNotice {
             uint256 totalCount
         )
     {
+        if (limit == 0) revert LimitZero();
+
         Notice[] storage arr = _notices[tokenAddress][actionId][groupId];
         totalCount = arr.length;
-        if (offset >= totalCount) {
-            return (
-                new string[](0),
-                new uint256[](0),
-                new uint256[](0),
-                new address[](0),
-                totalCount
-            );
+        if (offset >= totalCount) revert OffsetOutOfBounds();
+
+        // Calculate start index based on reverse flag
+        uint256 startIdx = reverse ? totalCount - 1 - offset : offset;
+
+        uint256 endIdx;
+        uint256 count;
+
+        if (reverse) {
+            // Reverse: offset 0 = latest, go backwards
+            endIdx = startIdx > limit - 1 ? startIdx - limit + 1 : 0;
+            count = startIdx - endIdx + 1;
+        } else {
+            // Forward: offset 0 = earliest, go forwards
+            endIdx = offset + limit > totalCount ? totalCount : offset + limit;
+            count = endIdx - startIdx;
         }
-        uint256 end = totalCount - offset > limit ? offset + limit : totalCount;
-        uint256 count = end - offset;
 
         contents = new string[](count);
         timestamps = new uint256[](count);
@@ -140,7 +149,7 @@ contract GroupNotice is IGroupNotice {
         publishers = new address[](count);
 
         for (uint256 i; i < count; ) {
-            Notice storage n = arr[offset + i];
+            Notice storage n = arr[reverse ? startIdx - i : startIdx + i];
             contents[i] = n.content;
             timestamps[i] = n.timestamp;
             blockNumbers[i] = n.blockNumber;

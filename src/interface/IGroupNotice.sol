@@ -22,6 +22,8 @@ interface IGroupNoticeErrors {
     error ContentEmpty();
     error ZeroAddress();
     error InvalidDelegate();
+    error OffsetOutOfBounds();
+    error LimitZero();
 }
 
 interface IGroupNotice is IGroupNoticeEvents, IGroupNoticeErrors {
@@ -59,7 +61,8 @@ interface IGroupNotice is IGroupNoticeEvents, IGroupNoticeErrors {
         uint256 actionId,
         uint256 groupId,
         uint256 offset,
-        uint256 limit
+        uint256 limit,
+        bool reverse
     )
         external
         view
