@@ -5,7 +5,7 @@ import {IGroupNotice} from "./interface/IGroupNotice.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 
 contract GroupNotice is IGroupNotice {
-    uint256 public constant MAX_CONTENT_LENGTH = 4096;
+    uint256 public constant MAX_CONTENT_LENGTH = 8192;
 
     struct Notice {
         string content;

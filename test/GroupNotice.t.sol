@@ -13,7 +13,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
     address tokenAddr = address(0x100);
     uint256 constant ACTION_ID = 1;
     uint256 constant GROUP_ID = 1;
-    uint256 constant MAX_CONTENT_LENGTH = 4096;
+    uint256 constant MAX_CONTENT_LENGTH = 8192;
 
     address owner = address(0x1);
     address nonOwner = address(0x2);

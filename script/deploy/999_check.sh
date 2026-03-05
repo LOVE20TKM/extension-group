@@ -77,7 +77,7 @@ fi
 echo "-------------------- GroupNotice check --------------------"
 if [ -n "$groupNoticeAddress" ]; then
     echo "  groupNoticeAddress: $groupNoticeAddress"
-    check_equal "GroupNotice: MAX_CONTENT_LENGTH" "4096" $(cast_call $groupNoticeAddress "MAX_CONTENT_LENGTH()(uint256)") || ((check_failed++))
+    check_equal "GroupNotice: MAX_CONTENT_LENGTH" "8192" $(cast_call $groupNoticeAddress "MAX_CONTENT_LENGTH()(uint256)") || ((check_failed++))
     check_equal "GroupNotice: GROUP_ADDRESS" $groupAddress $(cast_call $groupNoticeAddress "GROUP_ADDRESS()(address)") || ((check_failed++))
 else
     echo "(warning) GroupNotice not deployed"
