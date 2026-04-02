@@ -137,6 +137,29 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(c[0], "one");
     }
 
+    function test_GetNotices_LargeLimit_WithOffset_NoOverflow() public {
+        vm.startPrank(owner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice2");
+        vm.stopPrank();
+
+        (string[] memory contents, , , , , uint256 totalCount) = groupNotice
+            .getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                1,
+                type(uint256).max,
+                false
+            );
+
+        assertEq(totalCount, 3);
+        assertEq(contents.length, 2);
+        assertEq(contents[0], "notice1");
+        assertEq(contents[1], "notice2");
+    }
+
     function test_GetNotices_OffsetBeyondTotal_ReturnsEmpty() public {
         vm.prank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "only one");

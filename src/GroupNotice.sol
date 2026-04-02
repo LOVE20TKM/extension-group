@@ -160,7 +160,8 @@ contract GroupNotice is IGroupNotice {
             count = startIdx - endIdx + 1;
         } else {
             // Forward: offset 0 = earliest, go forwards
-            endIdx = offset + limit > totalCount ? totalCount : offset + limit;
+            uint256 remaining = totalCount - offset;
+            endIdx = limit > remaining ? totalCount : offset + limit;
             count = endIdx - startIdx;
         }
 
