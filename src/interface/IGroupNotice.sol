@@ -2,15 +2,20 @@
 pragma solidity =0.8.17;
 
 interface IGroupNoticeEvents {
+    event SetDelegate(
+        address indexed tokenAddress,
+        uint256 indexed actionId,
+        uint256 indexed groupId,
+        address groupOwner,
+        address delegate
+    );
     event Publish(
         address indexed tokenAddress,
         uint256 indexed actionId,
         uint256 indexed groupId,
-        address publisher,
-        address delegate,
+        address groupOwner,
+        address sender,
         uint256 index,
-        uint256 blockNumber,
-        uint256 timestamp,
         string content
     );
 }
@@ -70,7 +75,8 @@ interface IGroupNotice is IGroupNoticeEvents, IGroupNoticeErrors {
             string[] memory contents,
             uint256[] memory timestamps,
             uint256[] memory blockNumbers,
-            address[] memory publishers,
+            address[] memory groupOwners,
+            address[] memory senders,
             uint256 totalCount
         );
 }

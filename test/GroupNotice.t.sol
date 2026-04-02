@@ -44,7 +44,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             string[] memory contents,
             uint256[] memory timestamps,
             uint256[] memory blockNumbers,
-            address[] memory publishers,
+            address[] memory groupOwners,
+            address[] memory senders,
             uint256 totalCount
         ) = groupNotice.getNotices(
                 tokenAddr,
@@ -60,7 +61,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(contents[0], content);
         assertEq(timestamps[0], block.timestamp);
         assertEq(blockNumbers[0], block.number);
-        assertEq(publishers[0], owner);
+        assertEq(groupOwners[0], owner);
+        assertEq(senders[0], owner);
     }
 
     function test_Publish_NonOwner_Reverts() public {
@@ -93,16 +95,36 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID), 1);
     }
 
-    function test_GetNotices_EmptyList() public {
-        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
-        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 10, false);
+    function test_GetNotices_EmptyList_ReturnsEmptyPage() public view {
+        (
+            string[] memory contents,
+            uint256[] memory timestamps,
+            uint256[] memory blockNumbers,
+            address[] memory groupOwners,
+            address[] memory senders,
+            uint256 totalCount
+        ) = groupNotice.getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                0,
+                10,
+                false
+            );
+
+        assertEq(totalCount, 0);
+        assertEq(contents.length, 0);
+        assertEq(timestamps.length, 0);
+        assertEq(blockNumbers.length, 0);
+        assertEq(groupOwners.length, 0);
+        assertEq(senders.length, 0);
     }
 
     function test_GetNotices_LargeLimit_NoOverflow() public {
         vm.prank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "one");
 
-        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+        (string[] memory c, , , , , uint256 tc) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -119,8 +141,28 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.prank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "only one");
 
-        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
-        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 5, 10, false);
+        (
+            string[] memory contents,
+            uint256[] memory timestamps,
+            uint256[] memory blockNumbers,
+            address[] memory groupOwners,
+            address[] memory senders,
+            uint256 totalCount
+        ) = groupNotice.getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                5,
+                10,
+                false
+            );
+
+        assertEq(totalCount, 1);
+        assertEq(contents.length, 0);
+        assertEq(timestamps.length, 0);
+        assertEq(blockNumbers.length, 0);
+        assertEq(groupOwners.length, 0);
+        assertEq(senders.length, 0);
     }
 
     function test_GetNotices_Pagination_MultiPage() public {
@@ -144,16 +186,25 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         );
         assertEq(totalCount, 5);
 
-        (string[] memory c0, , , address[] memory p0, uint256 tc0) = groupNotice
+        (
+            string[] memory c0,
+            ,
+            ,
+            address[] memory go0,
+            address[] memory s0,
+            uint256 tc0
+        ) = groupNotice
             .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 2, false);
         assertEq(tc0, 5);
         assertEq(c0.length, 2);
         assertEq(c0[0], "notice0");
         assertEq(c0[1], "notice1");
-        assertEq(p0[0], owner);
-        assertEq(p0[1], owner);
+        assertEq(go0[0], owner);
+        assertEq(go0[1], owner);
+        assertEq(s0[0], owner);
+        assertEq(s0[1], owner);
 
-        (string[] memory c1, , , , uint256 tc1) = groupNotice.getNotices(
+        (string[] memory c1, , , , , uint256 tc1) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -166,7 +217,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(c1[0], "notice2");
         assertEq(c1[1], "notice3");
 
-        (string[] memory c2, , , , uint256 tc2) = groupNotice.getNotices(
+        (string[] memory c2, , , , , uint256 tc2) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -186,14 +237,27 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             tokenAddress: tokenAddr,
             actionId: ACTION_ID,
             groupId: GROUP_ID,
-            publisher: owner,
-            delegate: address(0),
+            groupOwner: owner,
+            sender: owner,
             index: 0,
-            blockNumber: block.number,
-            timestamp: block.timestamp,
             content: "test content"
         });
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "test content");
+    }
+
+    function test_EmitSetDelegate() public {
+        address delegateAddr = address(0x3);
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit SetDelegate({
+            tokenAddress: tokenAddr,
+            actionId: ACTION_ID,
+            groupId: GROUP_ID,
+            groupOwner: owner,
+            delegate: delegateAddr
+        });
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
     }
 
     function test_MaxContentLength() public view {
@@ -227,6 +291,20 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.prank(owner);
         vm.expectRevert(IGroupNoticeErrors.InvalidDelegate.selector);
         groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, owner);
+    }
+
+    function test_SetDelegate_ZeroAddress_ClearsDelegate() public {
+        address delegateAddr = address(0x3);
+
+        vm.startPrank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, address(0));
+        vm.stopPrank();
+
+        assertEq(
+            groupNotice.delegate(tokenAddr, ACTION_ID, GROUP_ID),
+            address(0)
+        );
     }
 
     function test_SetDelegate_DifferentTokenActionGroup_Succeeds() public {
@@ -273,8 +351,9 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
 
         assertEq(groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID), 1);
 
-        // Verify publisher is owner, not delegate
-        (, , , address[] memory publishers, ) = groupNotice.getNotices(
+        // Verify stored ownership context and actual sender are both preserved.
+        (, , , address[] memory groupOwners, address[] memory senders, ) = groupNotice
+            .getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -282,7 +361,8 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             10,
             false
         );
-        assertEq(publishers[0], owner);
+        assertEq(groupOwners[0], owner);
+        assertEq(senders[0], delegateAddr);
     }
 
     function test_Publish_AsDelegate_DifferentTokenActionGroup_Reverts()
@@ -359,7 +439,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         );
     }
 
-    function test_Publish_EventIncludesDelegate() public {
+    function test_Publish_EventIncludesSender() public {
         address delegateAddr = address(0x3);
 
         vm.prank(owner);
@@ -371,14 +451,34 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             tokenAddress: tokenAddr,
             actionId: ACTION_ID,
             groupId: GROUP_ID,
-            publisher: owner, // publisher is owner, not delegate
-            delegate: delegateAddr,
+            groupOwner: owner,
+            sender: delegateAddr,
             index: 0,
-            blockNumber: block.number,
-            timestamp: block.timestamp,
             content: "delegate content"
         });
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
+    }
+
+    function test_Publish_ByOwnerWithDelegateConfigured_EmitsOwnerAsSender()
+        public
+    {
+        address delegateAddr = address(0x3);
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        vm.prank(owner);
+        vm.expectEmit(true, true, true, true);
+        emit Publish({
+            tokenAddress: tokenAddr,
+            actionId: ACTION_ID,
+            groupId: GROUP_ID,
+            groupOwner: owner,
+            sender: owner,
+            index: 0,
+            content: "owner content"
+        });
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "owner content");
     }
 
     // Reverse pagination tests
@@ -392,7 +492,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.stopPrank();
 
         // Get latest 2 in reverse order
-        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+        (string[] memory c, , , , , uint256 tc) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -416,7 +516,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.stopPrank();
 
         // Skip latest 1, get next 2 in reverse order
-        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+        (string[] memory c, , , , , uint256 tc) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -437,7 +537,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.stopPrank();
 
         // Get all in reverse order with larger limit
-        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+        (string[] memory c, , , , , uint256 tc) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,
@@ -462,25 +562,65 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 0, true);
     }
 
-    function test_GetNotices_Reverse_OffsetEqualsTotal_Reverts() public {
+    function test_GetNotices_Reverse_OffsetEqualsTotal_ReturnsEmpty() public {
         vm.startPrank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
         vm.stopPrank();
 
-        // offset == totalCount should revert
-        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
-        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 1, 10, true);
+        (
+            string[] memory contents,
+            uint256[] memory timestamps,
+            uint256[] memory blockNumbers,
+            address[] memory groupOwners,
+            address[] memory senders,
+            uint256 totalCount
+        ) = groupNotice.getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                1,
+                10,
+                true
+            );
+
+        assertEq(totalCount, 1);
+        assertEq(contents.length, 0);
+        assertEq(timestamps.length, 0);
+        assertEq(blockNumbers.length, 0);
+        assertEq(groupOwners.length, 0);
+        assertEq(senders.length, 0);
     }
 
-    function test_GetNotices_Reverse_OffsetGreaterThanTotal_Reverts() public {
+    function test_GetNotices_Reverse_OffsetGreaterThanTotal_ReturnsEmpty()
+        public
+    {
         vm.startPrank(owner);
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice0");
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "notice1");
         vm.stopPrank();
 
-        // offset > totalCount should revert
-        vm.expectRevert(IGroupNoticeErrors.OffsetOutOfBounds.selector);
-        groupNotice.getNotices(tokenAddr, ACTION_ID, GROUP_ID, 3, 10, true);
+        (
+            string[] memory contents,
+            uint256[] memory timestamps,
+            uint256[] memory blockNumbers,
+            address[] memory groupOwners,
+            address[] memory senders,
+            uint256 totalCount
+        ) = groupNotice.getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                3,
+                10,
+                true
+            );
+
+        assertEq(totalCount, 2);
+        assertEq(contents.length, 0);
+        assertEq(timestamps.length, 0);
+        assertEq(blockNumbers.length, 0);
+        assertEq(groupOwners.length, 0);
+        assertEq(senders.length, 0);
     }
 
     function test_GetNotices_Reverse_ValidOffset_ReturnsCorrect() public {
@@ -491,7 +631,7 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         vm.stopPrank();
 
         // offset = 2 (third from end), should get only notice0
-        (string[] memory c, , , , uint256 tc) = groupNotice.getNotices(
+        (string[] memory c, , , , , uint256 tc) = groupNotice.getNotices(
             tokenAddr,
             ACTION_ID,
             GROUP_ID,

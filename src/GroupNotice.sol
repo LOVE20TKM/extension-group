@@ -11,7 +11,8 @@ contract GroupNotice is IGroupNotice {
         string content;
         uint256 timestamp;
         uint256 blockNumber;
-        address publisher;
+        address groupOwner;
+        address sender;
     }
 
     IERC721 internal immutable _group;
@@ -41,6 +42,14 @@ contract GroupNotice is IGroupNotice {
         if (delegate_ == msg.sender) revert InvalidDelegate();
         if (_group.ownerOf(groupId) != msg.sender) revert OnlyGroupOwner();
         _delegates[tokenAddress][actionId][groupId][msg.sender] = delegate_;
+
+        emit SetDelegate({
+            tokenAddress: tokenAddress,
+            actionId: actionId,
+            groupId: groupId,
+            groupOwner: msg.sender,
+            delegate: delegate_
+        });
     }
 
     function delegate(
@@ -60,37 +69,39 @@ contract GroupNotice is IGroupNotice {
         uint256 groupId,
         string calldata content
     ) external {
-        uint256 len = bytes(content).length;
-        if (len == 0) revert ContentEmpty();
-        if (len > MAX_CONTENT_LENGTH) revert ContentTooLong();
+        if (bytes(content).length == 0) revert ContentEmpty();
+        if (bytes(content).length > MAX_CONTENT_LENGTH) revert ContentTooLong();
 
-        address owner = _group.ownerOf(groupId);
-        address currentDelegate = _delegates[tokenAddress][actionId][groupId][
-            owner
-        ];
-        if (owner != msg.sender && currentDelegate != msg.sender) {
-            revert OnlyGroupOwnerOrDelegate();
+        address groupOwner = _group.ownerOf(groupId);
+        if (groupOwner != msg.sender) {
+            if (
+                _delegates[tokenAddress][actionId][groupId][groupOwner] !=
+                msg.sender
+            ) {
+                revert OnlyGroupOwnerOrDelegate();
+            }
         }
 
-        // Publisher is always the group owner, not the delegate
-        Notice memory n = Notice({
-            content: content,
-            timestamp: block.timestamp,
-            blockNumber: block.number,
-            publisher: owner
-        });
-        uint256 index = _notices[tokenAddress][actionId][groupId].length;
-        _notices[tokenAddress][actionId][groupId].push(n);
+        // Store both the notice owner context and the actual sender.
+        Notice[] storage notices = _notices[tokenAddress][actionId][groupId];
+        uint256 index = notices.length;
+        notices.push(
+            Notice({
+                content: content,
+                timestamp: block.timestamp,
+                blockNumber: block.number,
+                groupOwner: groupOwner,
+                sender: msg.sender
+            })
+        );
 
         emit Publish({
             tokenAddress: tokenAddress,
             actionId: actionId,
             groupId: groupId,
-            publisher: owner,
-            delegate: currentDelegate,
+            groupOwner: groupOwner,
+            sender: msg.sender,
             index: index,
-            blockNumber: n.blockNumber,
-            timestamp: n.timestamp,
             content: content
         });
     }
@@ -117,7 +128,8 @@ contract GroupNotice is IGroupNotice {
             string[] memory contents,
             uint256[] memory timestamps,
             uint256[] memory blockNumbers,
-            address[] memory publishers,
+            address[] memory groupOwners,
+            address[] memory senders,
             uint256 totalCount
         )
     {
@@ -125,7 +137,16 @@ contract GroupNotice is IGroupNotice {
 
         Notice[] storage arr = _notices[tokenAddress][actionId][groupId];
         totalCount = arr.length;
-        if (offset >= totalCount) revert OffsetOutOfBounds();
+        if (offset >= totalCount) {
+            return (
+                new string[](0),
+                new uint256[](0),
+                new uint256[](0),
+                new address[](0),
+                new address[](0),
+                totalCount
+            );
+        }
 
         // Calculate start index based on reverse flag
         uint256 startIdx = reverse ? totalCount - 1 - offset : offset;
@@ -146,14 +167,16 @@ contract GroupNotice is IGroupNotice {
         contents = new string[](count);
         timestamps = new uint256[](count);
         blockNumbers = new uint256[](count);
-        publishers = new address[](count);
+        groupOwners = new address[](count);
+        senders = new address[](count);
 
         for (uint256 i; i < count; ) {
             Notice storage n = arr[reverse ? startIdx - i : startIdx + i];
             contents[i] = n.content;
             timestamps[i] = n.timestamp;
             blockNumbers[i] = n.blockNumber;
-            publishers[i] = n.publisher;
+            groupOwners[i] = n.groupOwner;
+            senders[i] = n.sender;
             unchecked {
                 ++i;
             }
