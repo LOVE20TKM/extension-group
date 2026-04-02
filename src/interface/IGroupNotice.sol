@@ -27,7 +27,6 @@ interface IGroupNoticeErrors {
     error ContentEmpty();
     error ZeroAddress();
     error InvalidDelegate();
-    error OffsetOutOfBounds();
     error LimitZero();
 }
 

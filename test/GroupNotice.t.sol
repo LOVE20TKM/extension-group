@@ -417,6 +417,30 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
         assertEq(groupNotice.noticeCount(tokenAddr, ACTION_ID, GROUP_ID), 1);
     }
 
+    function test_Delegate_ReactivatesAfterOwnerReacquiresGroup() public {
+        address delegateAddr = address(0x3);
+        address newOwner = address(0x4);
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        group.transferFrom(owner, newOwner, GROUP_ID);
+        group.transferFrom(newOwner, owner, GROUP_ID);
+
+        assertEq(
+            groupNotice.delegate(tokenAddr, ACTION_ID, GROUP_ID),
+            delegateAddr
+        );
+
+        vm.prank(delegateAddr);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
+
+        (, , , address[] memory groupOwners, address[] memory senders, ) = groupNotice
+            .getNotices(tokenAddr, ACTION_ID, GROUP_ID, 0, 10, false);
+        assertEq(groupOwners[0], owner);
+        assertEq(senders[0], delegateAddr);
+    }
+
     function test_Delegate_ChangesAfterOwnerTransfer() public {
         address delegateAddr = address(0x3);
         address newOwner = address(0x4);
@@ -457,6 +481,46 @@ contract GroupNoticeTest is Test, IGroupNoticeEvents {
             content: "delegate content"
         });
         groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
+    }
+
+    function test_GetNotices_PreservesSnapshotsAcrossOwnerChange() public {
+        address delegateAddr = address(0x3);
+        address newOwner = address(0x4);
+
+        vm.prank(owner);
+        groupNotice.setDelegate(tokenAddr, ACTION_ID, GROUP_ID, delegateAddr);
+
+        vm.prank(delegateAddr);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "delegate content");
+
+        group.transferFrom(owner, newOwner, GROUP_ID);
+
+        vm.prank(newOwner);
+        groupNotice.publish(tokenAddr, ACTION_ID, GROUP_ID, "new owner content");
+
+        (
+            string[] memory contents,
+            ,
+            ,
+            address[] memory groupOwners,
+            address[] memory senders,
+            uint256 totalCount
+        ) = groupNotice.getNotices(
+                tokenAddr,
+                ACTION_ID,
+                GROUP_ID,
+                0,
+                10,
+                false
+            );
+
+        assertEq(totalCount, 2);
+        assertEq(contents[0], "delegate content");
+        assertEq(contents[1], "new owner content");
+        assertEq(groupOwners[0], owner);
+        assertEq(groupOwners[1], newOwner);
+        assertEq(senders[0], delegateAddr);
+        assertEq(senders[1], newOwner);
     }
 
     function test_Publish_ByOwnerWithDelegateConfigured_EmitsOwnerAsSender()

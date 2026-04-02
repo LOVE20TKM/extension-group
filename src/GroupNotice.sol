@@ -9,10 +9,10 @@ contract GroupNotice is IGroupNotice {
 
     struct Notice {
         string content;
-        uint256 timestamp;
-        uint256 blockNumber;
         address groupOwner;
+        uint64 timestamp;
         address sender;
+        uint64 blockNumber;
     }
 
     IERC721 internal immutable _group;
@@ -88,10 +88,10 @@ contract GroupNotice is IGroupNotice {
         notices.push(
             Notice({
                 content: content,
-                timestamp: block.timestamp,
-                blockNumber: block.number,
                 groupOwner: groupOwner,
-                sender: msg.sender
+                timestamp: uint64(block.timestamp),
+                sender: msg.sender,
+                blockNumber: uint64(block.number)
             })
         );
 
